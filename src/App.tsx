@@ -12,6 +12,7 @@ import AdminDashboard from "@/pages/admin/AdminDashboard";
 import Promocoes from "@/pages/Promocoes";
 import Combos from "@/pages/Combos";
 import Narguile from "@/pages/Narguile";
+import Bebidas from "@/pages/Bebidas";
 
 const queryClient = new QueryClient();
 
@@ -28,6 +29,7 @@ const App = () => (
           <Route path="/promocoes" element={<Promocoes />} />
           <Route path="/combos" element={<Combos />} />
           <Route path="/narguile" element={<Narguile />} />
+          <Route path="/bebidas" element={<Bebidas />} />
           
           {/* Client Routes */}
           <Route path="/cliente-dashboard" element={<ClientDashboard />} />
