@@ -10,6 +10,7 @@ import Login from "@/pages/Login";
 import ClientDashboard from "@/pages/client/ClientDashboard";
 import AdminDashboard from "@/pages/admin/AdminDashboard";
 import Promocoes from "@/pages/Promocoes";
+import Combos from "@/pages/Combos";
 
 const queryClient = new QueryClient();
 
@@ -24,6 +25,7 @@ const App = () => (
           <Route path="/login" element={<Login />} />
           <Route path="/login-admin" element={<Login />} />
           <Route path="/promocoes" element={<Promocoes />} />
+          <Route path="/combos" element={<Combos />} />
           
           {/* Client Routes */}
           <Route path="/cliente-dashboard" element={<ClientDashboard />} />
