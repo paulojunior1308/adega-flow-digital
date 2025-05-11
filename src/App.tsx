@@ -11,6 +11,7 @@ import ClientDashboard from "@/pages/client/ClientDashboard";
 import AdminDashboard from "@/pages/admin/AdminDashboard";
 import Promocoes from "@/pages/Promocoes";
 import Combos from "@/pages/Combos";
+import Narguile from "@/pages/Narguile";
 
 const queryClient = new QueryClient();
 
@@ -26,6 +27,7 @@ const App = () => (
           <Route path="/login-admin" element={<Login />} />
           <Route path="/promocoes" element={<Promocoes />} />
           <Route path="/combos" element={<Combos />} />
+          <Route path="/narguile" element={<Narguile />} />
           
           {/* Client Routes */}
           <Route path="/cliente-dashboard" element={<ClientDashboard />} />
