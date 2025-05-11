@@ -13,6 +13,9 @@ import Promocoes from "@/pages/Promocoes";
 import Combos from "@/pages/Combos";
 import Narguile from "@/pages/Narguile";
 import Bebidas from "@/pages/Bebidas";
+import ClientCatalog from "@/pages/client/ClientCatalog";
+import ClientSearch from "@/pages/client/ClientSearch";
+import ClientCart from "@/pages/client/ClientCart";
 
 const queryClient = new QueryClient();
 
@@ -33,9 +36,9 @@ const App = () => (
           
           {/* Client Routes */}
           <Route path="/cliente-dashboard" element={<ClientDashboard />} />
-          <Route path="/cliente-catalogo" element={<ClientDashboard />} />
-          <Route path="/cliente-buscar" element={<ClientDashboard />} />
-          <Route path="/cliente-carrinho" element={<ClientDashboard />} />
+          <Route path="/cliente-catalogo" element={<ClientCatalog />} />
+          <Route path="/cliente-buscar" element={<ClientSearch />} />
+          <Route path="/cliente-carrinho" element={<ClientCart />} />
           <Route path="/cliente-enderecos" element={<ClientDashboard />} />
           <Route path="/cliente-pedidos" element={<ClientDashboard />} />
           <Route path="/cliente-perfil" element={<ClientDashboard />} />
