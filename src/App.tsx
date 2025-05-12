@@ -16,6 +16,9 @@ import Bebidas from "@/pages/Bebidas";
 import ClientCatalog from "@/pages/client/ClientCatalog";
 import ClientSearch from "@/pages/client/ClientSearch";
 import ClientCart from "@/pages/client/ClientCart";
+import ClientProfile from "@/pages/client/ClientProfile";
+import ClientAddresses from "@/pages/client/ClientAddresses";
+import ClientOrders from "@/pages/client/ClientOrders";
 
 const queryClient = new QueryClient();
 
@@ -39,9 +42,9 @@ const App = () => (
           <Route path="/cliente-catalogo" element={<ClientCatalog />} />
           <Route path="/cliente-buscar" element={<ClientSearch />} />
           <Route path="/cliente-carrinho" element={<ClientCart />} />
-          <Route path="/cliente-enderecos" element={<ClientDashboard />} />
-          <Route path="/cliente-pedidos" element={<ClientDashboard />} />
-          <Route path="/cliente-perfil" element={<ClientDashboard />} />
+          <Route path="/cliente-enderecos" element={<ClientAddresses />} />
+          <Route path="/cliente-pedidos" element={<ClientOrders />} />
+          <Route path="/cliente-perfil" element={<ClientProfile />} />
           
           {/* Admin Routes */}
           <Route path="/admin-dashboard" element={<AdminDashboard />} />
