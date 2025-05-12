@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Link } from 'react-router-dom';
 import ClientSidebar from '@/components/client/ClientSidebar';
@@ -85,6 +84,7 @@ const RECENT_PRODUCTS = [
     price: 'R$ 42,90',
     image: 'https://images.unsplash.com/photo-1618160702438-9b02ab6515c9',
     category: 'Cervejas',
+    oldPrice: null, // Added the oldPrice property with null value
   },
   {
     id: '6',
@@ -92,6 +92,7 @@ const RECENT_PRODUCTS = [
     price: 'R$ 99,90',
     image: 'https://images.unsplash.com/photo-1582562124811-c09040d0a901',
     category: 'Destilados',
+    oldPrice: null, // Added the oldPrice property with null value
   },
   {
     id: '7',
@@ -99,6 +100,7 @@ const RECENT_PRODUCTS = [
     price: 'R$ 9,90',
     image: 'https://images.unsplash.com/photo-1582562124811-c09040d0a901',
     category: 'Energéticos',
+    oldPrice: null, // Added the oldPrice property with null value
   },
   {
     id: '8',
@@ -106,6 +108,7 @@ const RECENT_PRODUCTS = [
     price: 'R$ 24,90',
     image: 'https://images.unsplash.com/photo-1721322800607-8c38375eef04',
     category: 'Narguilé',
+    oldPrice: null, // Added the oldPrice property with null value
   },
 ];
 
