@@ -1,11 +1,11 @@
 
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import ClientSidebar from '@/components/client/ClientSidebar';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ShoppingCart, Plus, Minus, Trash2, ArrowRight } from 'lucide-react';
+import { ShoppingCart, Plus, Minus, Trash2, ArrowRight, MapPin, Search } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { 
@@ -14,8 +14,29 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { Label } from "@/components/ui/label"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Textarea } from "@/components/ui/textarea";
 
 // Dados para simular o carrinho
 interface Product {
@@ -29,6 +50,20 @@ interface Product {
 interface CartItem {
   product: Product;
   quantity: number;
+}
+
+// Simulando um endereço
+interface Address {
+  id: string;
+  title: string;
+  street: string;
+  number: string;
+  complement?: string;
+  neighborhood: string;
+  city: string;
+  state: string;
+  zipcode: string;
+  isDefault: boolean;
 }
 
 // Dados de exemplo para o carrinho
@@ -57,29 +92,45 @@ const initialCart: CartItem[] = [
 
 // Opções de entrega
 const deliveryOptions = [
-  { id: "standard", name: "Padrão (2-3 dias)", price: 5.90 },
-  { id: "express", name: "Expressa (1 dia)", price: 12.90 },
-  { id: "free", name: "Grátis (5-7 dias)", price: 0 }
+  { id: "express", name: "Express (30-45 min)", price: 9.90 },
+  { id: "priority", name: "Prioritária (45-60 min)", price: 5.90 },
+  { id: "standard", name: "Padrão (60-90 min)", price: 3.90 }
 ];
 
 // Endereços salvos
 const savedAddresses = [
   {
     id: "address1",
-    name: "Casa",
-    street: "Avenida Paulista, 1000",
+    title: "Casa",
+    street: "Avenida Paulista",
+    number: "1000",
+    complement: "Apto 101",
+    neighborhood: "Bela Vista",
     city: "São Paulo",
     state: "SP",
-    zipcode: "01310-100"
+    zipcode: "01310-100",
+    isDefault: true
   },
   {
     id: "address2",
-    name: "Trabalho",
-    street: "Rua Augusta, 500",
+    title: "Trabalho",
+    street: "Rua Augusta",
+    number: "500",
+    complement: "",
+    neighborhood: "Consolação",
     city: "São Paulo",
     state: "SP",
-    zipcode: "01304-000"
+    zipcode: "01304-000",
+    isDefault: false
   }
+];
+
+// Horários disponíveis para entrega
+const deliveryTimeSlots = [
+  "Assim que possível",
+  "30-45 minutos",
+  "45-60 minutos",
+  "60-90 minutos"
 ];
 
 const ClientCart = () => {
@@ -88,9 +139,15 @@ const ClientCart = () => {
   const [total, setTotal] = useState(0);
   const [discountCode, setDiscountCode] = useState("");
   const [discount, setDiscount] = useState(0);
-  const [deliveryMethod, setDeliveryMethod] = useState("standard");
-  const [deliveryFee, setDeliveryFee] = useState(5.90);
-  const [selectedAddress, setSelectedAddress] = useState("address1");
+  const [deliveryMethod, setDeliveryMethod] = useState("express");
+  const [deliveryFee, setDeliveryFee] = useState(9.90);
+  const [selectedAddress, setSelectedAddress] = useState<string | null>("address1");
+  const [searchZipcode, setSearchZipcode] = useState("");
+  const [newAddress, setNewAddress] = useState<Partial<Address> | null>(null);
+  const [addressMode, setAddressMode] = useState<"saved" | "new">("saved");
+  const [deliveryTime, setDeliveryTime] = useState("Assim que possível");
+  const [deliveryInstructions, setDeliveryInstructions] = useState("");
+  const [showZipcodeResults, setShowZipcodeResults] = useState(false);
   
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -163,15 +220,260 @@ const ClientCart = () => {
     }
   };
   
+  // Simular busca de CEP
+  const searchByCEP = () => {
+    if (searchZipcode.length < 8) {
+      toast({
+        title: "CEP inválido",
+        description: "Por favor, digite um CEP válido",
+        variant: "destructive",
+        duration: 2000,
+      });
+      return;
+    }
+    
+    // Simulando busca de CEP (em produção substituir por API real)
+    const mockCepData = {
+      street: "Avenida Brasil",
+      neighborhood: "Centro",
+      city: "Rio de Janeiro",
+      state: "RJ",
+      zipcode: searchZipcode
+    };
+    
+    setNewAddress({
+      ...mockCepData,
+      number: '',
+      title: 'Novo endereço'
+    });
+    setShowZipcodeResults(true);
+    
+    toast({
+      title: "CEP encontrado",
+      description: "Endereço localizado com sucesso",
+      duration: 2000,
+    });
+  };
+  
+  // Confirmar novo endereço
+  const confirmNewAddress = () => {
+    if (newAddress && newAddress.number) {
+      toast({
+        title: "Endereço confirmado",
+        description: "Seu pedido será entregue neste endereço",
+        duration: 2000,
+      });
+      setAddressMode("new");
+      setShowZipcodeResults(false);
+    } else {
+      toast({
+        title: "Número é obrigatório",
+        description: "Por favor, informe o número do endereço",
+        variant: "destructive",
+        duration: 2000,
+      });
+    }
+  };
+  
   // Simular finalização da compra
   const checkout = () => {
+    // Verificação de endereço
+    if (addressMode === "saved" && !selectedAddress) {
+      toast({
+        title: "Endereço não selecionado",
+        description: "Por favor, selecione um endereço de entrega",
+        variant: "destructive",
+        duration: 2000,
+      });
+      return;
+    }
+    
+    if (addressMode === "new" && (!newAddress || !newAddress.number)) {
+      toast({
+        title: "Endereço incompleto",
+        description: "Por favor, complete as informações do endereço",
+        variant: "destructive",
+        duration: 2000,
+      });
+      return;
+    }
+    
+    let addressInfo = "";
+    
+    if (addressMode === "saved") {
+      const address = savedAddresses.find(addr => addr.id === selectedAddress);
+      if (address) {
+        addressInfo = `${address.street}, ${address.number}`;
+      }
+    } else if (addressMode === "new" && newAddress) {
+      addressInfo = `${newAddress.street}, ${newAddress.number}`;
+    }
+    
     toast({
       title: "Pedido finalizado!",
-      description: `Seu pedido no valor de R$ ${total.toFixed(2)} foi confirmado!`,
+      description: `Seu pedido no valor de R$ ${total.toFixed(2)} será entregue em ${deliveryTime} em ${addressInfo}`,
       duration: 3000,
     });
     setCart([]);
     navigate('/cliente-pedidos');
+  };
+  
+  const renderAddressSelection = () => {
+    if (addressMode === "saved") {
+      return (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="font-medium">Selecione um endereço salvo</h3>
+            <Button 
+              variant="link" 
+              onClick={() => setAddressMode("new")}
+              className="text-sm p-0 h-auto"
+            >
+              Novo endereço
+            </Button>
+          </div>
+          
+          <RadioGroup 
+            value={selectedAddress || undefined}
+            onValueChange={setSelectedAddress}
+            className="space-y-3"
+          >
+            {savedAddresses.map(address => (
+              <div key={address.id} className="flex items-start space-x-2 rounded-md border p-3">
+                <RadioGroupItem value={address.id} id={address.id} className="mt-1" />
+                <div>
+                  <Label htmlFor={address.id} className="font-medium">{address.title}</Label>
+                  <p className="text-sm text-gray-500">{address.street}, {address.number}</p>
+                  {address.complement && <p className="text-sm text-gray-500">{address.complement}</p>}
+                  <p className="text-sm text-gray-500">{address.neighborhood}</p>
+                  <p className="text-sm text-gray-500">{address.city}, {address.state} - {address.zipcode}</p>
+                </div>
+              </div>
+            ))}
+          </RadioGroup>
+          
+          <div className="flex justify-between items-center">
+            <Button 
+              variant="link" 
+              className="p-0 h-auto"
+              onClick={() => navigate('/cliente-enderecos')}
+            >
+              Gerenciar endereços
+            </Button>
+          </div>
+        </div>
+      );
+    } else {
+      return (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="font-medium">Novo endereço para entrega</h3>
+            {savedAddresses.length > 0 && (
+              <Button 
+                variant="link" 
+                onClick={() => setAddressMode("saved")}
+                className="text-sm p-0 h-auto"
+              >
+                Usar endereço salvo
+              </Button>
+            )}
+          </div>
+          
+          <div className="space-y-3">
+            <div className="flex space-x-2">
+              <div className="flex-1">
+                <Label htmlFor="zipcode">CEP</Label>
+                <div className="flex space-x-2">
+                  <Input
+                    id="zipcode"
+                    value={searchZipcode}
+                    onChange={(e) => setSearchZipcode(e.target.value)}
+                    placeholder="00000-000"
+                    className="flex-1"
+                  />
+                  <Button onClick={searchByCEP} type="button">
+                    <Search className="h-4 w-4 mr-1" /> Buscar
+                  </Button>
+                </div>
+              </div>
+            </div>
+            
+            {showZipcodeResults && newAddress && (
+              <div className="space-y-3 border p-3 rounded-md">
+                <div>
+                  <Label htmlFor="street">Rua</Label>
+                  <Input
+                    id="street"
+                    value={newAddress.street}
+                    onChange={(e) => setNewAddress({...newAddress, street: e.target.value})}
+                    readOnly
+                  />
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <Label htmlFor="number">Número*</Label>
+                    <Input
+                      id="number"
+                      value={newAddress.number || ''}
+                      onChange={(e) => setNewAddress({...newAddress, number: e.target.value})}
+                      placeholder="123"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="complement">Complemento</Label>
+                    <Input
+                      id="complement"
+                      value={newAddress.complement || ''}
+                      onChange={(e) => setNewAddress({...newAddress, complement: e.target.value})}
+                      placeholder="Apto, bloco, etc."
+                    />
+                  </div>
+                </div>
+                
+                <div>
+                  <Label htmlFor="neighborhood">Bairro</Label>
+                  <Input
+                    id="neighborhood"
+                    value={newAddress.neighborhood}
+                    onChange={(e) => setNewAddress({...newAddress, neighborhood: e.target.value})}
+                    readOnly
+                  />
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <Label htmlFor="city">Cidade</Label>
+                    <Input
+                      id="city"
+                      value={newAddress.city}
+                      onChange={(e) => setNewAddress({...newAddress, city: e.target.value})}
+                      readOnly
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="state">Estado</Label>
+                    <Input
+                      id="state"
+                      value={newAddress.state}
+                      onChange={(e) => setNewAddress({...newAddress, state: e.target.value})}
+                      readOnly
+                    />
+                  </div>
+                </div>
+                
+                <div className="pt-2">
+                  <Button onClick={confirmNewAddress} className="w-full">
+                    Confirmar endereço
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
   };
   
   return (
@@ -310,61 +612,74 @@ const ClientCart = () => {
                         </Button>
                       </div>
                       
-                      {/* Opções de entrega */}
+                      {/* Opções de entrega e endereço */}
                       <Accordion type="single" collapsible defaultValue="delivery">
                         <AccordionItem value="delivery">
-                          <AccordionTrigger>Opções de Entrega</AccordionTrigger>
+                          <AccordionTrigger>
+                            <div className="flex items-center">
+                              <MapPin className="mr-2 h-5 w-5 text-element-blue-neon" />
+                              Endereço de Entrega
+                            </div>
+                          </AccordionTrigger>
                           <AccordionContent>
-                            <RadioGroup 
-                              value={deliveryMethod}
-                              onValueChange={setDeliveryMethod}
-                              className="space-y-2"
-                            >
-                              {deliveryOptions.map(option => (
-                                <div key={option.id} className="flex items-center justify-between space-x-2 rounded-md border p-3">
-                                  <div className="flex items-center space-x-2">
-                                    <RadioGroupItem value={option.id} id={option.id} />
-                                    <Label htmlFor={option.id}>{option.name}</Label>
-                                  </div>
-                                  <span className="font-medium">
-                                    {option.price > 0 
-                                      ? `R$ ${option.price.toFixed(2)}` 
-                                      : "Grátis"
-                                    }
-                                  </span>
-                                </div>
-                              ))}
-                            </RadioGroup>
+                            {renderAddressSelection()}
                           </AccordionContent>
                         </AccordionItem>
                         
-                        <AccordionItem value="address">
-                          <AccordionTrigger>Endereço de Entrega</AccordionTrigger>
+                        <AccordionItem value="deliveryOptions">
+                          <AccordionTrigger>Opções de Entrega</AccordionTrigger>
                           <AccordionContent>
-                            <RadioGroup 
-                              value={selectedAddress}
-                              onValueChange={setSelectedAddress}
-                              className="space-y-2"
-                            >
-                              {savedAddresses.map(address => (
-                                <div key={address.id} className="flex items-start space-x-2 rounded-md border p-3">
-                                  <RadioGroupItem value={address.id} id={address.id} className="mt-1" />
-                                  <div>
-                                    <Label htmlFor={address.id} className="font-medium">{address.name}</Label>
-                                    <p className="text-sm text-gray-500">{address.street}</p>
-                                    <p className="text-sm text-gray-500">{address.city}, {address.state} - {address.zipcode}</p>
+                            <div className="space-y-4">
+                              <RadioGroup 
+                                value={deliveryMethod}
+                                onValueChange={setDeliveryMethod}
+                                className="space-y-2"
+                              >
+                                {deliveryOptions.map(option => (
+                                  <div key={option.id} className="flex items-center justify-between space-x-2 rounded-md border p-3">
+                                    <div className="flex items-center space-x-2">
+                                      <RadioGroupItem value={option.id} id={option.id} />
+                                      <Label htmlFor={option.id}>{option.name}</Label>
+                                    </div>
+                                    <span className="font-medium">
+                                      {option.price > 0 
+                                        ? `R$ ${option.price.toFixed(2)}` 
+                                        : "Grátis"
+                                      }
+                                    </span>
                                   </div>
-                                </div>
-                              ))}
-                            </RadioGroup>
-                            
-                            <Button 
-                              variant="link" 
-                              className="mt-2 p-0 h-auto"
-                              onClick={() => navigate('/cliente-enderecos')}
-                            >
-                              Gerenciar endereços
-                            </Button>
+                                ))}
+                              </RadioGroup>
+                              
+                              <div>
+                                <Label htmlFor="deliveryTime">Horário de entrega</Label>
+                                <Select 
+                                  value={deliveryTime} 
+                                  onValueChange={setDeliveryTime}
+                                >
+                                  <SelectTrigger id="deliveryTime">
+                                    <SelectValue placeholder="Selecione um horário" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {deliveryTimeSlots.map((slot) => (
+                                      <SelectItem key={slot} value={slot}>
+                                        {slot}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              
+                              <div>
+                                <Label htmlFor="instructions">Instruções para entrega</Label>
+                                <Textarea 
+                                  id="instructions"
+                                  placeholder="Ex: Deixar na portaria, apartamento 101, etc."
+                                  value={deliveryInstructions}
+                                  onChange={(e) => setDeliveryInstructions(e.target.value)}
+                                />
+                              </div>
+                            </div>
                           </AccordionContent>
                         </AccordionItem>
                       </Accordion>
