@@ -15,7 +15,8 @@ import {
   Store,
   PackageCheck,
   Truck,
-  FileCheck
+  FileCheck,
+  LogOut
 } from 'lucide-react';
 
 const AdminSidebar = () => {
