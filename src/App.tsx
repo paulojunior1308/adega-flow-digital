@@ -22,6 +22,11 @@ import ClientCart from "@/pages/client/ClientCart";
 import ClientProfile from "@/pages/client/ClientProfile";
 import ClientAddresses from "@/pages/client/ClientAddresses";
 import ClientOrders from "@/pages/client/ClientOrders";
+import AdminSales from "@/pages/admin/AdminSales";
+import AdminCustomers from "@/pages/admin/AdminCustomers";
+import AdminSuppliers from "@/pages/admin/AdminSuppliers";
+import AdminAccounts from "@/pages/admin/AdminAccounts";
+import AdminCashRegister from "@/pages/admin/AdminCashRegister";
 
 const queryClient = new QueryClient();
 
@@ -56,16 +61,15 @@ const App = () => (
           <Route path="/admin-pedidos" element={<AdminOrders />} />
           <Route path="/admin-estoque" element={<AdminStock />} />
           <Route path="/admin-cadastro-produtos" element={<AdminProductRegistration />} />
-          <Route path="/admin-relatorios" element={<AdminDashboard />} />
           
           {/* New Financial Management Routes */}
-          <Route path="/admin-vendas" element={<AdminDashboard />} />
-          <Route path="/admin-clientes" element={<AdminDashboard />} />
-          <Route path="/admin-fornecedores" element={<AdminDashboard />} />
+          <Route path="/admin-vendas" element={<AdminSales />} />
+          <Route path="/admin-clientes" element={<AdminCustomers />} />
+          <Route path="/admin-fornecedores" element={<AdminSuppliers />} />
           <Route path="/admin-pagamentos" element={<AdminDashboard />} />
-          <Route path="/admin-contas" element={<AdminDashboard />} />
-          <Route path="/admin-caixa" element={<AdminDashboard />} />
-          <Route path="/admin-inventario" element={<AdminDashboard />} />
+          <Route path="/admin-contas" element={<AdminAccounts />} />
+          <Route path="/admin-caixa" element={<AdminCashRegister />} />
+          <Route path="/admin-inventario" element={<AdminStock />} />
           
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
