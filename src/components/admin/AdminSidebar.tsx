@@ -6,11 +6,16 @@ import {
   Package, 
   Archive, 
   Plus, 
-  TrendingUp, 
-  Settings, 
-  LogOut,
   Menu,
-  X
+  X,
+  DollarSign,
+  CreditCard,
+  Receipt,
+  Users,
+  Store,
+  PackageCheck,
+  Truck,
+  FileCheck
 } from 'lucide-react';
 
 const AdminSidebar = () => {
@@ -39,14 +44,44 @@ const AdminSidebar = () => {
       path: '/admin-pedidos' 
     },
     { 
-      icon: <TrendingUp className="h-5 w-5" />, 
-      label: 'Relatórios', 
-      path: '/admin-relatorios' 
+      icon: <DollarSign className="h-5 w-5" />, 
+      label: 'Controle de Vendas', 
+      path: '/admin-vendas' 
     },
     { 
-      icon: <Settings className="h-5 w-5" />, 
-      label: 'Configurações', 
-      path: '/admin-configuracoes' 
+      icon: <Users className="h-5 w-5" />, 
+      label: 'Cadastro de Clientes', 
+      path: '/admin-clientes' 
+    },
+    { 
+      icon: <Truck className="h-5 w-5" />, 
+      label: 'Cadastro de Fornecedores', 
+      path: '/admin-fornecedores' 
+    },
+    { 
+      icon: <CreditCard className="h-5 w-5" />, 
+      label: 'Meios de Pagamento', 
+      path: '/admin-pagamentos' 
+    },
+    { 
+      icon: <Receipt className="h-5 w-5" />, 
+      label: 'Contas a Pagar', 
+      path: '/admin-contas' 
+    },
+    { 
+      icon: <Store className="h-5 w-5" />, 
+      label: 'Caixa', 
+      path: '/admin-caixa' 
+    },
+    { 
+      icon: <PackageCheck className="h-5 w-5" />, 
+      label: 'Inventário', 
+      path: '/admin-inventario' 
+    },
+    { 
+      icon: <FileCheck className="h-5 w-5" />, 
+      label: 'Relatório de Vendas', 
+      path: '/admin-relatorios' 
     }
   ];
   

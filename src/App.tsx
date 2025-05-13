@@ -57,7 +57,15 @@ const App = () => (
           <Route path="/admin-estoque" element={<AdminStock />} />
           <Route path="/admin-cadastro-produtos" element={<AdminProductRegistration />} />
           <Route path="/admin-relatorios" element={<AdminDashboard />} />
-          <Route path="/admin-configuracoes" element={<AdminDashboard />} />
+          
+          {/* New Financial Management Routes */}
+          <Route path="/admin-vendas" element={<AdminDashboard />} />
+          <Route path="/admin-clientes" element={<AdminDashboard />} />
+          <Route path="/admin-fornecedores" element={<AdminDashboard />} />
+          <Route path="/admin-pagamentos" element={<AdminDashboard />} />
+          <Route path="/admin-contas" element={<AdminDashboard />} />
+          <Route path="/admin-caixa" element={<AdminDashboard />} />
+          <Route path="/admin-inventario" element={<AdminDashboard />} />
           
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
