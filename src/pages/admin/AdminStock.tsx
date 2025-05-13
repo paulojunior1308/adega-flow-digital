@@ -215,7 +215,7 @@ const AdminStock = () => {
   // Filter products based on search term, category and stock status
   const filteredProducts = sortedProducts.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                        product.supplier.toLowerCase().includes(searchTerm.toLowerCase());
+                         product.supplier.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesCategory = categoryFilter === 'all' || product.category === categoryFilter;
     
