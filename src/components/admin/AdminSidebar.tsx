@@ -16,7 +16,7 @@ import {
   PackageCheck,
   Truck,
   FileCheck,
-  LogOut
+  LogOut as LogOutIcon
 } from 'lucide-react';
 
 const AdminSidebar = () => {
@@ -152,7 +152,7 @@ const AdminSidebar = () => {
               to="/login"
               className="flex items-center p-3 rounded-lg text-white hover:bg-white/10 transition-colors"
             >
-              <LogOut className="h-5 w-5" />
+              <LogOutIcon className="h-5 w-5" />
               {!isCollapsed && <span className="ml-3">Sair</span>}
             </NavLink>
           </div>
@@ -206,7 +206,7 @@ const AdminSidebar = () => {
                   className="flex items-center p-3 rounded-lg text-white hover:bg-white/10 transition-colors"
                   onClick={toggleMobile}
                 >
-                  <LogOut className="h-5 w-5" />
+                  <LogOutIcon className="h-5 w-5" />
                   <span className="ml-3">Sair</span>
                 </NavLink>
               </div>
