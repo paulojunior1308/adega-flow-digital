@@ -320,7 +320,7 @@ const AdminStock = () => {
                   <SelectValue placeholder="Categoria" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todas Categorias</SelectItem>
+                  <SelectItem value="all">Todas Categorias</SelectItem>
                   {categories.map((category) => (
                     <SelectItem key={category} value={category}>{category}</SelectItem>
                   ))}
@@ -332,7 +332,7 @@ const AdminStock = () => {
                   <SelectValue placeholder="Status Estoque" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos Status</SelectItem>
+                  <SelectItem value="all">Todos Status</SelectItem>
                   <SelectItem value="low">Baixo Estoque</SelectItem>
                   <SelectItem value="out">Esgotado</SelectItem>
                   <SelectItem value="available">Disponível</SelectItem>
