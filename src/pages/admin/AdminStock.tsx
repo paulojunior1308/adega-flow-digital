@@ -172,8 +172,8 @@ const suppliers = Array.from(new Set(sampleProducts.map(product => product.suppl
 
 const AdminStock = () => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState<string>('');
-  const [stockFilter, setStockFilter] = useState<string>('');
+  const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [stockFilter, setStockFilter] = useState<string>('all');
   const [isUpdateDialogOpen, setIsUpdateDialogOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [stockUpdateAmount, setStockUpdateAmount] = useState<number>(0);
@@ -217,9 +217,9 @@ const AdminStock = () => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                         product.supplier.toLowerCase().includes(searchTerm.toLowerCase());
     
-    const matchesCategory = categoryFilter === '' || product.category === categoryFilter;
+    const matchesCategory = categoryFilter === 'all' || product.category === categoryFilter;
     
-    const matchesStock = stockFilter === '' || 
+    const matchesStock = stockFilter === 'all' || 
                         (stockFilter === 'low' && product.stockStatus === 'low') ||
                         (stockFilter === 'out' && product.stockStatus === 'out') ||
                         (stockFilter === 'available' && product.stockStatus !== 'out');
