@@ -11,6 +11,7 @@ import ClientDashboard from "@/pages/client/ClientDashboard";
 import AdminDashboard from "@/pages/admin/AdminDashboard";
 import AdminOrders from "@/pages/admin/AdminOrders";
 import AdminStock from "@/pages/admin/AdminStock";
+import AdminProductRegistration from "@/pages/admin/AdminProductRegistration";
 import Promocoes from "@/pages/Promocoes";
 import Combos from "@/pages/Combos";
 import Narguile from "@/pages/Narguile";
@@ -54,7 +55,7 @@ const App = () => (
           <Route path="/admin-dashboard" element={<AdminDashboard />} />
           <Route path="/admin-pedidos" element={<AdminOrders />} />
           <Route path="/admin-estoque" element={<AdminStock />} />
-          <Route path="/admin-cadastro-produtos" element={<AdminDashboard />} />
+          <Route path="/admin-cadastro-produtos" element={<AdminProductRegistration />} />
           <Route path="/admin-relatorios" element={<AdminDashboard />} />
           <Route path="/admin-configuracoes" element={<AdminDashboard />} />
           

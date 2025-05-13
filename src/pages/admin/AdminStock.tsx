@@ -1,5 +1,6 @@
 
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import AdminSidebar from '@/components/admin/AdminSidebar';
 import { 
   Table, 
@@ -171,6 +172,7 @@ const categories = Array.from(new Set(sampleProducts.map(product => product.cate
 const suppliers = Array.from(new Set(sampleProducts.map(product => product.supplier)));
 
 const AdminStock = () => {
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [stockFilter, setStockFilter] = useState<string>('all');
@@ -345,7 +347,10 @@ const AdminStock = () => {
               </Button>
             </div>
             
-            <Button className="bg-element-blue-dark flex items-center gap-2">
+            <Button 
+              className="bg-element-blue-dark flex items-center gap-2"
+              onClick={() => navigate('/admin-cadastro-produtos')}
+            >
               <Plus className="h-4 w-4" />
               <span>Novo Produto</span>
             </Button>
