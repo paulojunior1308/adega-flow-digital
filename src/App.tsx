@@ -27,6 +27,7 @@ import AdminCustomers from "@/pages/admin/AdminCustomers";
 import AdminSuppliers from "@/pages/admin/AdminSuppliers";
 import AdminAccounts from "@/pages/admin/AdminAccounts";
 import AdminCashRegister from "@/pages/admin/AdminCashRegister";
+import AdminPayments from "@/pages/admin/AdminPayments";
 
 const queryClient = new QueryClient();
 
@@ -62,11 +63,11 @@ const App = () => (
           <Route path="/admin-estoque" element={<AdminStock />} />
           <Route path="/admin-cadastro-produtos" element={<AdminProductRegistration />} />
           
-          {/* New Financial Management Routes */}
+          {/* Financial Management Routes */}
           <Route path="/admin-vendas" element={<AdminSales />} />
           <Route path="/admin-clientes" element={<AdminCustomers />} />
           <Route path="/admin-fornecedores" element={<AdminSuppliers />} />
-          <Route path="/admin-pagamentos" element={<AdminDashboard />} />
+          <Route path="/admin-pagamentos" element={<AdminPayments />} />
           <Route path="/admin-contas" element={<AdminAccounts />} />
           <Route path="/admin-caixa" element={<AdminCashRegister />} />
           <Route path="/admin-inventario" element={<AdminStock />} />
