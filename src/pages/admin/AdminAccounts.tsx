@@ -43,7 +43,7 @@ const AdminAccounts = () => {
   return (
     <div className="flex h-screen bg-gray-100">
       <AdminSidebar />
-      <div className="flex-1 p-6 overflow-y-auto">
+      <div className="flex-1 p-6 overflow-y-auto ml-0 lg:ml-64">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold text-element-blue-dark">Contas a Pagar</h1>
           <Button className="bg-element-blue-neon text-element-gray-dark hover:bg-element-blue-neon/80">

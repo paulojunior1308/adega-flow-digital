@@ -121,7 +121,7 @@ const AdminPayments = () => {
   return (
     <div className="flex h-screen bg-gray-100">
       <AdminSidebar />
-      <div className="flex-1 p-6 overflow-y-auto">
+      <div className="flex-1 p-6 overflow-y-auto ml-0 lg:ml-64">
         <h1 className="text-2xl font-bold text-element-blue-dark mb-6">Meios de Pagamento</h1>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
