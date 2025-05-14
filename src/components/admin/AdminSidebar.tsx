@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { 
@@ -133,7 +134,7 @@ const AdminSidebar = () => {
                     ${isActive ? 'bg-element-blue-neon text-element-gray-dark' : 'hover:bg-white/10 text-white'}
                   `}
                 >
-                  {item.icon}
+                  <span className="flex items-center justify-center w-5 h-5">{item.icon}</span>
                   {!isCollapsed && <span className="ml-3">{item.label}</span>}
                 </NavLink>
               ))}
@@ -145,7 +146,7 @@ const AdminSidebar = () => {
               to="/login"
               className="flex items-center p-3 rounded-lg text-white hover:bg-white/10 transition-colors"
             >
-              <LogOutIcon className="h-5 w-5" />
+              <span className="flex items-center justify-center w-5 h-5"><LogOutIcon className="h-5 w-5" /></span>
               {!isCollapsed && <span className="ml-3">Sair</span>}
             </NavLink>
           </div>
@@ -186,7 +187,7 @@ const AdminSidebar = () => {
                       `}
                       onClick={toggleMobile}
                     >
-                      {item.icon}
+                      <span className="flex items-center justify-center w-5 h-5">{item.icon}</span>
                       <span className="ml-3">{item.label}</span>
                     </NavLink>
                   ))}
@@ -199,7 +200,7 @@ const AdminSidebar = () => {
                   className="flex items-center p-3 rounded-lg text-white hover:bg-white/10 transition-colors"
                   onClick={toggleMobile}
                 >
-                  <LogOutIcon className="h-5 w-5" />
+                  <span className="flex items-center justify-center w-5 h-5"><LogOutIcon className="h-5 w-5" /></span>
                   <span className="ml-3">Sair</span>
                 </NavLink>
               </div>
