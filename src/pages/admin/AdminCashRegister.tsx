@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import AdminSidebar from '@/components/admin/AdminSidebar';
 import { Button } from '@/components/ui/button';
@@ -18,7 +17,6 @@ import {
   Menu,
   X,
   ArrowLeft,
-  Cash,
   Image,
   User
 } from 'lucide-react';
@@ -490,7 +488,7 @@ const AdminCashRegister = () => {
               className="bg-cyan-500 hover:bg-cyan-600"
               onClick={() => processPayment('dinheiro')}
             >
-              <Cash className="mr-1 h-4 w-4" />
+              <DollarSign className="mr-1 h-4 w-4" />
               <span className="text-xs">Dinheiro</span>
             </Button>
             <Button 
