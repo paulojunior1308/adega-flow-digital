@@ -1,10 +1,10 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import AdminSidebar from '@/components/admin/AdminSidebar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, ShoppingCart, ListPlus, X, ArrowRight, RefreshCcw, DollarSign, QrCode, CreditCard, IdCard, Menu } from 'lucide-react';
-import { useToast } from "@/components/ui/use-toast";
+import { Search, ShoppingCart, ListPlus, X, ArrowRight, RefreshCcw, DollarSign, QrCode, CreditCard, IdCard } from 'lucide-react';
+import { useToast } from "@/hooks/use-toast";
 import { 
   Dialog,
   DialogContent, 
@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Card, CardContent } from '@/components/ui/card';
 
 // Types definition
 interface Product {
@@ -20,6 +21,7 @@ interface Product {
   code: string;
   name: string;
   price: number;
+  pinned?: boolean;
   image?: string;
 }
 
@@ -40,23 +42,53 @@ const AdminPDV = () => {
   const [productQuantity, setProductQuantity] = useState(1);
   const [quickProductsOpen, setQuickProductsOpen] = useState(false);
   const [ticketNumber, setTicketNumber] = useState(34);
+  const [products, setProducts] = useState<Product[]>([
+    { id: 1, code: 'CERV1', name: 'Cerveja Heineken Lata 350ml', price: 7.50, pinned: false },
+    { id: 2, code: 'VINHO1', name: 'Vinho Tinto Taça 150ml', price: 12.00, pinned: false },
+    { id: 3, code: 'GUAR1', name: 'Guaraná Lata 350ml', price: 5.00, pinned: false },
+    { id: 4, code: 'EMPFR', name: 'Empada de Frango', price: 8.00, pinned: false },
+    { id: 5, code: 'CAFE1', name: 'Café Expresso', price: 4.00, pinned: false },
+    { id: 6, code: 'BRIG1', name: 'Brigadeiro', price: 3.00, pinned: false },
+    { id: 7, code: 'SUCO1', name: 'Suco de Laranja', price: 6.00, pinned: false },
+    { id: 8, code: 'SAND1', name: 'Sanduíche Agreste', price: 15.00, pinned: false },
+    { id: 9, code: 'COCA1', name: 'Coca Lata 350ml', price: 5.00, pinned: false },
+    { id: 10, code: 'BOLO1', name: 'Bolo SESC', price: 7.00, pinned: false },
+    { id: 11, code: 'QUIB1', name: 'Quibe de Abóbora', price: 6.00, pinned: false },
+    { id: 12, code: 'SAL1', name: 'Salada Pequena', price: 10.00, pinned: false },
+  ]);
+  const [pinnedProducts, setPinnedProducts] = useState<Product[]>([]);
+  const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   const { toast } = useToast();
   
-  // Quick products catalog - sample data
-  const quickProducts: Product[] = [
-    { id: 1, code: 'CERV1', name: 'Cerveja Heineken Lata 350ml', price: 7.50 },
-    { id: 2, code: 'VINHO1', name: 'Vinho Tinto Taça 150ml', price: 12.00 },
-    { id: 3, code: 'GUAR1', name: 'Guaraná Lata 350ml', price: 5.00 },
-    { id: 4, code: 'EMPFR', name: 'Empada de Frango', price: 8.00 },
-    { id: 5, code: 'CAFE1', name: 'Café Expresso', price: 4.00 },
-    { id: 6, code: 'BRIG1', name: 'Brigadeiro', price: 3.00 },
-    { id: 7, code: 'SUCO1', name: 'Suco de Laranja', price: 6.00 },
-    { id: 8, code: 'SAND1', name: 'Sanduíche Agreste', price: 15.00 },
-    { id: 9, code: 'COCA1', name: 'Coca Lata 350ml', price: 5.00 },
-    { id: 10, code: 'BOLO1', name: 'Bolo SESC', price: 7.00 },
-    { id: 11, code: 'QUIB1', name: 'Quibe de Abóbora', price: 6.00 },
-    { id: 12, code: 'SAL1', name: 'Salada Pequena', price: 10.00 },
-  ];
+  // Atualizar produtos fixados quando houver mudanças nos produtos
+  useEffect(() => {
+    const newPinnedProducts = products.filter(product => product.pinned);
+    setPinnedProducts(newPinnedProducts);
+  }, [products]);
+  
+  // Filtrar produtos ao pesquisar
+  useEffect(() => {
+    if (searchQuery.trim() === '') {
+      setFilteredProducts([]);
+    } else {
+      const filtered = products.filter(product => 
+        product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        product.code.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+      setFilteredProducts(filtered);
+    }
+  }, [searchQuery, products]);
+
+  // Toggle pin product
+  const togglePinProduct = (productId: number) => {
+    const updatedProducts = products.map(product => {
+      if (product.id === productId) {
+        return { ...product, pinned: !product.pinned };
+      }
+      return product;
+    });
+    setProducts(updatedProducts);
+  };
 
   // Calculate totals
   const subtotal = cartItems.reduce((sum, item) => sum + item.total, 0);
@@ -106,7 +138,7 @@ const AdminPDV = () => {
       return;
     }
 
-    const product = quickProducts.find(p => p.code === productCode);
+    const product = products.find(p => p.code === productCode);
     if (product) {
       addToCart(product, productQuantity);
       setProductCode('');
@@ -121,10 +153,24 @@ const AdminPDV = () => {
 
   // Remove item from cart
   const removeItem = (itemId: number) => {
-    setCartItems(cartItems.filter(item => item.id !== itemId));
-    toast({
-      description: "Item removido do carrinho.",
-    });
+    const itemToRemove = cartItems.find(item => item.id === itemId);
+    if (itemToRemove) {
+      setCartItems(cartItems.filter(item => item.id !== itemId));
+      toast({
+        description: `${itemToRemove.name} removido do carrinho.`,
+      });
+    } else if (cartItems.length > 0) {
+      // Se não achou o item específico mas tem itens no carrinho, remove o último
+      const lastItem = cartItems[cartItems.length - 1];
+      setCartItems(cartItems.slice(0, -1));
+      toast({
+        description: `${lastItem.name} removido do carrinho.`,
+      });
+    } else {
+      toast({
+        description: "Não há itens para remover.",
+      });
+    }
   };
 
   // Cancel ticket
@@ -246,12 +292,45 @@ const AdminPDV = () => {
               </Button>
             </div>
 
-            {/* Products space - could be used to display search results */}
-            <div className="flex-1 bg-white rounded-md border p-4">
-              {/* This space could show search results or recently used products */}
-              <div className="text-gray-500 text-center">
-                Use a barra de busca ou selecione um produto rápido
-              </div>
+            {/* Produtos fixados / Produtos filtrados pela busca */}
+            <div className="flex-1 bg-white rounded-md border p-4 overflow-y-auto">
+              {searchQuery.trim() !== '' && filteredProducts.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {filteredProducts.map(product => (
+                    <div 
+                      key={product.id}
+                      className="border rounded-lg p-4 cursor-pointer hover:border-cyan-400 transition-colors"
+                      onClick={() => addToCart(product)}
+                    >
+                      <div className="font-medium">{product.code} - {product.name}</div>
+                      <div className="text-green-600 mt-1">R$ {product.price.toFixed(2)}</div>
+                    </div>
+                  ))}
+                </div>
+              ) : pinnedProducts.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {pinnedProducts.map(product => (
+                    <Card 
+                      key={product.id} 
+                      className="cursor-pointer border hover:border-cyan-400 transition-colors"
+                      onClick={() => addToCart(product)}
+                    >
+                      <CardContent className="p-3">
+                        <div className="font-medium">{product.code} - {product.name}</div>
+                        <div className="text-green-600 mt-1">R$ {product.price.toFixed(2)}</div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : searchQuery.trim() !== '' ? (
+                <div className="text-center py-8 text-gray-500">
+                  Nenhum produto encontrado para "{searchQuery}"
+                </div>
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  Selecione produtos na opção "Produtos Rápidos" para aparecerem aqui
+                </div>
+              )}
             </div>
           </div>
 
@@ -314,39 +393,11 @@ const AdminPDV = () => {
                 <div className="font-medium text-element-blue-dark text-lg">R$ {total.toFixed(2)}</div>
               </div>
             </div>
-
-            {/* Finish button */}
-            <div className="p-4 bg-gray-100">
-              <Button 
-                className="w-full bg-cyan-400 hover:bg-cyan-500 text-white"
-                onClick={() => finishTicket('Finalizar')}
-              >
-                Finalizar Tíquete
-              </Button>
-            </div>
           </div>
         </div>
 
         {/* Bottom Buttons */}
-        <div className="grid grid-cols-8 gap-1 bg-gray-200 p-1">
-          <Button 
-            variant="outline" 
-            className="bg-cyan-400 hover:bg-cyan-500 text-white flex flex-col items-center justify-center py-4 h-auto"
-            onClick={() => toast({ description: "Menu de combos aberto." })}
-          >
-            <Menu className="h-5 w-5 mb-1" />
-            <span className="text-xs">Combos</span>
-          </Button>
-          
-          <Button 
-            variant="outline" 
-            className="bg-cyan-400 hover:bg-cyan-500 text-white flex flex-col items-center justify-center py-4 h-auto"
-            onClick={() => toast({ description: "Integrações não implementadas." })}
-          >
-            <RefreshCcw className="h-5 w-5 mb-1" />
-            <span className="text-xs">Integrações</span>
-          </Button>
-          
+        <div className="grid grid-cols-6 gap-1 bg-gray-200 p-1">
           <Button 
             variant="outline" 
             className="bg-cyan-400 hover:bg-cyan-500 text-white flex flex-col items-center justify-center py-4 h-auto"
@@ -363,15 +414,6 @@ const AdminPDV = () => {
           >
             <X className="h-5 w-5 mb-1" />
             <span className="text-xs">Cancelar Tíquete</span>
-          </Button>
-          
-          <Button 
-            variant="outline" 
-            className="bg-cyan-400 hover:bg-cyan-500 text-white flex flex-col items-center justify-center py-4 h-auto"
-            onClick={() => finishTicket('Finalizar')}
-          >
-            <ArrowRight className="h-5 w-5 mb-1" />
-            <span className="text-xs">Finalizar</span>
           </Button>
           
           <Button 
@@ -403,7 +445,7 @@ const AdminPDV = () => {
           
           <Button 
             variant="outline" 
-            className="bg-cyan-400 hover:bg-cyan-500 text-white flex flex-col items-center justify-center py-4 h-auto col-start-1"
+            className="bg-cyan-400 hover:bg-cyan-500 text-white flex flex-col items-center justify-center py-4 h-auto"
             onClick={() => finishTicket('Cartão Débito')}
           >
             <CreditCard className="h-5 w-5 mb-1" />
@@ -412,7 +454,7 @@ const AdminPDV = () => {
           
           <Button 
             variant="outline" 
-            className="bg-cyan-400 hover:bg-cyan-500 text-white flex flex-col items-center justify-center py-4 h-auto"
+            className="bg-cyan-400 hover:bg-cyan-500 text-white flex flex-col items-center justify-center py-4 h-auto col-start-1"
             onClick={() => finishTicket('Cartão Crédito')}
           >
             <CreditCard className="h-5 w-5 mb-1" />
@@ -422,28 +464,10 @@ const AdminPDV = () => {
           <Button 
             variant="outline" 
             className="bg-cyan-400 hover:bg-cyan-500 text-white flex flex-col items-center justify-center py-4 h-auto"
-            onClick={() => toast({ description: "Função de voucher não implementada." })}
-          >
-            <CreditCard className="h-5 w-5 mb-1" />
-            <span className="text-xs">Voucher</span>
-          </Button>
-          
-          <Button 
-            variant="outline" 
-            className="bg-cyan-400 hover:bg-cyan-500 text-white flex flex-col items-center justify-center py-4 h-auto"
             onClick={handleCpfCnpj}
           >
             <IdCard className="h-5 w-5 mb-1" />
             <span className="text-xs">CPF/CNPJ</span>
-          </Button>
-          
-          <Button 
-            variant="outline" 
-            className="bg-cyan-400 hover:bg-cyan-500 text-white flex flex-col items-center justify-center py-4 h-auto"
-            onClick={() => toast({ description: "Menu principal aberto." })}
-          >
-            <Menu className="h-5 w-5 mb-1" />
-            <span className="text-xs">Menu</span>
           </Button>
         </div>
 
@@ -456,21 +480,21 @@ const AdminPDV = () => {
                 Selecionar Produtos Rápidos
               </DialogTitle>
             </DialogHeader>
-            <div className="grid grid-cols-3 gap-4 py-4">
-              {quickProducts.map((product) => (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 py-4">
+              {products.map((product) => (
                 <div 
                   key={product.id} 
-                  className="border rounded-lg p-4 cursor-pointer hover:border-yellow-400 transition-colors"
-                  onClick={() => {
-                    addToCart(product);
-                    setQuickProductsOpen(false);
-                  }}
+                  className={`border rounded-lg p-4 cursor-pointer transition-colors ${product.pinned ? 'border-yellow-400 bg-yellow-50' : 'hover:border-yellow-400'}`}
                 >
-                  <div className="flex justify-between items-start mb-2">
-                    <span className="text-sm font-medium">{product.name}</span>
-                    <Checkbox id={`product-${product.id}`} />
+                  <div className="flex flex-col items-center mb-2">
+                    <Checkbox 
+                      id={`product-${product.id}`} 
+                      checked={product.pinned}
+                      onCheckedChange={() => togglePinProduct(product.id)}
+                    />
+                    <span className="font-medium text-center mt-2">{product.name}</span>
+                    <span className="text-green-600 font-medium mt-1">R$ {product.price.toFixed(2)}</span>
                   </div>
-                  <div className="text-sm text-gray-600">R$ {product.price.toFixed(2)}</div>
                 </div>
               ))}
             </div>
