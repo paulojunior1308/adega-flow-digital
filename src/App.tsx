@@ -28,6 +28,7 @@ import AdminSuppliers from "@/pages/admin/AdminSuppliers";
 import AdminAccounts from "@/pages/admin/AdminAccounts";
 import AdminCashRegister from "@/pages/admin/AdminCashRegister";
 import AdminPayments from "@/pages/admin/AdminPayments";
+import AdminPDV from "@/pages/admin/AdminPDV";
 
 const queryClient = new QueryClient();
 
@@ -71,6 +72,7 @@ const App = () => (
           <Route path="/admin-contas" element={<AdminAccounts />} />
           <Route path="/admin-caixa" element={<AdminCashRegister />} />
           <Route path="/admin-inventario" element={<AdminStock />} />
+          <Route path="/admin-pdv" element={<AdminPDV />} />
           
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
