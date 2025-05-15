@@ -111,26 +111,16 @@ const ToastDescription = React.forwardRef<
 ))
 ToastDescription.displayName = ToastPrimitives.Description.displayName
 
-type ToastProps = React.ComponentPropsWithoutRef<typeof Toast>
+export interface ToastProps extends React.ComponentPropsWithoutRef<typeof Toast> {
+  title?: string;
+  description?: string;
+  action?: React.ReactNode;
+  duration?: number;
+}
 
-type ToastActionElement = React.ReactElement<typeof ToastAction>
-
-// Define the toast context type and implementation
-type ToastContextType = {
-  toasts: { id: string; title?: string; description?: string; action?: ToastActionElement; [key: string]: any }[];
-  toast: (props: ToastProps) => void;
-};
-
-const ToastContext = React.createContext<ToastContextType>({
-  toasts: [],
-  toast: () => {},
-});
-
-// Export the useToast hook
-const useToast = () => React.useContext(ToastContext);
+export type ToastActionElement = React.ReactElement<typeof ToastAction>
 
 export {
-  type ToastProps,
   type ToastActionElement,
   ToastProvider,
   ToastViewport,
@@ -139,5 +129,4 @@ export {
   ToastDescription,
   ToastClose,
   ToastAction,
-  useToast,
 }

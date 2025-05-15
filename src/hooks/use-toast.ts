@@ -1,5 +1,6 @@
 
-import { type ToastProps, useToast as useToastOriginal } from "@/components/ui/toast";
+import { type ToastProps } from "@/components/ui/toast";
+import { useToast as useToastOriginal } from "@/components/ui/use-toast";
 
 export const useToast = useToastOriginal;
 

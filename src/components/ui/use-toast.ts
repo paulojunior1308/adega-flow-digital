@@ -4,16 +4,18 @@ import type { ToastProps } from "@/components/ui/toast";
 
 export const useToast = () => {
   return {
-    toast: (props: { title?: string; description?: string; variant?: "default" | "destructive" }) => {
+    toast: (props: ToastProps) => {
       sonnerToast(props.title || "", {
         description: props.description,
+        duration: props.duration,
       });
     },
   };
 };
 
-export const toast = (props: { title?: string; description?: string; variant?: "default" | "destructive" }) => {
+export const toast = (props: ToastProps) => {
   sonnerToast(props.title || "", {
     description: props.description,
+    duration: props.duration,
   });
 };
