@@ -4,7 +4,7 @@ import AdminSidebar from '@/components/admin/AdminSidebar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Search, ShoppingCart, ListPlus, X, ArrowRight, RefreshCcw, DollarSign, QrCode, CreditCard, IdCard, Menu } from 'lucide-react';
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/components/ui/use-toast";
 import { 
   Dialog,
   DialogContent, 
@@ -451,8 +451,8 @@ const AdminPDV = () => {
         <Dialog open={quickProductsOpen} onOpenChange={setQuickProductsOpen}>
           <DialogContent className="sm:max-w-[600px]">
             <DialogHeader>
-              <DialogTitle className="flex items-center">
-                <ListPlus className="h-5 w-5 mr-2" />
+              <DialogTitle className="flex items-center gap-2">
+                <ListPlus className="h-5 w-5" />
                 Selecionar Produtos Rápidos
               </DialogTitle>
             </DialogHeader>
