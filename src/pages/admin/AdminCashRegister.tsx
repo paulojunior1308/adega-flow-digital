@@ -14,177 +14,464 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
-  CardDescription,
-  CardFooter
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger
-} from '@/components/ui/tabs';
-import { DollarSign, CreditCard, Search, FileText, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ShoppingCart, Search, Plus, Menu } from 'lucide-react';
+import { useToast } from "@/hooks/use-toast";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Checkbox } from '@/components/ui/checkbox';
+
+interface CartItem {
+  id: number;
+  code: string;
+  name: string;
+  quantity: number;
+  price: number;
+  total: number;
+}
 
 const AdminCashRegister = () => {
-  // Sample data for cash register
-  const [transactions, setTransactions] = useState([
-    { id: 1, type: 'entrada', description: 'Venda #1052', method: 'Dinheiro', value: 'R$ 150,00', time: '14:25', operator: 'João Silva' },
-    { id: 2, type: 'saida', description: 'Pagamento Fornecedor', method: 'Dinheiro', value: 'R$ 230,50', time: '12:10', operator: 'João Silva' },
-    { id: 3, type: 'entrada', description: 'Venda #1051', method: 'Cartão', value: 'R$ 75,90', time: '11:42', operator: 'Maria Oliveira' },
-    { id: 4, type: 'entrada', description: 'Venda #1050', method: 'PIX', value: 'R$ 98,30', time: '10:15', operator: 'João Silva' },
-    { id: 5, type: 'saida', description: 'Retirada para Troco', method: 'Dinheiro', value: 'R$ 100,00', time: '09:30', operator: 'Maria Oliveira' },
-  ]);
+  const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [productCode, setProductCode] = useState('');
+  const [productQuantity, setProductQuantity] = useState(1);
+  const [quickProductsOpen, setQuickProductsOpen] = useState(false);
+  const [ticketNumber, setTicketNumber] = useState(34);
+  const { toast } = useToast();
   
-  // Calculate totals
-  const totalCash = 'R$ 1.540,00';
-  const totalIn = 'R$ 1.870,50';
-  const totalOut = 'R$ 330,50';
+  // Quick products catalog - sample data
+  const quickProducts = [
+    { id: 1, code: 'CERV1', name: 'Cerveja Heineken Lata 350ml', price: 7.50 },
+    { id: 2, code: 'VINHO1', name: 'Vinho Tinto Taça 150ml', price: 12.00 },
+    { id: 3, code: 'GUAR1', name: 'Guaraná Lata 350ml', price: 5.00 },
+    { id: 4, code: 'EMPFR', name: 'Empada de Frango', price: 8.00 },
+    { id: 5, code: 'CAFE1', name: 'Café Expresso', price: 4.00 },
+    { id: 6, code: 'BRIG1', name: 'Brigadeiro', price: 3.00 },
+    { id: 7, code: 'SUCO1', name: 'Suco de Laranja', price: 6.00 },
+    { id: 8, code: 'SAND1', name: 'Sanduíche Agreste', price: 15.00 },
+    { id: 9, code: 'COCA1', name: 'Coca Lata 350ml', price: 5.00 },
+    { id: 10, code: 'BOLO1', name: 'Bolo SESC', price: 7.00 },
+    { id: 11, code: 'QUIB1', name: 'Quibe de Abóbora', price: 6.00 },
+    { id: 12, code: 'SAL1', name: 'Salada Pequena', price: 10.00 },
+  ];
 
-  const [selectedTab, setSelectedTab] = useState('all');
-  
+  // Calculate totals
+  const subtotal = cartItems.reduce((sum, item) => sum + item.total, 0);
+  const discount = 0; // Could be implemented with a discount feature
+  const total = subtotal - discount;
+
+  // Add item to cart
+  const addToCart = (product: any, quantity: number = 1) => {
+    const existingItemIndex = cartItems.findIndex(item => item.code === product.code);
+    
+    if (existingItemIndex >= 0) {
+      // Update existing item
+      const updatedItems = [...cartItems];
+      updatedItems[existingItemIndex].quantity += quantity;
+      updatedItems[existingItemIndex].total = 
+        updatedItems[existingItemIndex].price * updatedItems[existingItemIndex].quantity;
+      
+      setCartItems(updatedItems);
+      toast({
+        title: "Atualizado",
+        description: `Quantidade de ${product.name} atualizada.`,
+      });
+    } else {
+      // Add new item
+      const newItem: CartItem = {
+        id: cartItems.length + 1,
+        code: product.code,
+        name: product.name,
+        quantity: quantity,
+        price: product.price,
+        total: product.price * quantity
+      };
+      
+      setCartItems([...cartItems, newItem]);
+      toast({
+        title: "Adicionado",
+        description: `${product.name} adicionado ao carrinho.`,
+      });
+    }
+  };
+
+  // Add product by code
+  const handleAddProductByCode = () => {
+    if (!productCode) {
+      toast({
+        title: "Erro",
+        description: "Por favor, insira um código de produto.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const product = quickProducts.find(p => p.code === productCode);
+    if (product) {
+      addToCart(product, productQuantity);
+      setProductCode('');
+      setProductQuantity(1);
+    } else {
+      toast({
+        title: "Erro",
+        description: "Produto não encontrado.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Remove item from cart
+  const removeItem = (itemId: number) => {
+    setCartItems(cartItems.filter(item => item.id !== itemId));
+    toast({
+      title: "Removido",
+      description: "Item removido do carrinho."
+    });
+  };
+
+  // Cancel ticket
+  const cancelTicket = () => {
+    if (cartItems.length === 0) {
+      toast({
+        title: "Info",
+        description: "Não há itens para cancelar.",
+      });
+      return;
+    }
+
+    setCartItems([]);
+    toast({
+      title: "Sucesso",
+      description: "Tíquete cancelado com sucesso.",
+    });
+  };
+
+  // Finish ticket
+  const finishTicket = (paymentMethod: string) => {
+    if (cartItems.length === 0) {
+      toast({
+        title: "Erro",
+        description: "Adicione itens ao carrinho para finalizar.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    toast({
+      title: "Sucesso",
+      description: `Venda finalizada! Pagamento via ${paymentMethod}.`,
+    });
+    
+    // Reset cart and increment ticket number
+    setCartItems([]);
+    setTicketNumber(prev => prev + 1);
+  };
+
   return (
     <div className="flex h-screen bg-gray-100">
       <AdminSidebar />
-      <div className="flex-1 p-6 overflow-y-auto ml-0 lg:ml-64">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold text-element-blue-dark">Caixa</h1>
-          <div className="flex space-x-2">
-            <Button className="bg-green-500 hover:bg-green-600">
-              <ArrowUpRight className="h-4 w-4 mr-2" />
-              Entrada no Caixa
-            </Button>
-            <Button className="bg-amber-500 hover:bg-amber-600">
-              <ArrowDownLeft className="h-4 w-4 mr-2" />
-              Saída do Caixa
-            </Button>
-            <Button className="bg-element-blue-dark hover:bg-element-blue-dark/80">
-              <FileText className="h-4 w-4 mr-2" />
-              Fechar Caixa
-            </Button>
+      <div className="flex-1 flex flex-col overflow-hidden p-0 ml-0 lg:ml-64">
+        {/* Header */}
+        <div className="bg-white shadow-sm p-4 flex justify-between items-center">
+          <div className="flex items-center gap-2">
+            <ShoppingCart className="h-6 w-6 text-element-blue-dark" />
+            <h1 className="text-xl font-medium text-element-blue-dark">Caixa Administrativo</h1>
+          </div>
+          <Button 
+            onClick={() => setQuickProductsOpen(true)} 
+            variant="outline" 
+            className="flex items-center gap-2"
+          >
+            <Menu className="h-4 w-4" />
+            Produtos Rápidos
+          </Button>
+        </div>
+
+        {/* Main content */}
+        <div className="flex flex-1 overflow-hidden">
+          {/* Left side - Product search */}
+          <div className="flex-1 flex flex-col p-4 overflow-y-auto">
+            {/* Current selected product */}
+            <div className="bg-white border rounded-md p-3 mb-4">
+              {cartItems.length > 0 && cartItems[cartItems.length - 1] ? (
+                <div className="text-lg font-medium text-element-blue-dark">
+                  {cartItems[cartItems.length - 1].code} - {cartItems[cartItems.length - 1].name}
+                </div>
+              ) : (
+                <div className="text-gray-500">Selecione um produto...</div>
+              )}
+            </div>
+
+            {/* Search bar */}
+            <div className="flex gap-2 mb-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <Input 
+                  type="text" 
+                  placeholder="Buscar por nome ou código..." 
+                  className="pl-9"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
+              <div className="w-32">
+                <Input 
+                  type="text" 
+                  placeholder="Cód.Prod" 
+                  value={productCode}
+                  onChange={(e) => setProductCode(e.target.value)}
+                />
+              </div>
+              <div className="w-16">
+                <Input 
+                  type="number" 
+                  min="1" 
+                  value={productQuantity}
+                  onChange={(e) => setProductQuantity(parseInt(e.target.value) || 1)}
+                />
+              </div>
+              <Button onClick={handleAddProductByCode} className="px-3">
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
+
+            {/* Products space - could be used to display search results */}
+            <div className="flex-1 bg-white rounded-md border p-4">
+              {/* This space could show search results or transactions history */}
+              <div className="text-gray-500 text-center">
+                Use a barra de busca ou selecione um produto rápido
+              </div>
+            </div>
+          </div>
+
+          {/* Right side - Cart */}
+          <div className="w-96 bg-white shadow-md flex flex-col overflow-hidden">
+            {/* Ticket header */}
+            <div className="p-4 bg-gray-100 flex justify-between items-center">
+              <div className="font-medium">Tíquete: {ticketNumber}</div>
+              <div className="text-green-600 font-medium">ABERTO</div>
+            </div>
+
+            {/* Cart items */}
+            <div className="flex-1 overflow-y-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-12">Item</TableHead>
+                    <TableHead className="w-16">Cód.</TableHead>
+                    <TableHead>Produto</TableHead>
+                    <TableHead className="w-12 text-center">Qtd</TableHead>
+                    <TableHead className="w-20 text-right">Preço</TableHead>
+                    <TableHead className="w-20 text-right">Total</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {cartItems.length > 0 ? (
+                    cartItems.map((item, index) => (
+                      <TableRow key={item.id} className="cursor-pointer hover:bg-gray-50" onClick={() => removeItem(item.id)}>
+                        <TableCell>{index + 1}</TableCell>
+                        <TableCell>{item.code}</TableCell>
+                        <TableCell className="font-medium">{item.name}</TableCell>
+                        <TableCell className="text-center">{item.quantity}</TableCell>
+                        <TableCell className="text-right">R$ {item.price.toFixed(2)}</TableCell>
+                        <TableCell className="text-right">R$ {item.total.toFixed(2)}</TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-8 text-gray-500">
+                        Nenhum item adicionado
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+
+            {/* Totals */}
+            <div className="p-4 border-t">
+              <div className="flex justify-between mb-1">
+                <div>Valor:</div>
+                <div className="font-medium text-green-600">R$ {subtotal.toFixed(2)}</div>
+              </div>
+              <div className="flex justify-between mb-1">
+                <div>Desconto:</div>
+                <div className="font-medium text-red-600">R$ {discount.toFixed(2)}</div>
+              </div>
+              <div className="flex justify-between">
+                <div>Total:</div>
+                <div className="font-medium text-element-blue-dark text-lg">R$ {total.toFixed(2)}</div>
+              </div>
+            </div>
+
+            {/* Finish button */}
+            <div className="p-4 bg-gray-100">
+              <Button 
+                className="w-full bg-cyan-400 hover:bg-cyan-500 text-white"
+                onClick={() => finishTicket('Finalizar')}
+              >
+                Finalizar Tíquete
+              </Button>
+            </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-          <Card className="bg-green-50">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium flex items-center">
-                <DollarSign className="h-4 w-4 mr-2 text-green-500" /> Total em Caixa
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold text-green-600">{totalCash}</p>
-              <p className="text-xs text-muted-foreground mt-1">Atualizado: Hoje, 14:25</p>
-            </CardContent>
-          </Card>
+        {/* Bottom Buttons */}
+        <div className="grid grid-cols-8 gap-1 bg-gray-200 p-1">
+          <Button 
+            variant="outline" 
+            className="bg-cyan-400 hover:bg-cyan-500 text-white flex flex-col items-center justify-center py-4 h-auto"
+            onClick={() => toast({title: "Info", description: "Menu de combos aberto."})}
+          >
+            <Menu className="h-5 w-5 mb-1" />
+            <span className="text-xs">Combos</span>
+          </Button>
           
-          <Card className="bg-blue-50">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium flex items-center">
-                <ArrowUpRight className="h-4 w-4 mr-2 text-blue-500" /> Entradas (Hoje)
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold text-blue-600">{totalIn}</p>
-              <p className="text-xs text-muted-foreground mt-1">15 operações realizadas</p>
-            </CardContent>
-          </Card>
+          <Button 
+            variant="outline" 
+            className="bg-cyan-400 hover:bg-cyan-500 text-white flex flex-col items-center justify-center py-4 h-auto"
+            onClick={() => toast({title: "Info", description: "Integrações não implementadas."})}
+          >
+            <Menu className="h-5 w-5 mb-1" />
+            <span className="text-xs">Integrações</span>
+          </Button>
           
-          <Card className="bg-amber-50">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium flex items-center">
-                <ArrowDownLeft className="h-4 w-4 mr-2 text-amber-500" /> Saídas (Hoje)
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold text-amber-600">{totalOut}</p>
-              <p className="text-xs text-muted-foreground mt-1">4 operações realizadas</p>
-            </CardContent>
-          </Card>
+          <Button 
+            variant="outline" 
+            className="bg-cyan-400 hover:bg-cyan-500 text-white flex flex-col items-center justify-center py-4 h-auto"
+            onClick={() => removeItem(cartItems.length > 0 ? cartItems[cartItems.length - 1].id : 0)}
+          >
+            <Menu className="h-5 w-5 mb-1" />
+            <span className="text-xs">Cancelar Item</span>
+          </Button>
+          
+          <Button 
+            variant="outline" 
+            className="bg-cyan-400 hover:bg-cyan-500 text-white flex flex-col items-center justify-center py-4 h-auto"
+            onClick={cancelTicket}
+          >
+            <Menu className="h-5 w-5 mb-1" />
+            <span className="text-xs">Cancelar Tíquete</span>
+          </Button>
+          
+          <Button 
+            variant="outline" 
+            className="bg-cyan-400 hover:bg-cyan-500 text-white flex flex-col items-center justify-center py-4 h-auto"
+            onClick={() => finishTicket('Finalizar')}
+          >
+            <Menu className="h-5 w-5 mb-1" />
+            <span className="text-xs">Finalizar</span>
+          </Button>
+          
+          <Button 
+            variant="outline" 
+            className="bg-cyan-400 hover:bg-cyan-500 text-white flex flex-col items-center justify-center py-4 h-auto"
+            onClick={() => toast({title: "Info", description: "Operação extornada."})}
+          >
+            <Menu className="h-5 w-5 mb-1" />
+            <span className="text-xs">Extornar</span>
+          </Button>
+          
+          <Button 
+            variant="outline" 
+            className="bg-cyan-400 hover:bg-cyan-500 text-white flex flex-col items-center justify-center py-4 h-auto"
+            onClick={() => finishTicket('Dinheiro')}
+          >
+            <Menu className="h-5 w-5 mb-1" />
+            <span className="text-xs">Dinheiro</span>
+          </Button>
+          
+          <Button 
+            variant="outline" 
+            className="bg-cyan-400 hover:bg-cyan-500 text-white flex flex-col items-center justify-center py-4 h-auto"
+            onClick={() => finishTicket('PIX')}
+          >
+            <Menu className="h-5 w-5 mb-1" />
+            <span className="text-xs">PIX</span>
+          </Button>
+          
+          <Button 
+            variant="outline" 
+            className="bg-cyan-400 hover:bg-cyan-500 text-white flex flex-col items-center justify-center py-4 h-auto col-start-1"
+            onClick={() => finishTicket('Cartão Débito')}
+          >
+            <Menu className="h-5 w-5 mb-1" />
+            <span className="text-xs">Cartão Débito</span>
+          </Button>
+          
+          <Button 
+            variant="outline" 
+            className="bg-cyan-400 hover:bg-cyan-500 text-white flex flex-col items-center justify-center py-4 h-auto"
+            onClick={() => finishTicket('Cartão Crédito')}
+          >
+            <Menu className="h-5 w-5 mb-1" />
+            <span className="text-xs">Cartão Crédito</span>
+          </Button>
+          
+          <Button 
+            variant="outline" 
+            className="bg-cyan-400 hover:bg-cyan-500 text-white flex flex-col items-center justify-center py-4 h-auto"
+            onClick={() => toast({title: "Info", description: "Função de voucher não implementada."})}
+          >
+            <Menu className="h-5 w-5 mb-1" />
+            <span className="text-xs">Voucher</span>
+          </Button>
+          
+          <Button 
+            variant="outline" 
+            className="bg-cyan-400 hover:bg-cyan-500 text-white flex flex-col items-center justify-center py-4 h-auto"
+            onClick={() => toast({title: "Info", description: "CPF/CNPJ adicionado à nota."})}
+          >
+            <Menu className="h-5 w-5 mb-1" />
+            <span className="text-xs">CPF/CNPJ</span>
+          </Button>
+          
+          <Button 
+            variant="outline" 
+            className="bg-cyan-400 hover:bg-cyan-500 text-white flex flex-col items-center justify-center py-4 h-auto"
+            onClick={() => toast({title: "Info", description: "Menu principal aberto."})}
+          >
+            <Menu className="h-5 w-5 mb-1" />
+            <span className="text-xs">Menu</span>
+          </Button>
         </div>
-        
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>Movimentações de Caixa</CardTitle>
-                <CardDescription>Acompanhe todas as entradas e saídas do caixa</CardDescription>
-              </div>
-              <div className="flex gap-4">
-                <div className="relative w-60">
-                  <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input placeholder="Buscar operações..." className="pl-8" />
+
+        {/* Quick Products Modal */}
+        <Dialog open={quickProductsOpen} onOpenChange={setQuickProductsOpen}>
+          <DialogContent className="sm:max-w-[600px]">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Menu className="h-5 w-5" />
+                Selecionar Produtos Rápidos
+              </DialogTitle>
+            </DialogHeader>
+            <div className="grid grid-cols-3 gap-4 py-4">
+              {quickProducts.map((product) => (
+                <div 
+                  key={product.id} 
+                  className="border rounded-lg p-4 cursor-pointer hover:border-yellow-400 transition-colors"
+                  onClick={() => {
+                    addToCart(product);
+                    setQuickProductsOpen(false);
+                  }}
+                >
+                  <div className="flex justify-between items-start mb-2">
+                    <span className="text-sm font-medium">{product.name}</span>
+                    <Checkbox id={`product-${product.id}`} />
+                  </div>
+                  <div className="text-sm text-gray-600">R$ {product.price.toFixed(2)}</div>
                 </div>
-                <Select defaultValue="today">
-                  <SelectTrigger className="w-36">
-                    <SelectValue placeholder="Período" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="today">Hoje</SelectItem>
-                    <SelectItem value="yesterday">Ontem</SelectItem>
-                    <SelectItem value="week">Esta semana</SelectItem>
-                    <SelectItem value="month">Este mês</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              ))}
             </div>
-          </CardHeader>
-          <CardContent>
-            <Tabs defaultValue="all" className="mb-4" onValueChange={setSelectedTab}>
-              <TabsList>
-                <TabsTrigger value="all">Todas</TabsTrigger>
-                <TabsTrigger value="in">Entradas</TabsTrigger>
-                <TabsTrigger value="out">Saídas</TabsTrigger>
-              </TabsList>
-            </Tabs>
-            
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>ID</TableHead>
-                  <TableHead>Descrição</TableHead>
-                  <TableHead>Método</TableHead>
-                  <TableHead>Valor</TableHead>
-                  <TableHead>Hora</TableHead>
-                  <TableHead>Operador</TableHead>
-                  <TableHead>Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {transactions
-                  .filter(trans => {
-                    if (selectedTab === 'in') return trans.type === 'entrada';
-                    if (selectedTab === 'out') return trans.type === 'saida';
-                    return true;
-                  })
-                  .map((transaction) => (
-                    <TableRow key={transaction.id}>
-                      <TableCell className="font-medium">#{transaction.id}</TableCell>
-                      <TableCell className="flex items-center">
-                        {transaction.type === 'entrada' ? (
-                          <ArrowUpRight className="h-4 w-4 mr-2 text-green-500" />
-                        ) : (
-                          <ArrowDownLeft className="h-4 w-4 mr-2 text-amber-500" />
-                        )}
-                        {transaction.description}
-                      </TableCell>
-                      <TableCell>{transaction.method}</TableCell>
-                      <TableCell className={transaction.type === 'entrada' ? "text-green-600" : "text-amber-600"}>
-                        {transaction.value}
-                      </TableCell>
-                      <TableCell>{transaction.time}</TableCell>
-                      <TableCell>{transaction.operator}</TableCell>
-                      <TableCell>
-                        <Button variant="outline" size="sm">Detalhes</Button>
-                      </TableCell>
-                    </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+            <Button 
+              onClick={() => setQuickProductsOpen(false)} 
+              className="w-full bg-cyan-400 hover:bg-cyan-500 text-white"
+            >
+              Fechar
+            </Button>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
