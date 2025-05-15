@@ -1,3 +1,4 @@
+
 import * as React from "react"
 import * as ToastPrimitives from "@radix-ui/react-toast"
 import { cva, type VariantProps } from "class-variance-authority"
@@ -114,6 +115,20 @@ type ToastProps = React.ComponentPropsWithoutRef<typeof Toast>
 
 type ToastActionElement = React.ReactElement<typeof ToastAction>
 
+// Define the toast context type and implementation
+type ToastContextType = {
+  toasts: { id: string; title?: string; description?: string; action?: ToastActionElement; [key: string]: any }[];
+  toast: (props: ToastProps) => void;
+};
+
+const ToastContext = React.createContext<ToastContextType>({
+  toasts: [],
+  toast: () => {},
+});
+
+// Export the useToast hook
+const useToast = () => React.useContext(ToastContext);
+
 export {
   type ToastProps,
   type ToastActionElement,
@@ -124,4 +139,5 @@ export {
   ToastDescription,
   ToastClose,
   ToastAction,
+  useToast,
 }
