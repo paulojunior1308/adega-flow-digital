@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import AdminSidebar from '@/components/admin/AdminSidebar';
 import {
   Table,
@@ -12,12 +12,10 @@ import {
 import {
   Card,
   CardContent,
-  CardHeader,
-  CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ShoppingCart, Search, Plus, Menu } from 'lucide-react';
+import { ShoppingCart, Search, Plus, ListPlus, X, ArrowRight, RefreshCcw, DollarSign, QrCode, CreditCard, IdCard } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -31,6 +29,14 @@ interface CartItem {
   total: number;
 }
 
+interface Product {
+  id: number;
+  code: string;
+  name: string;
+  price: number;
+  pinned?: boolean;
+}
+
 const AdminCashRegister = () => {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -38,31 +44,47 @@ const AdminCashRegister = () => {
   const [productQuantity, setProductQuantity] = useState(1);
   const [quickProductsOpen, setQuickProductsOpen] = useState(false);
   const [ticketNumber, setTicketNumber] = useState(34);
+  const [pinnedProducts, setPinnedProducts] = useState<Product[]>([]);
+  const [products, setProducts] = useState<Product[]>([
+    { id: 1, code: 'CERV1', name: 'Cerveja Skol Lata 350ml', price: 6.00, pinned: false },
+    { id: 2, code: 'VINHO1', name: 'Vinho Tinto Taça 150ml', price: 12.00, pinned: false },
+    { id: 3, code: 'GUAR1', name: 'Guaraná Lata 350ml', price: 5.00, pinned: false },
+    { id: 4, code: 'EMPFR', name: 'Empada de Frango', price: 8.00, pinned: false },
+    { id: 5, code: 'CAFE1', name: 'Café Expresso', price: 4.00, pinned: false },
+    { id: 6, code: 'BRIG1', name: 'Brigadeiro', price: 3.00, pinned: false },
+    { id: 7, code: 'SUCO1', name: 'Suco de Laranja', price: 6.00, pinned: false },
+    { id: 8, code: 'SAND1', name: 'Sanduíche Agreste', price: 15.00, pinned: false },
+    { id: 9, code: 'COCA1', name: 'Coca Lata 350ml', price: 5.00, pinned: false },
+    { id: 10, code: 'BOLO1', name: 'Bolo SESC', price: 7.00, pinned: false },
+    { id: 11, code: 'VODKA1', name: 'Vodka Dose 50ml', price: 9.00, pinned: false },
+    { id: 12, code: 'ENERG1', name: 'Energético Monster 473ml', price: 12.00, pinned: false },
+  ]);
   const { toast } = useToast();
   
-  // Quick products catalog - sample data
-  const quickProducts = [
-    { id: 1, code: 'CERV1', name: 'Cerveja Heineken Lata 350ml', price: 7.50 },
-    { id: 2, code: 'VINHO1', name: 'Vinho Tinto Taça 150ml', price: 12.00 },
-    { id: 3, code: 'GUAR1', name: 'Guaraná Lata 350ml', price: 5.00 },
-    { id: 4, code: 'EMPFR', name: 'Empada de Frango', price: 8.00 },
-    { id: 5, code: 'CAFE1', name: 'Café Expresso', price: 4.00 },
-    { id: 6, code: 'BRIG1', name: 'Brigadeiro', price: 3.00 },
-    { id: 7, code: 'SUCO1', name: 'Suco de Laranja', price: 6.00 },
-    { id: 8, code: 'SAND1', name: 'Sanduíche Agreste', price: 15.00 },
-    { id: 9, code: 'COCA1', name: 'Coca Lata 350ml', price: 5.00 },
-    { id: 10, code: 'BOLO1', name: 'Bolo SESC', price: 7.00 },
-    { id: 11, code: 'QUIB1', name: 'Quibe de Abóbora', price: 6.00 },
-    { id: 12, code: 'SAL1', name: 'Salada Pequena', price: 10.00 },
-  ];
+  // Atualizar produtos fixados quando houver mudanças nos produtos
+  useEffect(() => {
+    const newPinnedProducts = products.filter(product => product.pinned);
+    setPinnedProducts(newPinnedProducts);
+  }, [products]);
+  
+  // Toggle pin product
+  const togglePinProduct = (productId: number) => {
+    const updatedProducts = products.map(product => {
+      if (product.id === productId) {
+        return { ...product, pinned: !product.pinned };
+      }
+      return product;
+    });
+    setProducts(updatedProducts);
+  };
 
   // Calculate totals
   const subtotal = cartItems.reduce((sum, item) => sum + item.total, 0);
-  const discount = 0; // Could be implemented with a discount feature
+  const discount = 0;
   const total = subtotal - discount;
 
   // Add item to cart
-  const addToCart = (product: any, quantity: number = 1) => {
+  const addToCart = (product: Product, quantity: number = 1) => {
     const existingItemIndex = cartItems.findIndex(item => item.code === product.code);
     
     if (existingItemIndex >= 0) {
@@ -107,7 +129,7 @@ const AdminCashRegister = () => {
       return;
     }
 
-    const product = quickProducts.find(p => p.code === productCode);
+    const product = products.find(p => p.code === productCode);
     if (product) {
       addToCart(product, productQuantity);
       setProductCode('');
@@ -123,11 +145,27 @@ const AdminCashRegister = () => {
 
   // Remove item from cart
   const removeItem = (itemId: number) => {
-    setCartItems(cartItems.filter(item => item.id !== itemId));
-    toast({
-      title: "Removido",
-      description: "Item removido do carrinho."
-    });
+    const itemToRemove = cartItems.find(item => item.id === itemId);
+    if (itemToRemove) {
+      setCartItems(cartItems.filter(item => item.id !== itemId));
+      toast({
+        title: "Removido",
+        description: `${itemToRemove.name} removido do carrinho.`
+      });
+    } else if (cartItems.length > 0) {
+      // Se não achou o item específico mas tem itens no carrinho, remove o último
+      const lastItem = cartItems[cartItems.length - 1];
+      setCartItems(cartItems.slice(0, -1));
+      toast({
+        title: "Removido",
+        description: `${lastItem.name} removido do carrinho.`
+      });
+    } else {
+      toast({
+        title: "Info",
+        description: "Não há itens para remover."
+      });
+    }
   };
 
   // Cancel ticket
@@ -146,8 +184,16 @@ const AdminCashRegister = () => {
       description: "Tíquete cancelado com sucesso.",
     });
   };
+  
+  // Cancelar operação (extornar)
+  const cancelOperation = () => {
+    toast({
+      title: "Extorno",
+      description: "Última operação extornada com sucesso.",
+    });
+  };
 
-  // Finish ticket
+  // Finish ticket with payment method
   const finishTicket = (paymentMethod: string) => {
     if (cartItems.length === 0) {
       toast({
@@ -167,6 +213,17 @@ const AdminCashRegister = () => {
     setCartItems([]);
     setTicketNumber(prev => prev + 1);
   };
+  
+  // Handle CPF/CNPJ
+  const handleCpfCnpj = () => {
+    const cpfCnpj = prompt("Digite o CPF/CNPJ do cliente:");
+    if (cpfCnpj) {
+      toast({
+        title: "CPF/CNPJ Adicionado",
+        description: `CPF/CNPJ ${cpfCnpj} adicionado à nota.`,
+      });
+    }
+  };
 
   return (
     <div className="flex h-screen bg-gray-100">
@@ -183,7 +240,7 @@ const AdminCashRegister = () => {
             variant="outline" 
             className="flex items-center gap-2"
           >
-            <Menu className="h-4 w-4" />
+            <ListPlus className="h-4 w-4" />
             Produtos Rápidos
           </Button>
         </div>
@@ -236,12 +293,31 @@ const AdminCashRegister = () => {
               </Button>
             </div>
 
-            {/* Products space - could be used to display search results */}
+            {/* Produtos fixados / Products space */}
             <div className="flex-1 bg-white rounded-md border p-4">
-              {/* This space could show search results or transactions history */}
-              <div className="text-gray-500 text-center">
-                Use a barra de busca ou selecione um produto rápido
-              </div>
+              {pinnedProducts.length > 0 ? (
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  {pinnedProducts.map(product => (
+                    <Card 
+                      key={product.id} 
+                      className="cursor-pointer hover:border-cyan-400 transition-colors"
+                      onClick={() => addToCart(product)}
+                    >
+                      <CardContent className="p-3">
+                        <div className="font-medium text-sm">{product.name}</div>
+                        <div className="flex justify-between items-center mt-1">
+                          <span className="text-green-600 font-medium">R$ {product.price.toFixed(2)}</span>
+                          <span className="text-xs text-gray-500">{product.code}</span>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-gray-500 text-center py-8">
+                  Use o botão "Produtos Rápidos" e marque os produtos para aparecerem aqui
+                </div>
+              )}
             </div>
           </div>
 
@@ -308,9 +384,10 @@ const AdminCashRegister = () => {
             {/* Finish button */}
             <div className="p-4 bg-gray-100">
               <Button 
-                className="w-full bg-cyan-400 hover:bg-cyan-500 text-white"
+                className="w-full bg-cyan-400 hover:bg-cyan-500 text-white flex items-center justify-center gap-2"
                 onClick={() => finishTicket('Finalizar')}
               >
+                <ArrowRight className="h-5 w-5" />
                 Finalizar Tíquete
               </Button>
             </div>
@@ -318,31 +395,13 @@ const AdminCashRegister = () => {
         </div>
 
         {/* Bottom Buttons */}
-        <div className="grid grid-cols-8 gap-1 bg-gray-200 p-1">
-          <Button 
-            variant="outline" 
-            className="bg-cyan-400 hover:bg-cyan-500 text-white flex flex-col items-center justify-center py-4 h-auto"
-            onClick={() => toast({title: "Info", description: "Menu de combos aberto."})}
-          >
-            <Menu className="h-5 w-5 mb-1" />
-            <span className="text-xs">Combos</span>
-          </Button>
-          
-          <Button 
-            variant="outline" 
-            className="bg-cyan-400 hover:bg-cyan-500 text-white flex flex-col items-center justify-center py-4 h-auto"
-            onClick={() => toast({title: "Info", description: "Integrações não implementadas."})}
-          >
-            <Menu className="h-5 w-5 mb-1" />
-            <span className="text-xs">Integrações</span>
-          </Button>
-          
+        <div className="grid grid-cols-6 gap-1 bg-gray-200 p-1">
           <Button 
             variant="outline" 
             className="bg-cyan-400 hover:bg-cyan-500 text-white flex flex-col items-center justify-center py-4 h-auto"
             onClick={() => removeItem(cartItems.length > 0 ? cartItems[cartItems.length - 1].id : 0)}
           >
-            <Menu className="h-5 w-5 mb-1" />
+            <X className="h-5 w-5 mb-1" />
             <span className="text-xs">Cancelar Item</span>
           </Button>
           
@@ -351,25 +410,16 @@ const AdminCashRegister = () => {
             className="bg-cyan-400 hover:bg-cyan-500 text-white flex flex-col items-center justify-center py-4 h-auto"
             onClick={cancelTicket}
           >
-            <Menu className="h-5 w-5 mb-1" />
+            <X className="h-5 w-5 mb-1" />
             <span className="text-xs">Cancelar Tíquete</span>
           </Button>
           
           <Button 
             variant="outline" 
             className="bg-cyan-400 hover:bg-cyan-500 text-white flex flex-col items-center justify-center py-4 h-auto"
-            onClick={() => finishTicket('Finalizar')}
+            onClick={cancelOperation}
           >
-            <Menu className="h-5 w-5 mb-1" />
-            <span className="text-xs">Finalizar</span>
-          </Button>
-          
-          <Button 
-            variant="outline" 
-            className="bg-cyan-400 hover:bg-cyan-500 text-white flex flex-col items-center justify-center py-4 h-auto"
-            onClick={() => toast({title: "Info", description: "Operação extornada."})}
-          >
-            <Menu className="h-5 w-5 mb-1" />
+            <RefreshCcw className="h-5 w-5 mb-1" />
             <span className="text-xs">Extornar</span>
           </Button>
           
@@ -378,7 +428,7 @@ const AdminCashRegister = () => {
             className="bg-cyan-400 hover:bg-cyan-500 text-white flex flex-col items-center justify-center py-4 h-auto"
             onClick={() => finishTicket('Dinheiro')}
           >
-            <Menu className="h-5 w-5 mb-1" />
+            <DollarSign className="h-5 w-5 mb-1" />
             <span className="text-xs">Dinheiro</span>
           </Button>
           
@@ -387,53 +437,35 @@ const AdminCashRegister = () => {
             className="bg-cyan-400 hover:bg-cyan-500 text-white flex flex-col items-center justify-center py-4 h-auto"
             onClick={() => finishTicket('PIX')}
           >
-            <Menu className="h-5 w-5 mb-1" />
+            <QrCode className="h-5 w-5 mb-1" />
             <span className="text-xs">PIX</span>
           </Button>
           
           <Button 
             variant="outline" 
-            className="bg-cyan-400 hover:bg-cyan-500 text-white flex flex-col items-center justify-center py-4 h-auto col-start-1"
+            className="bg-cyan-400 hover:bg-cyan-500 text-white flex flex-col items-center justify-center py-4 h-auto"
             onClick={() => finishTicket('Cartão Débito')}
           >
-            <Menu className="h-5 w-5 mb-1" />
+            <CreditCard className="h-5 w-5 mb-1" />
             <span className="text-xs">Cartão Débito</span>
           </Button>
           
           <Button 
             variant="outline" 
-            className="bg-cyan-400 hover:bg-cyan-500 text-white flex flex-col items-center justify-center py-4 h-auto"
+            className="bg-cyan-400 hover:bg-cyan-500 text-white flex flex-col items-center justify-center py-4 h-auto col-start-1"
             onClick={() => finishTicket('Cartão Crédito')}
           >
-            <Menu className="h-5 w-5 mb-1" />
+            <CreditCard className="h-5 w-5 mb-1" />
             <span className="text-xs">Cartão Crédito</span>
           </Button>
           
           <Button 
             variant="outline" 
             className="bg-cyan-400 hover:bg-cyan-500 text-white flex flex-col items-center justify-center py-4 h-auto"
-            onClick={() => toast({title: "Info", description: "Função de voucher não implementada."})}
+            onClick={handleCpfCnpj}
           >
-            <Menu className="h-5 w-5 mb-1" />
-            <span className="text-xs">Voucher</span>
-          </Button>
-          
-          <Button 
-            variant="outline" 
-            className="bg-cyan-400 hover:bg-cyan-500 text-white flex flex-col items-center justify-center py-4 h-auto"
-            onClick={() => toast({title: "Info", description: "CPF/CNPJ adicionado à nota."})}
-          >
-            <Menu className="h-5 w-5 mb-1" />
+            <IdCard className="h-5 w-5 mb-1" />
             <span className="text-xs">CPF/CNPJ</span>
-          </Button>
-          
-          <Button 
-            variant="outline" 
-            className="bg-cyan-400 hover:bg-cyan-500 text-white flex flex-col items-center justify-center py-4 h-auto"
-            onClick={() => toast({title: "Info", description: "Menu principal aberto."})}
-          >
-            <Menu className="h-5 w-5 mb-1" />
-            <span className="text-xs">Menu</span>
           </Button>
         </div>
 
@@ -442,23 +474,25 @@ const AdminCashRegister = () => {
           <DialogContent className="sm:max-w-[600px]">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
-                <Menu className="h-5 w-5" />
+                <ListPlus className="h-5 w-5" />
                 Selecionar Produtos Rápidos
               </DialogTitle>
             </DialogHeader>
             <div className="grid grid-cols-3 gap-4 py-4">
-              {quickProducts.map((product) => (
+              {products.map((product) => (
                 <div 
                   key={product.id} 
-                  className="border rounded-lg p-4 cursor-pointer hover:border-yellow-400 transition-colors"
-                  onClick={() => {
-                    addToCart(product);
-                    setQuickProductsOpen(false);
-                  }}
+                  className={`border rounded-lg p-4 cursor-pointer transition-colors ${product.pinned ? 'border-yellow-400 bg-yellow-50' : 'hover:border-yellow-400'}`}
+                  onClick={() => addToCart(product)}
                 >
                   <div className="flex justify-between items-start mb-2">
                     <span className="text-sm font-medium">{product.name}</span>
-                    <Checkbox id={`product-${product.id}`} />
+                    <Checkbox 
+                      id={`product-${product.id}`} 
+                      checked={product.pinned}
+                      onCheckedChange={() => togglePinProduct(product.id)}
+                      onClick={(e) => e.stopPropagation()}
+                    />
                   </div>
                   <div className="text-sm text-gray-600">R$ {product.price.toFixed(2)}</div>
                 </div>
