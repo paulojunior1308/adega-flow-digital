@@ -13,10 +13,9 @@ interface ProductCardProps {
   oldPrice?: string;
   category?: string;
   id: string;
-  onAddToCart: (id: string) => void;
 }
 
-const ProductCard = ({ image, title, price, oldPrice, category, id, onAddToCart }: ProductCardProps) => {
+const ProductCard = ({ image, title, price, oldPrice, category, id }: ProductCardProps) => {
   return (
     <div className="element-card p-4 element-card-hover">
       <img src={image} alt={title} className="w-full h-32 object-cover rounded-md mb-3" />
@@ -31,14 +30,6 @@ const ProductCard = ({ image, title, price, oldPrice, category, id, onAddToCart 
           <p className="font-bold text-lg text-element-blue-dark">{price}</p>
           {oldPrice && <p className="text-sm text-element-gray-dark/60 line-through">{oldPrice}</p>}
         </div>
-        <Button 
-          variant="outline" 
-          size="icon" 
-          className="rounded-full hover:bg-element-blue-neon hover:text-element-gray-dark"
-          onClick={() => onAddToCart(id)}
-        >
-          <ShoppingCart className="h-4 w-4" />
-        </Button>
       </div>
     </div>
   );
@@ -140,19 +131,6 @@ const ClientDashboard = () => {
   const [searchTerm, setSearchTerm] = React.useState('');
   const [cartCount, setCartCount] = React.useState(0);
   
-  const handleAddToCart = (id: string) => {
-    setCartCount(prev => prev + 1);
-    const product = [...FEATURED_PRODUCTS, ...RECENT_PRODUCTS].find(p => p.id === id);
-    
-    if (product) {
-      toast({
-        title: "Produto adicionado",
-        description: `${product.title} adicionado ao carrinho`,
-        duration: 2000,
-      });
-    }
-  };
-  
   return (
     <div className="min-h-screen bg-element-gray-light">
       <ClientSidebar />
@@ -240,16 +218,16 @@ const ClientDashboard = () => {
             
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
               {FEATURED_PRODUCTS.map((product) => (
-                <ProductCard 
-                  key={product.id}
-                  id={product.id}
-                  image={product.image}
-                  title={product.title}
-                  price={product.price}
-                  oldPrice={product.oldPrice}
-                  category={product.category}
-                  onAddToCart={handleAddToCart}
-                />
+                <Link to={`/cliente-catalogo/produto/${product.id}`} key={product.id}>
+                  <ProductCard 
+                    id={product.id}
+                    image={product.image}
+                    title={product.title}
+                    price={product.price}
+                    oldPrice={product.oldPrice}
+                    category={product.category}
+                  />
+                </Link>
               ))}
             </div>
           </div>
@@ -265,16 +243,16 @@ const ClientDashboard = () => {
             
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
               {RECENT_PRODUCTS.map((product) => (
-                <ProductCard 
-                  key={product.id}
-                  id={product.id}
-                  image={product.image}
-                  title={product.title}
-                  price={product.price}
-                  oldPrice={product.oldPrice}
-                  category={product.category}
-                  onAddToCart={handleAddToCart}
-                />
+                <Link to={`/cliente-catalogo/produto/${product.id}`} key={product.id}>
+                  <ProductCard 
+                    id={product.id}
+                    image={product.image}
+                    title={product.title}
+                    price={product.price}
+                    oldPrice={product.oldPrice}
+                    category={product.category}
+                  />
+                </Link>
               ))}
             </div>
           </div>

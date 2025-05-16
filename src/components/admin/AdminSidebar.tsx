@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { 
@@ -13,7 +12,6 @@ import {
   Receipt,
   Users,
   Store,
-  PackageCheck,
   Truck,
   LogOut as LogOutIcon
 } from 'lucide-react';
@@ -72,11 +70,6 @@ const AdminSidebar = () => {
       icon: <Store className="h-5 w-5" />, 
       label: 'Caixa', 
       path: '/admin-caixa' 
-    },
-    { 
-      icon: <PackageCheck className="h-5 w-5" />, 
-      label: 'Inventário', 
-      path: '/admin-inventario' 
     }
   ];
   

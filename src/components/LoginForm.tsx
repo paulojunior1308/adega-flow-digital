@@ -1,15 +1,11 @@
 
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { User, UserRound } from 'lucide-react';
+import { User } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 
-interface LoginFormProps {
-  type: 'customer' | 'admin';
-}
-
-const LoginForm = ({ type }: LoginFormProps) => {
+const LoginForm = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -29,16 +25,15 @@ const LoginForm = ({ type }: LoginFormProps) => {
         // Success
         toast({
           title: "Login realizado com sucesso",
-          description: type === 'customer' 
-            ? "Bem-vindo à área do cliente!" 
-            : "Bem-vindo à área administrativa!",
+          description: "Bem-vindo à Element Adega!"
         });
         
-        // Redirect based on user type
-        if (type === 'customer') {
-          navigate('/cliente-dashboard');
-        } else {
+        // For demonstration, redirect based on email
+        // In a real app, this would be based on JWT roles
+        if (email.includes('admin')) {
           navigate('/admin-dashboard');
+        } else {
+          navigate('/cliente-dashboard');
         }
       } else {
         // Error
@@ -54,23 +49,13 @@ const LoginForm = ({ type }: LoginFormProps) => {
   return (
     <div className="element-card p-8 w-full max-w-md mx-auto">
       <div className="flex flex-col items-center mb-8">
-        {type === 'customer' ? (
-          <div className="bg-element-blue-neon rounded-full p-4 mb-4">
-            <User className="h-8 w-8 text-element-blue-dark" />
-          </div>
-        ) : (
-          <div className="bg-element-blue-dark rounded-full p-4 mb-4">
-            <UserRound className="h-8 w-8 text-white" />
-          </div>
-        )}
+        <div className="bg-element-blue-neon rounded-full p-4 mb-4">
+          <User className="h-8 w-8 text-element-blue-dark" />
+        </div>
         
-        <h2 className="element-heading text-center">
-          {type === 'customer' ? 'Área do Cliente' : 'Área Administrativa'}
-        </h2>
+        <h2 className="element-heading text-center">Área de Acesso</h2>
         <p className="text-element-gray-dark/70 text-center mt-2">
-          {type === 'customer' 
-            ? 'Faça login para acompanhar pedidos e ver ofertas exclusivas' 
-            : 'Acesso restrito aos administradores da Element Adega'}
+          Faça login para acessar sua conta
         </p>
       </div>
       
@@ -124,26 +109,20 @@ const LoginForm = ({ type }: LoginFormProps) => {
         
         <Button
           type="submit"
-          className={`w-full ${
-            type === 'customer' 
-              ? 'element-btn-primary' 
-              : 'element-btn-secondary'
-          }`}
+          className="w-full element-btn-primary"
           disabled={loading}
         >
           {loading ? 'Carregando...' : 'Entrar'}
         </Button>
         
-        {type === 'customer' && (
-          <div className="text-center mt-6">
-            <p className="text-element-gray-dark">
-              Não tem uma conta?{" "}
-              <a href="/cadastro" className="element-link font-medium">
-                Cadastre-se
-              </a>
-            </p>
-          </div>
-        )}
+        <div className="text-center mt-6">
+          <p className="text-element-gray-dark">
+            Não tem uma conta?{" "}
+            <a href="/cadastro" className="element-link font-medium">
+              Cadastre-se
+            </a>
+          </p>
+        </div>
       </form>
     </div>
   );

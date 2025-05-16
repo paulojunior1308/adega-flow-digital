@@ -29,6 +29,7 @@ import AdminAccounts from "@/pages/admin/AdminAccounts";
 import AdminCashRegister from "@/pages/admin/AdminCashRegister";
 import AdminPayments from "@/pages/admin/AdminPayments";
 import AdminPDV from "@/pages/admin/AdminPDV";
+import ContactRedirect from "@/pages/ContactRedirect";
 
 const queryClient = new QueryClient();
 
@@ -45,6 +46,7 @@ const App = () => (
           <Route path="/combos" element={<Combos />} />
           <Route path="/narguile" element={<Narguile />} />
           <Route path="/bebidas" element={<Bebidas />} />
+          <Route path="/contato" element={<ContactRedirect />} />
           
           {/* Client Routes */}
           <Route path="/cliente-dashboard" element={<ClientDashboard />} />
@@ -70,7 +72,6 @@ const App = () => (
           <Route path="/admin-pagamentos" element={<AdminPayments />} />
           <Route path="/admin-contas" element={<AdminAccounts />} />
           <Route path="/admin-caixa" element={<AdminCashRegister />} />
-          <Route path="/admin-inventario" element={<AdminStock />} />
           <Route path="/admin-pdv" element={<AdminPDV />} />
           
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

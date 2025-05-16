@@ -1,10 +1,8 @@
-
 import React, { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { 
   BookOpen, 
   Home, 
-  Search, 
   ShoppingCart, 
   Map, 
   Truck, 
@@ -29,11 +27,6 @@ const ClientSidebar = () => {
       icon: <BookOpen className="h-5 w-5" />, 
       label: 'Catálogo', 
       path: '/cliente-catalogo' 
-    },
-    { 
-      icon: <Search className="h-5 w-5" />, 
-      label: 'Buscar', 
-      path: '/cliente-buscar' 
     },
     { 
       icon: <ShoppingCart className="h-5 w-5" />, 
