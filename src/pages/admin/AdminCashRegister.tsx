@@ -457,15 +457,7 @@ const AdminCashRegister = () => {
               </div>
             </div>
 
-            {/* Finish button */}
-            <div className="p-4 bg-gray-100">
-              <Button 
-                className="w-full bg-cyan-400 hover:bg-cyan-500 text-white"
-                onClick={() => finishTicket('Finalizar')}
-              >
-                Finalizar Tíquete
-              </Button>
-            </div>
+            {/* Removed the "Finalizar Tíquete" button that was here */}
           </div>
         </div>
 
