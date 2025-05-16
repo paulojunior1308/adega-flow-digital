@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ShoppingCart, Search, Plus, ListPlus, X, ArrowRight, RefreshCcw, DollarSign, QrCode, CreditCard, IdCard } from 'lucide-react';
+import { ShoppingCart, Search, Plus, Minus, ListPlus, X, ArrowRight, RefreshCcw, DollarSign, QrCode, CreditCard, IdCard } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -44,7 +44,10 @@ const AdminCashRegister = () => {
   const [productQuantity, setProductQuantity] = useState(1);
   const [quickProductsOpen, setQuickProductsOpen] = useState(false);
   const [ticketNumber, setTicketNumber] = useState(34);
+  const [cpfCnpjDialogOpen, setCpfCnpjDialogOpen] = useState(false);
+  const [cpfCnpjValue, setCpfCnpjValue] = useState('');
   const [pinnedProducts, setPinnedProducts] = useState<Product[]>([]);
+  const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   const [products, setProducts] = useState<Product[]>([
     { id: 1, code: 'CERV1', name: 'Cerveja Skol Lata 350ml', price: 6.00, pinned: false },
     { id: 2, code: 'VINHO1', name: 'Vinho Tinto Taça 150ml', price: 12.00, pinned: false },
@@ -66,6 +69,19 @@ const AdminCashRegister = () => {
     const newPinnedProducts = products.filter(product => product.pinned);
     setPinnedProducts(newPinnedProducts);
   }, [products]);
+  
+  // Filter products when searching
+  useEffect(() => {
+    if (searchQuery.trim() === '') {
+      setFilteredProducts([]);
+    } else {
+      const filtered = products.filter(product => 
+        product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        product.code.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+      setFilteredProducts(filtered);
+    }
+  }, [searchQuery, products]);
   
   // Toggle pin product
   const togglePinProduct = (productId: number) => {
@@ -102,7 +118,7 @@ const AdminCashRegister = () => {
     } else {
       // Add new item
       const newItem: CartItem = {
-        id: cartItems.length + 1,
+        id: Date.now(), // Use timestamp for unique IDs
         code: product.code,
         name: product.name,
         quantity: quantity,
@@ -116,6 +132,24 @@ const AdminCashRegister = () => {
         description: `${product.name} adicionado ao carrinho.`,
       });
     }
+  };
+
+  // Update cart item quantity
+  const updateCartItemQuantity = (itemId: number, newQuantity: number) => {
+    if (newQuantity < 1) return; // Prevent quantity less than 1
+    
+    const updatedItems = cartItems.map(item => {
+      if (item.id === itemId) {
+        return {
+          ...item,
+          quantity: newQuantity,
+          total: item.price * newQuantity
+        };
+      }
+      return item;
+    });
+    
+    setCartItems(updatedItems);
   };
 
   // Add product by code
@@ -214,13 +248,20 @@ const AdminCashRegister = () => {
     setTicketNumber(prev => prev + 1);
   };
   
-  // Handle CPF/CNPJ
-  const handleCpfCnpj = () => {
-    const cpfCnpj = prompt("Digite o CPF/CNPJ do cliente:");
-    if (cpfCnpj) {
+  // Handle CPF/CNPJ submission
+  const handleCpfCnpjSubmit = () => {
+    if (cpfCnpjValue) {
       toast({
         title: "CPF/CNPJ Adicionado",
-        description: `CPF/CNPJ ${cpfCnpj} adicionado à nota.`,
+        description: `CPF/CNPJ ${cpfCnpjValue} adicionado à nota.`,
+      });
+      setCpfCnpjDialogOpen(false);
+      setCpfCnpjValue('');
+    } else {
+      toast({
+        title: "Erro",
+        variant: "destructive",
+        description: "Por favor, informe um CPF/CNPJ válido.",
       });
     }
   };
@@ -249,14 +290,22 @@ const AdminCashRegister = () => {
         <div className="flex flex-1 overflow-hidden">
           {/* Left side - Product search */}
           <div className="flex-1 flex flex-col p-4 overflow-y-auto">
-            {/* Current selected product */}
-            <div className="bg-white border rounded-md p-3 mb-4">
-              {cartItems.length > 0 && cartItems[cartItems.length - 1] ? (
-                <div className="text-lg font-medium text-element-blue-dark">
-                  {cartItems[cartItems.length - 1].code} - {cartItems[cartItems.length - 1].name}
+            {/* Pinned Products - Quick access buttons */}
+            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-2 mb-4">
+              {pinnedProducts.map(product => (
+                <button
+                  key={product.id}
+                  className="text-left p-3 border rounded-md hover:border-cyan-400 transition-colors bg-white"
+                  onClick={() => addToCart(product)}
+                >
+                  <div className="text-sm font-medium truncate">{product.code} - {product.name}</div>
+                  <div className="text-sm text-green-600">R$ {product.price.toFixed(2)}</div>
+                </button>
+              ))}
+              {pinnedProducts.length === 0 && (
+                <div className="col-span-full text-center p-3 text-gray-500 bg-white border rounded-md">
+                  Selecione produtos na opção "Produtos Rápidos" para aparecerem aqui
                 </div>
-              ) : (
-                <div className="text-gray-500">Selecione um produto...</div>
               )}
             </div>
 
@@ -293,29 +342,25 @@ const AdminCashRegister = () => {
               </Button>
             </div>
 
-            {/* Produtos fixados / Products space */}
-            <div className="flex-1 bg-white rounded-md border p-4">
-              {pinnedProducts.length > 0 ? (
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                  {pinnedProducts.map(product => (
-                    <Card 
-                      key={product.id} 
-                      className="cursor-pointer hover:border-cyan-400 transition-colors"
+            {/* Search results */}
+            <div className="flex-1 overflow-y-auto">
+              {searchQuery.trim() !== '' && (
+                <div className="grid grid-cols-1 gap-2">
+                  {filteredProducts.map(product => (
+                    <button
+                      key={product.id}
+                      className="text-left p-3 border rounded-md hover:border-cyan-400 transition-colors bg-white w-full"
                       onClick={() => addToCart(product)}
                     >
-                      <CardContent className="p-3">
-                        <div className="font-medium text-sm">{product.name}</div>
-                        <div className="flex justify-between items-center mt-1">
-                          <span className="text-green-600 font-medium">R$ {product.price.toFixed(2)}</span>
-                          <span className="text-xs text-gray-500">{product.code}</span>
-                        </div>
-                      </CardContent>
-                    </Card>
+                      <div className="font-medium">{product.code} - {product.name}</div>
+                      <div className="text-green-600 mt-1">R$ {product.price.toFixed(2)}</div>
+                    </button>
                   ))}
-                </div>
-              ) : (
-                <div className="text-gray-500 text-center py-8">
-                  Use o botão "Produtos Rápidos" e marque os produtos para aparecerem aqui
+                  {filteredProducts.length === 0 && (
+                    <div className="text-center py-4 text-gray-500">
+                      Nenhum produto encontrado para "{searchQuery}"
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -337,26 +382,57 @@ const AdminCashRegister = () => {
                     <TableHead className="w-12">Item</TableHead>
                     <TableHead className="w-16">Cód.</TableHead>
                     <TableHead>Produto</TableHead>
-                    <TableHead className="w-12 text-center">Qtd</TableHead>
+                    <TableHead className="w-20 text-center">Qtd</TableHead>
                     <TableHead className="w-20 text-right">Preço</TableHead>
                     <TableHead className="w-20 text-right">Total</TableHead>
+                    <TableHead className="w-8"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {cartItems.length > 0 ? (
                     cartItems.map((item, index) => (
-                      <TableRow key={item.id} className="cursor-pointer hover:bg-gray-50" onClick={() => removeItem(item.id)}>
+                      <TableRow key={item.id} className="hover:bg-gray-50">
                         <TableCell>{index + 1}</TableCell>
                         <TableCell>{item.code}</TableCell>
                         <TableCell className="font-medium">{item.name}</TableCell>
-                        <TableCell className="text-center">{item.quantity}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center justify-center">
+                            <Button 
+                              variant="outline" 
+                              size="icon" 
+                              className="h-6 w-6 rounded-full p-0"
+                              onClick={() => updateCartItemQuantity(item.id, item.quantity - 1)}
+                            >
+                              <Minus className="h-3 w-3" />
+                            </Button>
+                            <span className="mx-2">{item.quantity}</span>
+                            <Button 
+                              variant="outline" 
+                              size="icon" 
+                              className="h-6 w-6 rounded-full p-0"
+                              onClick={() => updateCartItemQuantity(item.id, item.quantity + 1)}
+                            >
+                              <Plus className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </TableCell>
                         <TableCell className="text-right">R$ {item.price.toFixed(2)}</TableCell>
                         <TableCell className="text-right">R$ {item.total.toFixed(2)}</TableCell>
+                        <TableCell>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-6 w-6 p-0 text-red-500"
+                            onClick={() => removeItem(item.id)}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
                       </TableRow>
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center py-8 text-gray-500">
+                      <TableCell colSpan={7} className="text-center py-8 text-gray-500">
                         Nenhum item adicionado
                       </TableCell>
                     </TableRow>
@@ -384,10 +460,9 @@ const AdminCashRegister = () => {
             {/* Finish button */}
             <div className="p-4 bg-gray-100">
               <Button 
-                className="w-full bg-cyan-400 hover:bg-cyan-500 text-white flex items-center justify-center gap-2"
+                className="w-full bg-cyan-400 hover:bg-cyan-500 text-white"
                 onClick={() => finishTicket('Finalizar')}
               >
-                <ArrowRight className="h-5 w-5" />
                 Finalizar Tíquete
               </Button>
             </div>
@@ -399,7 +474,7 @@ const AdminCashRegister = () => {
           <Button 
             variant="outline" 
             className="bg-cyan-400 hover:bg-cyan-500 text-white flex flex-col items-center justify-center py-4 h-auto"
-            onClick={() => removeItem(cartItems.length > 0 ? cartItems[cartItems.length - 1].id : 0)}
+            onClick={() => cartItems.length > 0 && removeItem(cartItems[cartItems.length - 1].id)}
           >
             <X className="h-5 w-5 mb-1" />
             <span className="text-xs">Cancelar Item</span>
@@ -462,7 +537,7 @@ const AdminCashRegister = () => {
           <Button 
             variant="outline" 
             className="bg-cyan-400 hover:bg-cyan-500 text-white flex flex-col items-center justify-center py-4 h-auto"
-            onClick={handleCpfCnpj}
+            onClick={() => setCpfCnpjDialogOpen(true)}
           >
             <IdCard className="h-5 w-5 mb-1" />
             <span className="text-xs">CPF/CNPJ</span>
@@ -482,8 +557,7 @@ const AdminCashRegister = () => {
               {products.map((product) => (
                 <div 
                   key={product.id} 
-                  className={`border rounded-lg p-4 cursor-pointer transition-colors ${product.pinned ? 'border-yellow-400 bg-yellow-50' : 'hover:border-yellow-400'}`}
-                  onClick={() => addToCart(product)}
+                  className={`border rounded-lg p-4 transition-colors ${product.pinned ? 'border-yellow-400 bg-yellow-50' : 'hover:border-yellow-400'}`}
                 >
                   <div className="flex justify-between items-start mb-2">
                     <span className="text-sm font-medium">{product.name}</span>
@@ -504,6 +578,29 @@ const AdminCashRegister = () => {
             >
               Fechar
             </Button>
+          </DialogContent>
+        </Dialog>
+
+        {/* CPF/CNPJ Modal */}
+        <Dialog open={cpfCnpjDialogOpen} onOpenChange={setCpfCnpjDialogOpen}>
+          <DialogContent className="sm:max-w-[400px]">
+            <DialogHeader>
+              <DialogTitle>Adicionar CPF/CNPJ</DialogTitle>
+            </DialogHeader>
+            <div className="py-4">
+              <Input
+                placeholder="Digite o CPF/CNPJ"
+                value={cpfCnpjValue}
+                onChange={(e) => setCpfCnpjValue(e.target.value)}
+                className="mb-4"
+              />
+              <Button 
+                onClick={handleCpfCnpjSubmit} 
+                className="w-full bg-cyan-400 hover:bg-cyan-500 text-white"
+              >
+                Adicionar
+              </Button>
+            </div>
           </DialogContent>
         </Dialog>
       </div>
