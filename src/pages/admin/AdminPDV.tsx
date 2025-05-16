@@ -35,6 +35,8 @@ const AdminPDV = () => {
   const [productQuantity, setProductQuantity] = useState(1);
   const [quickProductsOpen, setQuickProductsOpen] = useState(false);
   const [ticketNumber, setTicketNumber] = useState(34);
+  const [cpfCnpjDialogOpen, setCpfCnpjDialogOpen] = useState(false);
+  const [cpfCnpjValue, setCpfCnpjValue] = useState('');
   const [products, setProducts] = useState<Product[]>([
     { id: 1, code: 'HEI350', name: 'Cerveja Heineken Lata 350ml', price: 7.50, pinned: false },
     { id: 2, code: 'VIN150', name: 'Vinho Tinto Taça 150ml', price: 12.00, pinned: false },
@@ -214,12 +216,18 @@ const AdminPDV = () => {
     setTicketNumber(prev => prev + 1);
   };
 
-  // Handle CPF/CNPJ
-  const handleCpfCnpj = () => {
-    const cpfCnpj = prompt("Digite o CPF/CNPJ do cliente:");
-    if (cpfCnpj) {
+  // Handle CPF/CNPJ submission
+  const handleCpfCnpjSubmit = () => {
+    if (cpfCnpjValue) {
       toast({
-        description: `CPF/CNPJ ${cpfCnpj} adicionado à nota.`,
+        description: `CPF/CNPJ ${cpfCnpjValue} adicionado à nota.`,
+      });
+      setCpfCnpjDialogOpen(false);
+      setCpfCnpjValue('');
+    } else {
+      toast({
+        variant: "destructive",
+        description: "Por favor, informe um CPF/CNPJ válido.",
       });
     }
   };
@@ -413,16 +421,6 @@ const AdminPDV = () => {
                 <div className="font-medium text-element-blue-dark text-lg">R$ {total.toFixed(2)}</div>
               </div>
             </div>
-            
-            {/* Finish button */}
-            <div className="p-4 bg-gray-100">
-              <Button 
-                className="w-full bg-cyan-400 hover:bg-cyan-500 text-white"
-                onClick={() => finishTicket('Finalizar')}
-              >
-                Finalizar Tíquete
-              </Button>
-            </div>
           </div>
         </div>
 
@@ -494,7 +492,7 @@ const AdminPDV = () => {
           <Button 
             variant="outline" 
             className="bg-cyan-400 hover:bg-cyan-500 text-white flex flex-col items-center justify-center py-4 h-auto"
-            onClick={handleCpfCnpj}
+            onClick={() => setCpfCnpjDialogOpen(true)}
           >
             <IdCard className="h-5 w-5 mb-1" />
             <span className="text-xs">CPF/CNPJ</span>
@@ -534,6 +532,29 @@ const AdminPDV = () => {
             >
               Fechar
             </Button>
+          </DialogContent>
+        </Dialog>
+
+        {/* CPF/CNPJ Modal */}
+        <Dialog open={cpfCnpjDialogOpen} onOpenChange={setCpfCnpjDialogOpen}>
+          <DialogContent className="sm:max-w-[400px]">
+            <DialogHeader>
+              <DialogTitle>Adicionar CPF/CNPJ</DialogTitle>
+            </DialogHeader>
+            <div className="py-4">
+              <Input
+                placeholder="Digite o CPF/CNPJ"
+                value={cpfCnpjValue}
+                onChange={(e) => setCpfCnpjValue(e.target.value)}
+                className="mb-4"
+              />
+              <Button 
+                onClick={handleCpfCnpjSubmit} 
+                className="w-full bg-cyan-400 hover:bg-cyan-500 text-white"
+              >
+                Adicionar
+              </Button>
+            </div>
           </DialogContent>
         </Dialog>
       </div>
