@@ -65,6 +65,7 @@ interface Product {
   costPrice?: number;
   description?: string;
   image?: string;
+  active: boolean;
 }
 
 // Category interface
@@ -369,6 +370,7 @@ const AdminStock = () => {
                   </Button>
                 </TableHead>
                 <TableHead>Última Atualização</TableHead>
+                <TableHead>Status</TableHead>
                 <TableHead>Ações</TableHead>
               </TableRow>
             </TableHeader>
@@ -392,6 +394,13 @@ const AdminStock = () => {
                       )}
                     </TableCell>
                     <TableCell>{product.updatedAt ? new Date(product.updatedAt).toLocaleDateString('pt-BR') : '-'}</TableCell>
+                    <TableCell>
+                      {product.active ? (
+                        <Badge className="bg-green-500">Ativo</Badge>
+                      ) : (
+                        <Badge className="bg-red-500">Inativo</Badge>
+                      )}
+                    </TableCell>
                     <TableCell>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>

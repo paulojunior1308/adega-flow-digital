@@ -5,6 +5,11 @@ const prisma = new PrismaClient();
 
 async function main() {
 
+  // Log das tabelas existentes
+  const tables = await prisma.$queryRaw<Array<{ table_name: string }>>`
+    SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'`;
+  console.log('Tabelas existentes no banco:', tables.map(t => t.table_name));
+
   // Adicionar usuário admin
   await prisma.user.upsert({
     where: { email: 'pauloesjr2@gmail.com' },
@@ -32,7 +37,7 @@ async function main() {
   ];
   for (const name of categorias) {
     await prisma.category.create({
-      data: { name },
+      data: { name, active: true },
     });
   }
 }
