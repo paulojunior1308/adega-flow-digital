@@ -176,14 +176,14 @@ model Cart {
 
 model CartItem {
   id        String   @id @default(uuid())
-  cartId    String
-  productId String
-  quantity  Int      @default(1)
-  price     Float?
-  comboId   String?
-  createdAt DateTime @default(now())
-  cart      Cart     @relation(fields: [cartId], references: [id])
+  quantity  Int
   product   Product  @relation(fields: [productId], references: [id])
+  productId String
+  cart      Cart     @relation(fields: [cartId], references: [id])
+  cartId    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   @@map("cart_items")
 }
 
