@@ -4,18 +4,37 @@ import bcrypt from 'bcryptjs';
 const prisma = new PrismaClient();
 
 async function main() {
-  // Adicionar usuário motoboy genérico
+
+  // Adicionar usuário admin
   await prisma.user.upsert({
-    where: { email: 'motoboy@teste.com' },
+    where: { email: 'pauloesjr2@gmail.com' },
     update: {},
     create: {
-      email: 'motoboy@teste.com',
-      password: await bcrypt.hash('123456', 10),
-      name: 'Motoboy Teste',
-      role: Role.MOTOBOY,
+      email: 'pauloesjr2@gmail.com',
+      password: await bcrypt.hash('Paulo1308**', 10),
+      name: 'Paulo Junior',
+      role: Role.ADMIN,
       active: true,
     },
   });
+
+  // Adicionar categorias
+  const categorias = [
+    'Whisky',
+    'Essências',
+    'GIN',
+    'Energéticos',
+    'Cervejas',
+    'Refrigerantes',
+    'Gelo de Coco',
+    'Sucos',
+    'Carvão',
+  ];
+  for (const name of categorias) {
+    await prisma.category.create({
+      data: { name },
+    });
+  }
 }
 
 main()
