@@ -8,7 +8,7 @@ const envSchema = zod_1.z.object({
     nodeEnv: zod_1.z.enum(['development', 'test', 'production']).default('development'),
     port: zod_1.z.coerce.number().default(3333),
     host: zod_1.z.string().default('localhost'),
-    frontendUrl: zod_1.z.string().default('http://localhost:8080'),
+    frontendUrl: zod_1.z.string().default('https://adega-element.netlify.app'),
     databaseUrl: zod_1.z.string(),
     jwtSecret: zod_1.z.string(),
     jwtExpiresIn: zod_1.z.string().default('1d'),

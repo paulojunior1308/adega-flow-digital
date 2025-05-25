@@ -29,7 +29,7 @@ interface Promotion {
   products: Product[];
 }
 
-const API_URL = 'http://localhost:3333'; // URL base do backend
+const API_URL = 'https://adega-flow-digital.onrender.com'; // URL base do backend
 
 export function PromotionCarousel() {
   const [promotions, setPromotions] = React.useState<Promotion[]>([]);

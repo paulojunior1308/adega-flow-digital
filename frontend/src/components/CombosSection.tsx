@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/carousel";
 import { api } from '@/lib/api';
 
-const API_URL = 'http://localhost:3333'; // URL base do backend
+const API_URL = 'https://adega-flow-digital.onrender.com'; // URL base do backend
 
 const ComboCard = ({ title, items, price, bgColor, image }: any) => {
   return (

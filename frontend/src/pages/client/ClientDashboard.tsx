@@ -50,7 +50,7 @@ const getRandomProducts = (products, count = 4) => {
   return shuffled.slice(0, count);
 };
 
-const API_URL = 'http://localhost:3333';
+const API_URL = 'https://adega-flow-digital.onrender.com';
 
 const categoryImages = {
   'Whisky': '/uploads/whisky.png',

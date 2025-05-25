@@ -16,7 +16,7 @@ const userTypes = [
   { value: 'motoboy', label: 'Motoboy' },
 ];
 
-const API_URL = 'http://localhost:3333/api';
+const API_URL = 'https://adega-flow-digital.onrender.com/api';
 
 const AdminUsers = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);

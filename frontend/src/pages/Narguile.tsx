@@ -63,7 +63,7 @@ const Narguile = () => {
       '38b881e9-853a-4cbc-b37b-53e4fa96c553', // Essências
       'e1415b1d-c6fc-475c-befb-67f5b27bcf27'  // Carvão
     ];
-    Promise.all(ids.map(id => fetch(`http://localhost:3333/api/products?categoryId=${id}`).then(res => res.json())))
+    Promise.all(ids.map(id => fetch(`https://adega-flow-digital.onrender.com/api/products?categoryId=${id}`).then(res => res.json())))
       .then(results => {
         setProducts(results.flat());
         console.log('Produtos carregados para Narguile:', results.flat());

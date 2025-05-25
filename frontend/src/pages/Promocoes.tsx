@@ -88,14 +88,14 @@ const Promocoes = () => {
   const [searchTerm, setSearchTerm] = useState('');
   
   useEffect(() => {
-    fetch('http://localhost:3333/api/promotions')
+    fetch('https://adega-flow-digital.onrender.com/api/promotions')
       .then(res => res.json())
       .then(data => {
         setPromos(data.map((promo: any) => ({
           id: promo.id,
           title: promo.name,
           description: promo.description,
-          image: promo.image ? `http://localhost:3333${promo.image}` : '',
+          image: promo.image ? `https://adega-flow-digital.onrender.com${promo.image}` : '',
           price: `R$ ${promo.price.toFixed(2)}`,
           originalPrice: promo.originalPrice ? `R$ ${promo.originalPrice.toFixed(2)}` : undefined,
           discountPercentage: promo.originalPrice ? Math.round(((promo.originalPrice - promo.price) / promo.originalPrice) * 100) : undefined,

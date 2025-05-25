@@ -26,7 +26,7 @@ const categories = [
 function getImageUrl(image?: string) {
   if (!image) return '/placeholder.png';
   if (image.startsWith('http')) return image;
-  if (image.startsWith('/uploads')) return `http://localhost:3333${image}`;
+  if (image.startsWith('/uploads')) return `https://adega-flow-digital.onrender.com${image}`;
   return image;
 }
 

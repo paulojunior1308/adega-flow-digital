@@ -87,3 +87,5 @@ O projeto está configurado para deploy na Railway ou Render. Basta conectar o r
 ## Licença
 
 ISC 
+
+O frontend estará disponível em `https://adega-element.netlify.app` 

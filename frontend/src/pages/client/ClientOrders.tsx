@@ -381,7 +381,7 @@ const ClientOrders = () => {
                               product.image
                                 ? product.image.startsWith('http')
                                   ? product.image
-                                  : `http://localhost:3333${product.image}`
+                                  : `https://adega-flow-digital.onrender.com${product.image}`
                                 : '/img/no-image.png'
                             } 
                             alt={product.name} 
