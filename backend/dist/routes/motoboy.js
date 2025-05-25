@@ -1,0 +1,12 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const auth_1 = require("../middlewares/auth");
+const motoboy_1 = require("../middlewares/motoboy");
+const order_1 = require("../controllers/order");
+const router = (0, express_1.Router)();
+router.use(auth_1.authMiddleware, motoboy_1.motoboyMiddleware);
+router.get('/orders', order_1.orderController.motoboyList);
+router.patch('/orders/:id/status', order_1.orderController.motoboyUpdateStatus);
+router.patch('/orders/:id/location', order_1.orderController.updateLocation);
+exports.default = router;

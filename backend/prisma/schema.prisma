@@ -1,0 +1,305 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String     @id @default(uuid())
+  email     String     @unique
+  password  String
+  name      String
+  role      Role       @default(USER)
+  active    Boolean    @default(true)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  addresses Address[]
+  cart      Cart?
+  cashFlows CashFlow[]
+  orders    Order[]
+  sales     Sale[]
+}
+
+model Product {
+  id          String      @id @default(uuid())
+  name        String
+  description String?
+  price       Float
+  costPrice   Float
+  stock       Int         @default(0)
+  minStock    Int         @default(0)
+  barcode     String?     @unique
+  sku         String?     @unique
+  active      Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  categoryId  String
+  supplierId  String?
+  image       String?
+  isCombo     Boolean     @default(false)
+  isPromotion Boolean     @default(false)
+  pinned      Boolean     @default(false)
+  cartItems   CartItem[]
+  comboItems  ComboItem[]
+  kitItems    KitItem[]
+  orderItems  OrderItem[]
+  category    Category    @relation(fields: [categoryId], references: [id])
+  supplier    Supplier?   @relation(fields: [supplierId], references: [id])
+  saleItems   SaleItem[]
+  promotions  Promotion[] @relation("ProductToPromotion")
+}
+
+model Category {
+  id          String    @id @default(uuid())
+  name        String
+  active      Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  description String?
+  products    Product[]
+}
+
+model Client {
+  id        String   @id @default(uuid())
+  name      String
+  email     String?  @unique
+  phone     String?
+  document  String?  @unique
+  address   String?
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  sales     Sale[]
+}
+
+model Supplier {
+  id        String    @id @default(uuid())
+  name      String
+  email     String?   @unique
+  phone     String?
+  document  String?   @unique
+  address   String?
+  active    Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  category  String?
+  contact   String?
+  products  Product[]
+}
+
+model Sale {
+  id              String         @id @default(uuid())
+  status          SaleStatus     @default(PENDING)
+  total           Float
+  discount        Float          @default(0)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  userId          String
+  clientId        String?
+  paymentMethodId String?
+  client          Client?        @relation(fields: [clientId], references: [id])
+  paymentMethod   PaymentMethod? @relation(fields: [paymentMethodId], references: [id])
+  user            User           @relation(fields: [userId], references: [id])
+  items           SaleItem[]
+}
+
+model SaleItem {
+  id        String   @id @default(uuid())
+  quantity  Int
+  price     Float
+  discount  Float    @default(0)
+  createdAt DateTime @default(now())
+  saleId    String
+  productId String
+  product   Product  @relation(fields: [productId], references: [id])
+  sale      Sale     @relation(fields: [saleId], references: [id])
+}
+
+model Kit {
+  id        String    @id @default(uuid())
+  name      String
+  price     Float
+  active    Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  items     KitItem[]
+}
+
+model KitItem {
+  id        String   @id @default(uuid())
+  quantity  Int
+  createdAt DateTime @default(now())
+  kitId     String
+  productId String
+  kit       Kit      @relation(fields: [kitId], references: [id])
+  product   Product  @relation(fields: [productId], references: [id])
+}
+
+model CashFlow {
+  id          String       @id @default(uuid())
+  type        CashFlowType
+  amount      Float
+  description String
+  createdAt   DateTime     @default(now())
+  userId      String
+  user        User         @relation(fields: [userId], references: [id])
+}
+
+model Address {
+  id           String   @id @default(uuid())
+  userId       String
+  title        String
+  street       String
+  number       String
+  complement   String?
+  neighborhood String
+  city         String
+  state        String
+  zipcode      String
+  isDefault    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  user         User     @relation(fields: [userId], references: [id])
+  orders       Order[]
+}
+
+model Cart {
+  id        String     @id @default(uuid())
+  userId    String     @unique
+  updatedAt DateTime   @updatedAt
+  user      User       @relation(fields: [userId], references: [id])
+  items     CartItem[]
+}
+
+model CartItem {
+  id        String   @id @default(uuid())
+  cartId    String
+  productId String
+  quantity  Int      @default(1)
+  price     Float?
+  comboId   String?
+  createdAt DateTime @default(now())
+  cart      Cart     @relation(fields: [cartId], references: [id])
+  product   Product  @relation(fields: [productId], references: [id])
+}
+
+model Order {
+  id              String         @id @default(uuid())
+  userId          String
+  addressId       String
+  status          OrderStatus    @default(PENDING)
+  total           Float
+  instructions    String?
+  deliveryLat     Float?
+  deliveryLng     Float?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  paymentMethodId String?
+  address         Address        @relation(fields: [addressId], references: [id])
+  paymentMethod   PaymentMethod? @relation(fields: [paymentMethodId], references: [id])
+  user            User           @relation(fields: [userId], references: [id])
+  items           OrderItem[]
+}
+
+model OrderItem {
+  id        String  @id @default(uuid())
+  orderId   String
+  productId String
+  quantity  Int     @default(1)
+  price     Float
+  order     Order   @relation(fields: [orderId], references: [id])
+  product   Product @relation(fields: [productId], references: [id])
+}
+
+model Combo {
+  id          String      @id @default(uuid())
+  name        String
+  description String
+  price       Float
+  image       String?
+  active      Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  items       ComboItem[]
+}
+
+model ComboItem {
+  id                   String  @id @default(uuid())
+  comboId              String
+  productId            String
+  quantity             Int     @default(1)
+  allowFlavorSelection Boolean @default(false)
+  maxFlavors           Int     @default(1)
+  categoryId           String?
+  combo                Combo   @relation(fields: [comboId], references: [id])
+  product              Product @relation(fields: [productId], references: [id])
+}
+
+model Promotion {
+  id            String    @id @default(uuid())
+  name          String
+  description   String
+  price         Float
+  originalPrice Float
+  image         String?
+  active        Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  products      Product[] @relation("ProductToPromotion")
+}
+
+model PaymentMethod {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  orders    Order[]
+  sales     Sale[]
+}
+
+model AccountPayable {
+  id           String         @id @default(uuid())
+  description  String
+  value        Float
+  dueDate      DateTime
+  status       AccountStatus  @default(PENDING)
+  type         String
+  observations String?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+}
+
+enum Role {
+  ADMIN
+  USER
+  MOTOBOY
+}
+
+enum SaleStatus {
+  PENDING
+  COMPLETED
+  CANCELLED
+}
+
+enum CashFlowType {
+  INCOME
+  EXPENSE
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PREPARING
+  DELIVERING
+  DELIVERED
+  CANCELLED
+}
+
+enum AccountStatus {
+  PENDING
+  PAID
+}

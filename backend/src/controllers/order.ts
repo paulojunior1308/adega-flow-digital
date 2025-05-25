@@ -1,0 +1,248 @@
+import { Request, Response } from 'express';
+import prisma from '../config/prisma';
+import { AppError } from '../config/errorHandler';
+import { getSocketInstance } from '../config/socketInstance';
+
+type OrderStatus = 'PENDING' | 'CONFIRMED' | 'PREPARING' | 'DELIVERING' | 'DELIVERED' | 'CANCELLED';
+
+export const orderController = {
+  // Criar pedido a partir do carrinho
+  create: async (req: Request, res: Response) => {
+    // @ts-ignore
+    const userId = req.user.id;
+    const { addressId, paymentMethodId, instructions } = req.body;
+
+    console.log('paymentMethodId recebido:', paymentMethodId);
+    const paymentMethod = await prisma.paymentMethod.findUnique({ where: { id: paymentMethodId } });
+    console.log('paymentMethod encontrado:', paymentMethod);
+    if (!paymentMethod) {
+      return res.status(400).json({ error: 'Forma de pagamento inválida' });
+    }
+
+    // Validar se o endereço foi fornecido
+    if (!addressId) {
+      return res.status(400).json({ error: 'Endereço de entrega é obrigatório' });
+    }
+
+    // Validar se o endereço pertence ao usuário
+    const address = await prisma.address.findUnique({
+      where: { id: addressId },
+    });
+
+    if (!address || address.userId !== userId) {
+      return res.status(400).json({ error: 'Endereço inválido' });
+    }
+
+    // Busca o carrinho do usuário
+    const cart = await prisma.cart.findUnique({
+      where: { userId },
+      include: { items: { include: { product: true } } },
+    });
+
+    if (!cart || cart.items.length === 0) {
+      return res.status(400).json({ error: 'Carrinho vazio' });
+    }
+
+    // Verificar estoque antes de criar o pedido
+    for (const item of cart.items) {
+      const produto = await prisma.product.findUnique({ where: { id: item.productId } });
+      if (!produto) {
+        return res.status(400).json({ error: `Produto não encontrado: ${item.productId}` });
+      }
+      if ((produto.stock || 0) < item.quantity) {
+        return res.status(400).json({ error: `Estoque insuficiente para o produto '${produto.name}'.` });
+      }
+    }
+
+    // Calcula total usando o preço ajustado do cartItem
+    const total = cart.items.reduce((sum: number, item: any) => sum + (item.price ?? item.product.price) * item.quantity, 0);
+
+    // Cria o pedido
+    const order = await prisma.order.create({
+      data: {
+        userId,
+        addressId,
+        paymentMethodId,
+        total,
+        instructions,
+        items: {
+          create: cart.items.map((item: any) => ({
+            productId: item.productId,
+            quantity: item.quantity,
+            price: item.price ?? item.product.price,
+          })),
+        },
+      },
+      include: { 
+        items: { 
+          include: { 
+            product: true 
+          } 
+        }, 
+        address: true,
+        user: {
+          select: {
+            name: true,
+            email: true
+          }
+        }
+      },
+    });
+
+    // Limpa o carrinho
+    await prisma.cartItem.deleteMany({ where: { cartId: cart.id } });
+
+    // Emitir evento de novo pedido para admins
+    const io = getSocketInstance();
+    if (io) {
+      io.emit('new-order', { order });
+    }
+
+    res.status(201).json(order);
+  },
+
+  // Listar pedidos do usuário logado
+  list: async (req: Request, res: Response) => {
+    // @ts-ignore
+    const userId = req.user.id;
+    const orders = await prisma.order.findMany({
+      where: { userId },
+      include: { items: { include: { product: true } }, address: true },
+      orderBy: { createdAt: 'desc' },
+    });
+    // Mapear para garantir que cada produto tenha o campo 'image'
+    const formatted = orders.map((order: any) => ({
+      ...order,
+      products: order.items.map((item: any) => ({
+        id: item.product.id,
+        name: item.product.name,
+        price: item.product.price,
+        quantity: item.quantity,
+        image: (item.product as any).image || '',
+      })),
+    }));
+    res.json(formatted);
+  },
+
+  // Admin: listar todos os pedidos
+  adminList: async (req: Request, res: Response) => {
+    const orders = await prisma.order.findMany({
+      include: {
+        user: { select: { id: true, name: true, email: true } },
+        items: { include: { product: true } },
+        address: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    res.json(orders);
+  },
+
+  // Admin: atualizar status do pedido
+  updateStatus: async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    // Mapear status do frontend para o enum do Prisma
+    const statusMap: Record<string, OrderStatus> = {
+      pending: 'PENDING',
+      preparing: 'PREPARING',
+      delivering: 'DELIVERING',
+      delivered: 'DELIVERED',
+      cancelled: 'CANCELLED',
+      confirmed: 'CONFIRMED',
+    };
+    const statusEnum = statusMap[String(status)];
+    if (!statusEnum) {
+      throw new AppError('Status inválido', 400);
+    }
+
+    const order = await prisma.order.update({
+      where: { id },
+      data: { status: statusEnum as OrderStatus },
+      include: { items: { include: { product: true } }, address: true },
+    });
+    // Subtrair estoque se status for DELIVERED
+    if (statusEnum === 'DELIVERED') {
+      if (order.items && Array.isArray(order.items)) {
+        for (const item of order.items) {
+          if (item.productId) {
+            // Produto normal
+            await prisma.product.update({
+              where: { id: item.productId },
+              data: { stock: { decrement: item.quantity } }
+            });
+          }
+        }
+      }
+    }
+    // Emitir evento para o cliente
+    const io = getSocketInstance();
+    if (io) {
+      io.to(order.userId).emit('order-updated', { order });
+    }
+    res.json(order);
+  },
+
+  // Admin: atualizar localização do entregador
+  updateLocation: async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const { deliveryLat, deliveryLng } = req.body;
+    const order = await prisma.order.update({
+      where: { id },
+      data: { deliveryLat, deliveryLng },
+      include: { items: { include: { product: true } }, address: true },
+    });
+    // Emitir evento para o cliente
+    const io = getSocketInstance();
+    if (io) {
+      io.to(order.userId).emit('order-updated', { order });
+    }
+    res.json(order);
+  },
+
+  // Motoboy: listar todos os pedidos em entrega
+  motoboyList: async (req: Request, res: Response) => {
+    const orders = await prisma.order.findMany({
+      where: { status: 'DELIVERING' },
+      include: {
+        items: { include: { product: true } },
+        address: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    // Formatar para o frontend do motoboy
+    const formatted = orders.map((order: any) => ({
+      id: order.id,
+      status: order.status,
+      address: `${order.address.title} - ${order.address.street}, ${order.address.number}${order.address.complement ? ' ' + order.address.complement : ''}, ${order.address.neighborhood}, ${order.address.city} - ${order.address.state}, CEP: ${order.address.zipcode}`,
+      products: order.items.map((item: any) => ({
+        name: item.product?.name ?? '',
+        quantity: item.quantity
+      })),
+      createdAt: order.createdAt,
+      total: order.total
+    }));
+    res.json(formatted);
+  },
+
+  // Motoboy/Admin: atualizar status do pedido para DELIVERED
+  motoboyUpdateStatus: async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const { status } = req.body;
+    // Permitir apenas DELIVERED
+    if (status !== 'delivered' && status !== 'DELIVERED') {
+      return res.status(403).json({ error: 'Motoboy só pode marcar como entregue.' });
+    }
+    const order = await prisma.order.update({
+      where: { id },
+      data: { status: 'DELIVERED' },
+      include: { items: { include: { product: true } }, address: true },
+    });
+    // Emitir evento para o cliente
+    const io = getSocketInstance();
+    if (io) {
+      io.to(order.userId).emit('order-updated', { order });
+    }
+    res.json(order);
+  },
+}; 
