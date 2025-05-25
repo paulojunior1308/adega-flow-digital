@@ -13,7 +13,7 @@ import api from '@/lib/axios';
 import { ComboOptionsModal } from '@/components/home/ComboOptionsModal';
 
 // Defina a URL base do backend
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3333';
+const API_URL = import.meta.env.VITE_API_URL || 'https://adega-flow-digital.onrender.com';
 
 // Tipos para os produtos
 interface Product {

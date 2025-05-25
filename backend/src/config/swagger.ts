@@ -9,8 +9,8 @@ export const swaggerSpec = {
   },
   servers: [
     {
-      url: `http://localhost:${env.port}`,
-      description: 'Servidor de Desenvolvimento',
+      url: `https://adega-flow-digital.onrender.com`,
+      description: 'Servidor de Produção',
     },
   ],
   components: {

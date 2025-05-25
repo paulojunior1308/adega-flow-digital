@@ -21,12 +21,8 @@ export const initializeExpress = (app: Express) => {
   // CORS
   app.use(cors({
     origin: [
-      'http://172.17.77.169:8080',
-      'http://172.17.77.169:3000',
-      'http://172.17.77.169:5173',
-      'http://localhost:8080',
-      'http://localhost:3000',
-      'http://localhost:5173', // Adiciona porta padrão do Vite
+      'https://adega-element.netlify.app',
+      'https://www.adega-element.netlify.app',
     ],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],

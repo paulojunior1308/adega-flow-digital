@@ -12,7 +12,7 @@ const envSchema = z.object({
   host: z.string().default('localhost'),
   
   // Frontend
-  frontendUrl: z.string().default('http://localhost:8080'),
+  frontendUrl: z.string().default('https://adega-element.netlify.app'),
   
   // Banco de dados
   databaseUrl: z.string(),

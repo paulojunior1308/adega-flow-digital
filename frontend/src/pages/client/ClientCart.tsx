@@ -52,7 +52,7 @@ import {
 import api from '@/lib/axios';
 
 // Defina a URL base do backend
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3333';
+const API_URL = import.meta.env.VITE_API_URL || 'https://adega-flow-digital.onrender.com';
 
 // Interfaces
 interface Product {
@@ -194,6 +194,11 @@ const ClientCart = () => {
       await api.put(`/cart/${item.id}`, { quantity: item.quantity - 1 });
       const res = await api.get('/cart');
       setCart(res.data?.items || []);
+    toast({
+      title: "Item removido",
+      description: "Produto removido do carrinho",
+      duration: 2000,
+    });
     }
   };
 

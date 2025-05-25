@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: 'http://localhost:3333/api',
+  baseURL: 'https://adega-flow-digital.onrender.com/api',
 });
 
 api.interceptors.request.use((config) => {

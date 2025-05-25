@@ -36,7 +36,7 @@ const Combos = () => {
   const [loading, setLoading] = useState(true);
   
   useEffect(() => {
-    fetch('http://localhost:3333/api/combos')
+    fetch('https://adega-flow-digital.onrender.com/api/combos')
       .then(res => res.json())
       .then(data => {
         setCombos(data);
