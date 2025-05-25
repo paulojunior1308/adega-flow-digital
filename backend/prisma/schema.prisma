@@ -184,6 +184,7 @@ model CartItem {
   createdAt DateTime @default(now())
   cart      Cart     @relation(fields: [cartId], references: [id])
   product   Product  @relation(fields: [productId], references: [id])
+  @@map("cart_items")
 }
 
 model Order {
