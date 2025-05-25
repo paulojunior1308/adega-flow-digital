@@ -48,6 +48,7 @@ import {
 } from '@/components/ui/select';
 import { useToast } from "@/components/ui/use-toast";
 import api from '@/lib/axios';
+import { Switch } from '@/components/ui/switch';
 
 // Product interface
 interface Product {
@@ -253,6 +254,21 @@ const AdminStock = () => {
     }
   };
 
+  // Função para atualizar status ativo do produto
+  const handleToggleActive = async (productId: string, active: boolean) => {
+    try {
+      await api.patch(`/admin/products/${productId}`, { active });
+      setProducts(products.map(p => p.id === productId ? { ...p, active } : p));
+      toast({ title: `Produto ${active ? 'ativado' : 'inativado'} com sucesso!` });
+    } catch (error: any) {
+      toast({
+        title: 'Erro ao atualizar status.',
+        description: error.response?.data?.error || 'Tente novamente mais tarde.',
+        variant: 'destructive'
+      });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-element-gray-light flex">
       <AdminSidebar />
@@ -395,11 +411,10 @@ const AdminStock = () => {
                     </TableCell>
                     <TableCell>{product.updatedAt ? new Date(product.updatedAt).toLocaleDateString('pt-BR') : '-'}</TableCell>
                     <TableCell>
-                      {product.active ? (
-                        <Badge className="bg-green-500">Ativo</Badge>
-                      ) : (
-                        <Badge className="bg-red-500">Inativo</Badge>
-                      )}
+                      <Switch
+                        checked={product.active}
+                        onCheckedChange={(checked) => handleToggleActive(product.id, checked)}
+                      />
                     </TableCell>
                     <TableCell>
                       <DropdownMenu>
