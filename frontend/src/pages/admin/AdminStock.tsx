@@ -257,7 +257,7 @@ const AdminStock = () => {
   // Função para atualizar status ativo do produto
   const handleToggleActive = async (productId: string, active: boolean) => {
     try {
-      await api.patch(`/admin/products/${productId}`, { active });
+      await api.put(`/admin/products/${productId}`, { active });
       setProducts(products.map(p => p.id === productId ? { ...p, active } : p));
       toast({ title: `Produto ${active ? 'ativado' : 'inativado'} com sucesso!` });
     } catch (error: any) {
