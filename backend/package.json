@@ -11,7 +11,7 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
     "create:admin": "ts-node src/scripts/createAdmin.ts",
-    "prestart": "npx prisma migrate deploy && npx prisma db seed"
+    "prestart": "npx prisma generate && npx prisma migrate deploy && npx prisma db seed"
   },
   "keywords": [
     "pdv",
