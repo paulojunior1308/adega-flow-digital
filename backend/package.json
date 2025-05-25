@@ -10,7 +10,8 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
-    "create:admin": "ts-node src/scripts/createAdmin.ts"
+    "create:admin": "ts-node src/scripts/createAdmin.ts",
+    "prestart": "npx prisma migrate deploy"
   },
   "keywords": [
     "pdv",
