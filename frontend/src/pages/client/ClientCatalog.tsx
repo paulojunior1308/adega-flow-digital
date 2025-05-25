@@ -283,15 +283,15 @@ const ClientCatalog = () => {
     setFilteredProducts(result);
   }, [searchTerm, selectedCategory, allProducts]);
 
-  // Corrigir categorias duplicadas
+  // Corrigir categorias duplicadas usando o id
   const categoriasPopularesUnicas = React.useMemo(() => {
     const map = new Map();
     categories.forEach((cat: any) => {
-      if (!map.has(cat.name)) {
-        map.set(cat.name, cat);
+      if (cat.id !== 'all' && !map.has(cat.id)) {
+        map.set(cat.id, cat);
       }
     });
-    return Array.from(map.values()).filter((cat: any) => cat.id !== 'all');
+    return Array.from(map.values());
   }, [categories]);
 
   return (
