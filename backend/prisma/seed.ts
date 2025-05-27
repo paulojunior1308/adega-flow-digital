@@ -23,23 +23,10 @@ async function main() {
     },
   });
 
-  // Adicionar categorias
-  const categorias = [
-    'Whisky',
-    'Essências',
-    'GIN',
-    'Energéticos',
-    'Cervejas',
-    'Refrigerantes',
-    'Gelo de Coco',
-    'Sucos',
-    'Carvão',
-  ];
-  for (const name of categorias) {
-    await prisma.category.create({
-      data: { name, active: true },
-    });
-  }
+  await prisma.category.deleteMany({});
+  console.log('Categorias removidas com sucesso!');
+
+
 }
 
 main()

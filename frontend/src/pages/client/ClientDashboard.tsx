@@ -105,10 +105,6 @@ const ClientDashboard = () => {
     return () => clearInterval(interval);
   }, [promotions]);
 
-  const uniqueCategories = categories
-    .filter(category => category.name !== 'Sucos')
-    .filter((cat, idx, arr) => arr.findIndex(c => c.id === cat.id) === idx);
-
   return (
     <div className="min-h-screen bg-element-gray-light">
       <ClientSidebar />
@@ -263,8 +259,12 @@ const ClientDashboard = () => {
             <h3 className="element-subheading mb-6">Categorias Populares</h3>
             
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-              {uniqueCategories.map((category) => (
-                <Link key={category.id} to={`/cliente-catalogo?cat=${category.id}`} className="element-card flex flex-col items-center justify-center p-6 text-center element-card-hover">
+              {categories.filter(category => category.name !== 'Sucos').map((category) => (
+                <Link 
+                  key={category.id}
+                  to={`/cliente-catalogo?cat=${category.id}`} 
+                  className="element-card flex flex-col items-center justify-center p-6 text-center element-card-hover"
+                >
                   <img 
                     src={category.image ? `${API_URL}${category.image}` : (categoryImages[category.name] ? `${API_URL}${categoryImages[category.name]}` : 'https://images.unsplash.com/photo-1618160702438-9b02ab6515c9')} 
                     alt={category.name} 
