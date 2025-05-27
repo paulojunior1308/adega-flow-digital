@@ -30,10 +30,12 @@ router.get('/products', async (req: Request, res: Response) => {
 // Listar categorias de produtos
 router.get('/products/categories', async (req: Request, res: Response) => {
   try {
-    const categories = await prisma.category.findMany({
+    let categories = await prisma.category.findMany({
       where: { active: true },
       orderBy: { name: 'asc' }
     });
+    // Filtrar duplicatas por id
+    categories = categories.filter((cat, idx, arr) => arr.findIndex(c => c.id === cat.id) === idx);
     res.json(categories);
   } catch (error) {
     console.error('Erro ao listar categorias:', error);
