@@ -45,6 +45,18 @@ interface Address {
   isDefault: boolean;
 }
 
+// Função para buscar lat/lng pelo endereço
+async function getLatLngFromAddress(address: string): Promise<{ lat: number, lng: number } | null> {
+  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+  if (!apiKey) return null;
+  const response = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${apiKey}`);
+  const data = await response.json();
+  if (data.status === 'OK') {
+    return data.results[0].geometry.location;
+  }
+  return null;
+}
+
 const ClientAddresses = () => {
   const { toast } = useToast();
   const [addresses, setAddresses] = React.useState<Address[]>([]);
@@ -129,10 +141,22 @@ const ClientAddresses = () => {
       zipcode: formData.get('zipcode') as string,
       isDefault: formData.get('isDefault') === 'on'
     };
+    // Montar endereço completo para geocodificação
+    const fullAddress = `${newAddress.street}, ${newAddress.number}, ${newAddress.neighborhood}, ${newAddress.city}, ${newAddress.state}, ${newAddress.zipcode}`;
+    const latLng = await getLatLngFromAddress(fullAddress);
+    if (!latLng) {
+      toast({
+        title: 'Erro ao localizar endereço',
+        description: 'Não foi possível obter a localização. Verifique o endereço digitado.',
+        variant: 'destructive',
+        duration: 3000,
+      });
+      return;
+    }
     try {
       if (currentAddress) {
         // Editar endereço existente
-        await api.put(`/addresses/${currentAddress.id}`, newAddress);
+        await api.put(`/addresses/${currentAddress.id}`, { ...newAddress, lat: latLng.lat, lng: latLng.lng });
         toast({
           title: 'Endereço atualizado',
           description: 'O endereço foi atualizado com sucesso.',
@@ -140,7 +164,7 @@ const ClientAddresses = () => {
         });
       } else {
         // Criar novo endereço
-        await api.post('/addresses', newAddress);
+        await api.post('/addresses', { ...newAddress, lat: latLng.lat, lng: latLng.lng });
         toast({
           title: 'Endereço adicionado',
           description: 'O novo endereço foi adicionado com sucesso.',
