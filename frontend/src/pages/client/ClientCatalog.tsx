@@ -230,7 +230,16 @@ const ClientCatalog = () => {
 
   useEffect(() => {
     api.get('/products/categories').then(res => {
-      setCategories([{ id: 'all', name: 'Todos' }, ...res.data]);
+      // Filtra categorias únicas pelo id
+      const unique = [];
+      const map = new Map();
+      res.data.forEach((cat: any) => {
+        if (!map.has(cat.id)) {
+          map.set(cat.id, true);
+          unique.push(cat);
+        }
+      });
+      setCategories([{ id: 'all', name: 'Todos' }, ...unique]);
     });
     api.get('/combos').then(res => {
       // Corrigir combos: mapear allowFlavorSelection para isChoosable
@@ -491,7 +500,9 @@ const ClientCatalog = () => {
           <div className="mb-8">
             <h2 className="text-xl font-bold mb-4">Categorias Populares</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {categoriasPopularesUnicas.map((category: any) => (
+              {categories.filter((cat, idx, arr) =>
+                cat.id !== 'all' && arr.findIndex(c => c.id === cat.id) === idx
+              ).map((category: any) => (
                 <div key={category.id} className="bg-white rounded-lg shadow p-4 flex flex-col items-center">
                   <img src={category.image && !category.image.startsWith('http') ? API_URL + category.image : category.image} alt={category.name} className="w-20 h-20 object-cover rounded-full mb-2" />
                   <span className="font-medium text-lg">{category.name}</span>
