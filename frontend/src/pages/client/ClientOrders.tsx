@@ -47,6 +47,7 @@ interface Order {
   paymentMethod: string;
   deliveryLat?: number;
   deliveryLng?: number;
+  deliveryFee?: number;
 }
 
 // Coordenadas fixas da loja
@@ -99,6 +100,7 @@ const ClientOrders = () => {
       })),
       deliveryLat: order.deliveryLat,
       deliveryLng: order.deliveryLng,
+      deliveryFee: order.deliveryFee ?? 0,
     };
   }
 
@@ -404,11 +406,11 @@ const ClientOrders = () => {
                   <div className="border-t pt-4">
                     <div className="flex justify-between">
                       <span className="font-medium">Subtotal</span>
-                      <span>R$ {selectedOrder.total.toFixed(2)}</span>
+                      <span>R$ {(selectedOrder.total - (selectedOrder.deliveryFee ?? 0)).toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between mt-1">
                       <span className="font-medium">Taxa de entrega</span>
-                      <span>Grátis</span>
+                      <span>R$ {(selectedOrder.deliveryFee ?? 0).toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between mt-3 text-lg font-bold">
                       <span>Total</span>

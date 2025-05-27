@@ -284,4 +284,25 @@ export const orderController = {
     }
     res.json(order);
   },
+
+  calculateDeliveryFee: async (req: Request, res: Response) => {
+    const { addressId } = req.body;
+    if (!addressId) {
+      return res.status(400).json({ error: 'Endereço de entrega é obrigatório' });
+    }
+    // @ts-ignore
+    const userId = req.user.id;
+    const address = await prisma.address.findUnique({ where: { id: addressId } });
+    if (!address || address.userId !== userId) {
+      return res.status(400).json({ error: 'Endereço inválido' });
+    }
+    const addressLat = (address as any).lat;
+    const addressLng = (address as any).lng;
+    if (typeof addressLat !== 'number' || typeof addressLng !== 'number') {
+      return res.status(400).json({ error: 'Endereço do cliente sem coordenadas (lat/lng).' });
+    }
+    const distanceKm = calculateDistance(STORE_LOCATION.lat, STORE_LOCATION.lng, addressLat, addressLng);
+    const deliveryFee = Math.round((calculateDeliveryFee(distanceKm) + Number.EPSILON) * 100) / 100;
+    res.json({ deliveryFee });
+  },
 }; 

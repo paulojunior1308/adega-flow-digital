@@ -125,6 +125,8 @@ const ClientCart = () => {
   
   // Buscar descontos do combo do localStorage
   const [comboDescontos, setComboDescontos] = useState<any[]>([]);
+  const [deliveryFee, setDeliveryFee] = useState(0);
+  
   useEffect(() => {
     const descontos = localStorage.getItem('comboDescontos');
     if (descontos) {
@@ -156,12 +158,25 @@ const ClientCart = () => {
     });
   }, []);
   
+  // Buscar taxa de entrega ao selecionar endereço
+  useEffect(() => {
+    if (selectedAddress) {
+      api.post('/orders/calculate-delivery-fee', { addressId: selectedAddress })
+        .then(res => {
+          setDeliveryFee(res.data.deliveryFee ?? 0);
+        })
+        .catch(() => setDeliveryFee(0));
+    } else {
+      setDeliveryFee(0);
+    }
+  }, [selectedAddress]);
+  
   // Calcular subtotal e total
   useEffect(() => {
     const calculatedSubtotal = cart.reduce((sum, item) => sum + ((item.price ?? item.product.price) * item.quantity), 0);
     setSubtotal(calculatedSubtotal);
-    setTotal(calculatedSubtotal - discount);
-  }, [cart, discount]);
+    setTotal(calculatedSubtotal - discount + deliveryFee);
+  }, [cart, discount, deliveryFee]);
   
   // Buscar carrinho real do backend ao carregar a página
   useEffect(() => {
@@ -497,6 +512,11 @@ const ClientCart = () => {
                             <span>-R$ {discount.toFixed(2)}</span>
                           </div>
                         )}
+                        
+                        <div className="flex justify-between">
+                          <span className="text-gray-500">Taxa de entrega</span>
+                          <span>R$ {deliveryFee.toFixed(2)}</span>
+                        </div>
                         
                         <Separator className="my-2" />
                         

@@ -38,5 +38,6 @@ router.delete('/cart/:itemId', cartController.removeItem);
 // Rotas de pedidos do cliente
 router.get('/orders', orderController.list);
 router.post('/orders', orderController.create);
+router.post('/orders/calculate-delivery-fee', orderController.calculateDeliveryFee);
 
 export default router; 
