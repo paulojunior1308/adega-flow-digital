@@ -18,7 +18,7 @@ export const addressController = {
   create: async (req: Request, res: Response) => {
     // @ts-ignore
     const userId = req.user.id;
-    const { title, street, number, complement, neighborhood, city, state, zipcode, isDefault } = req.body;
+    const { title, street, number, complement, neighborhood, city, state, zipcode, isDefault, lat, lng } = req.body;
 
     if (isDefault) {
       // Desmarcar outros endereços como default
@@ -40,6 +40,8 @@ export const addressController = {
         state,
         zipcode,
         isDefault: !!isDefault,
+        lat: lat ? parseFloat(lat) : null,
+        lng: lng ? parseFloat(lng) : null,
       },
     });
     res.status(201).json(address);
