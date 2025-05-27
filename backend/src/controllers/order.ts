@@ -7,8 +7,8 @@ type OrderStatus = 'PENDING' | 'CONFIRMED' | 'PREPARING' | 'DELIVERING' | 'DELIV
 
 // Coordenadas fixas da loja
 const STORE_LOCATION = {
-  lat: -23.755172388661855,
-  lng: -46.69824233956144
+  lat: -23.75516809248333,
+  lng: -46.69815114446251
 };
 
 // Função para calcular distância entre dois pontos (Haversine)
