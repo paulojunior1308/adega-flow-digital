@@ -21,7 +21,7 @@ async function main() {
   END $$;
 `);
 console.log('Tabelas apagadas com sucesso!');
-*/
+
   // Adicionar usuário admin
   await prisma.user.upsert({
     where: { email: 'pauloesjr2@gmail.com' },
@@ -52,7 +52,7 @@ console.log('Tabelas apagadas com sucesso!');
       data: { name, active: true },
     });
   }
-  console.log('Categorias adicionadas com sucesso!'+ prisma.category.findMany());
+  console.log('Categorias adicionadas com sucesso!'+ prisma.category.findMany());*/
 }
 
 main()

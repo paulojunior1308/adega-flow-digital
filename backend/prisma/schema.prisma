@@ -162,6 +162,8 @@ model Address {
   isDefault    Boolean  @default(false)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+  lat          Float?
+  lng          Float?
   user         User     @relation(fields: [userId], references: [id])
   orders       Order[]
 }
@@ -198,6 +200,7 @@ model Order {
   instructions    String?
   deliveryLat     Float?
   deliveryLng     Float?
+  deliveryFee     Float          @default(0)
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
   paymentMethodId String?

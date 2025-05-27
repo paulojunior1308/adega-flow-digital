@@ -5,6 +5,32 @@ import { getSocketInstance } from '../config/socketInstance';
 
 type OrderStatus = 'PENDING' | 'CONFIRMED' | 'PREPARING' | 'DELIVERING' | 'DELIVERED' | 'CANCELLED';
 
+// Coordenadas fixas da loja
+const STORE_LOCATION = {
+  lat: -23.744837,
+  lng: -46.579837
+};
+
+// Função para calcular distância entre dois pontos (Haversine)
+function calculateDistance(lat1: number, lng1: number, lat2: number, lng2: number) {
+  const toRad = (value: number) => (value * Math.PI) / 180;
+  const R = 6371; // Raio da Terra em km
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+    Math.sin(dLng / 2) * Math.sin(dLng / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+// Função para calcular taxa de entrega
+function calculateDeliveryFee(distanceKm: number) {
+  if (distanceKm <= 2) return 3;
+  return 3 + (distanceKm - 2) * 1.5;
+}
+
 export const orderController = {
   // Criar pedido a partir do carrinho
   create: async (req: Request, res: Response) => {
@@ -33,6 +59,13 @@ export const orderController = {
       return res.status(400).json({ error: 'Endereço inválido' });
     }
 
+    // Buscar as coordenadas do endereço do cliente
+    const addressLat = (address as any).lat;
+    const addressLng = (address as any).lng;
+    if (typeof addressLat !== 'number' || typeof addressLng !== 'number') {
+      return res.status(400).json({ error: 'Endereço do cliente sem coordenadas (lat/lng).' });
+    }
+
     // Busca o carrinho do usuário
     const cart = await prisma.cart.findUnique({
       where: { userId },
@@ -54,8 +87,13 @@ export const orderController = {
       }
     }
 
+    // Calcular distância e taxa de entrega
+    const distanceKm = calculateDistance(STORE_LOCATION.lat, STORE_LOCATION.lng, addressLat, addressLng);
+    const deliveryFee = Math.round((calculateDeliveryFee(distanceKm) + Number.EPSILON) * 100) / 100;
+
     // Calcula total usando o preço ajustado do cartItem
-    const total = cart.items.reduce((sum: number, item: any) => sum + (item.price ?? item.product.price) * item.quantity, 0);
+    const totalProdutos = cart.items.reduce((sum: number, item: any) => sum + (item.price ?? item.product.price) * item.quantity, 0);
+    const total = totalProdutos + deliveryFee;
 
     // Cria o pedido
     const order = await prisma.order.create({
@@ -65,6 +103,7 @@ export const orderController = {
         paymentMethodId,
         total,
         instructions,
+        deliveryFee: deliveryFee as any,
         items: {
           create: cart.items.map((item: any) => ({
             productId: item.productId,
@@ -72,7 +111,7 @@ export const orderController = {
             price: item.price ?? item.product.price,
           })),
         },
-      },
+      } as any,
       include: { 
         items: { 
           include: { 
