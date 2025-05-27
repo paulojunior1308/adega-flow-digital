@@ -65,6 +65,12 @@ export const orderController = {
     if (typeof addressLat !== 'number' || typeof addressLng !== 'number') {
       return res.status(400).json({ error: 'Endereço do cliente sem coordenadas (lat/lng).' });
     }
+    console.log('Coordenadas loja:', STORE_LOCATION);
+    console.log('Coordenadas cliente:', addressLat, addressLng);
+    const distanceKm = calculateDistance(STORE_LOCATION.lat, STORE_LOCATION.lng, addressLat, addressLng);
+    console.log('Distância calculada (km):', distanceKm);
+    const deliveryFee = Math.round((calculateDeliveryFee(distanceKm) + Number.EPSILON) * 100) / 100;
+    console.log('Taxa de entrega calculada:', deliveryFee);
 
     // Busca o carrinho do usuário
     const cart = await prisma.cart.findUnique({
@@ -86,10 +92,6 @@ export const orderController = {
         return res.status(400).json({ error: `Estoque insuficiente para o produto '${produto.name}'.` });
       }
     }
-
-    // Calcular distância e taxa de entrega
-    const distanceKm = calculateDistance(STORE_LOCATION.lat, STORE_LOCATION.lng, addressLat, addressLng);
-    const deliveryFee = Math.round((calculateDeliveryFee(distanceKm) + Number.EPSILON) * 100) / 100;
 
     // Calcula total usando o preço ajustado do cartItem
     const totalProdutos = cart.items.reduce((sum: number, item: any) => sum + (item.price ?? item.product.price) * item.quantity, 0);
@@ -301,8 +303,12 @@ export const orderController = {
     if (typeof addressLat !== 'number' || typeof addressLng !== 'number') {
       return res.status(400).json({ error: 'Endereço do cliente sem coordenadas (lat/lng).' });
     }
+    console.log('Coordenadas loja:', STORE_LOCATION);
+    console.log('Coordenadas cliente:', addressLat, addressLng);
     const distanceKm = calculateDistance(STORE_LOCATION.lat, STORE_LOCATION.lng, addressLat, addressLng);
+    console.log('Distância calculada (km):', distanceKm);
     const deliveryFee = Math.round((calculateDeliveryFee(distanceKm) + Number.EPSILON) * 100) / 100;
+    console.log('Taxa de entrega calculada:', deliveryFee);
     res.json({ deliveryFee });
   },
 }; 
