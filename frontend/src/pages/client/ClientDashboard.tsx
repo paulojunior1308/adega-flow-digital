@@ -105,6 +105,9 @@ const ClientDashboard = () => {
     return () => clearInterval(interval);
   }, [promotions]);
 
+  // Remover duplicatas de categorias pelo id
+  const uniqueCategories = categories.filter((cat, idx, arr) => arr.findIndex(c => c.id === cat.id) === idx);
+
   return (
     <div className="min-h-screen bg-element-gray-light">
       <ClientSidebar />
@@ -259,7 +262,7 @@ const ClientDashboard = () => {
             <h3 className="element-subheading mb-6">Categorias Populares</h3>
             
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-              {categories.filter(category => category.name !== 'Sucos').map((category) => (
+              {uniqueCategories.filter(category => category.name !== 'Sucos').map((category) => (
                 <Link 
                   key={category.id}
                   to={`/cliente-catalogo?cat=${category.id}`} 

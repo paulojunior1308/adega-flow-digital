@@ -230,16 +230,7 @@ const ClientCatalog = () => {
 
   useEffect(() => {
     api.get('/products/categories').then(res => {
-      // Filtra categorias únicas pelo id
-      const unique = [];
-      const map = new Map();
-      res.data.forEach((cat: any) => {
-        if (!map.has(cat.id)) {
-          map.set(cat.id, true);
-          unique.push(cat);
-        }
-      });
-      setCategories([{ id: 'all', name: 'Todos' }, ...unique]);
+      setCategories([{ id: 'all', name: 'Todos' }, ...res.data]);
     });
     api.get('/combos').then(res => {
       // Corrigir combos: mapear allowFlavorSelection para isChoosable
@@ -291,17 +282,6 @@ const ClientCatalog = () => {
     }
     setFilteredProducts(result);
   }, [searchTerm, selectedCategory, allProducts]);
-
-  // Corrigir categorias duplicadas usando o id
-  const categoriasPopularesUnicas = React.useMemo(() => {
-    const map = new Map();
-    categories.forEach((cat: any) => {
-      if (cat.id !== 'all' && !map.has(cat.id)) {
-        map.set(cat.id, cat);
-      }
-    });
-    return Array.from(map.values());
-  }, [categories]);
 
   return (
     <div className="min-h-screen bg-element-gray-light">
@@ -494,21 +474,6 @@ const ClientCatalog = () => {
                 </div>
               </>
             )}
-          </div>
-          
-          {/* Renderização das categorias populares únicas */}
-          <div className="mb-8">
-            <h2 className="text-xl font-bold mb-4">Categorias Populares</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {categories.filter((cat, idx, arr) =>
-                cat.id !== 'all' && arr.findIndex(c => c.id === cat.id) === idx
-              ).map((category: any) => (
-                <div key={category.id} className="bg-white rounded-lg shadow p-4 flex flex-col items-center">
-                  <img src={category.image && !category.image.startsWith('http') ? API_URL + category.image : category.image} alt={category.name} className="w-20 h-20 object-cover rounded-full mb-2" />
-                  <span className="font-medium text-lg">{category.name}</span>
-                </div>
-              ))}
-            </div>
           </div>
         </div>
       </div>
