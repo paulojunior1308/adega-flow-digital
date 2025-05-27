@@ -10,6 +10,18 @@ async function main() {
     SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'`;
   console.log('Tabelas existentes no banco:', tables.map(t => t.table_name));
 
+  // Apagar todas as tabelas do banco (exceto _prisma_migrations)
+await prisma.$executeRawUnsafe(`
+  DO $$ DECLARE
+    r RECORD;
+  BEGIN
+    FOR r IN (SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename != '_prisma_migrations') LOOP
+      EXECUTE 'TRUNCATE TABLE \"' || r.tablename || '\" CASCADE;';
+    END LOOP;
+  END $$;
+`);
+console.log('Tabelas apagadas com sucesso!');
+
   // Adicionar usuário admin
   await prisma.user.upsert({
     where: { email: 'pauloesjr2@gmail.com' },
@@ -22,9 +34,6 @@ async function main() {
       active: true,
     },
   });
-
-  await prisma.category.deleteMany({});
-  console.log('Categorias removidas com sucesso!');
 
 
 }
