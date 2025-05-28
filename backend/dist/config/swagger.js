@@ -1,7 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.swaggerSpec = void 0;
-const env_1 = require("./env");
 exports.swaggerSpec = {
     openapi: '3.0.0',
     info: {
@@ -11,8 +10,8 @@ exports.swaggerSpec = {
     },
     servers: [
         {
-            url: `http://localhost:${env_1.env.port}`,
-            description: 'Servidor de Desenvolvimento',
+            url: `https://adega-flow-digital.onrender.com`,
+            description: 'Servidor de Produção',
         },
     ],
     components: {

@@ -28,4 +28,5 @@ router.put('/cart/:itemId', cart_1.cartController.updateItem);
 router.delete('/cart/:itemId', cart_1.cartController.removeItem);
 router.get('/orders', order_1.orderController.list);
 router.post('/orders', order_1.orderController.create);
+router.post('/orders/calculate-delivery-fee', order_1.orderController.calculateDeliveryFee);
 exports.default = router;

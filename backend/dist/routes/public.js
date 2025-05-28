@@ -5,6 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const prisma_1 = __importDefault(require("../config/prisma"));
+const mercadopago_1 = require("../controllers/mercadopago");
 const router = express_1.default.Router();
 router.get('/payment-methods', async (req, res) => {
     const methods = await prisma_1.default.paymentMethod.findMany({ where: { active: true }, orderBy: { name: 'asc' } });
@@ -87,4 +88,5 @@ router.get('/combos', async (req, res) => {
         res.status(500).json({ error: 'Erro ao listar combos' });
     }
 });
+router.post('/mercadopago/webhook', mercadopago_1.mercadopagoController.webhook);
 exports.default = router;

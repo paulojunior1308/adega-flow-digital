@@ -312,22 +312,22 @@ const ClientCart = () => {
           }
         }, 3000);
       } else {
-        setCurrentOrderId(orderId);
-        setOrderStatus({
-          status: "pending",
-          statusText: "Aguardando confirmação",
-          timestamp: new Date()
-        });
-        toast({
-          title: "Pedido enviado!",
-          description: `Seu pedido #${orderId} foi enviado para processamento`,
-          duration: 3000,
-        });
-        setOrderPlaced(true);
-        setCart([]);
-        setTimeout(() => {
-          navigate('/cliente-pedidos');
-        }, 2000);
+    setCurrentOrderId(orderId);
+    setOrderStatus({
+      status: "pending",
+      statusText: "Aguardando confirmação",
+      timestamp: new Date()
+    });
+    toast({
+      title: "Pedido enviado!",
+      description: `Seu pedido #${orderId} foi enviado para processamento`,
+      duration: 3000,
+    });
+    setOrderPlaced(true);
+    setCart([]);
+    setTimeout(() => {
+      navigate('/cliente-pedidos');
+    }, 2000);
       }
     } catch (error: any) {
       toast({
@@ -446,7 +446,7 @@ const ClientCart = () => {
                         </TabsList>
                         
                         <TabsContent value="address" className="pt-4">
-                        <div className="space-y-4">
+                          <div className="space-y-4">
                           <div className="flex items-center justify-between">
                             <h3 className="font-medium">Selecione um endereço</h3>
                             <Button 

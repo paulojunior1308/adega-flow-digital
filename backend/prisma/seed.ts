@@ -1,10 +1,23 @@
-import { PrismaClient, Role } from '@prisma/client';
-import bcrypt from 'bcryptjs';
-
+import { PrismaClient } from '@prisma/client';
+import { execSync } from 'child_process';
 const prisma = new PrismaClient();
 
 async function main() {
+  // Gera o client do Prisma e aplica as migrations
+  console.log('--- SETUP PRISMA ---');
+  try {
+    console.log('\nExecutando: npx prisma generate');
+    execSync('npx prisma generate', { stdio: 'inherit' });
+    console.log('Comando concluído: npx prisma generate\n');
 
+    console.log('\nExecutando: npx prisma migrate deploy');
+    execSync('npx prisma migrate deploy', { stdio: 'inherit' });
+    console.log('Comando concluído: npx prisma migrate deploy\n');
+  } catch (err) {
+    console.error('Erro ao executar setup do Prisma:', err);
+    process.exit(1);
+  }
+  console.log('--- PRISMA OK! ---');
   // Log das tabelas existentes
   const tables = await prisma.$queryRaw<Array<{ table_name: string }>>`
     SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'`;

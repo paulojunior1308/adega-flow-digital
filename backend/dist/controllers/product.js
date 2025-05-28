@@ -96,7 +96,7 @@ exports.productController = {
                     stock: parseInt(stock),
                     minStock: minStock ? parseInt(minStock) : undefined,
                     barcode,
-                    active: active === 'true',
+                    active: typeof active === 'boolean' ? active : active === 'true' || active === '1',
                     image: imageUrl,
                     category: {
                         connect: { id: categoryId }

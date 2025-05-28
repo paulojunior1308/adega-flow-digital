@@ -7,6 +7,27 @@ exports.orderController = void 0;
 const prisma_1 = __importDefault(require("../config/prisma"));
 const errorHandler_1 = require("../config/errorHandler");
 const socketInstance_1 = require("../config/socketInstance");
+const mercadopago_1 = __importDefault(require("../config/mercadopago"));
+const STORE_LOCATION = {
+    lat: -23.75516809248333,
+    lng: -46.69815114446251
+};
+function calculateDistance(lat1, lng1, lat2, lng2) {
+    const toRad = (value) => (value * Math.PI) / 180;
+    const R = 6371;
+    const dLat = toRad(lat2 - lat1);
+    const dLng = toRad(lng2 - lng1);
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+            Math.sin(dLng / 2) * Math.sin(dLng / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+}
+function calculateDeliveryFee(distanceKm) {
+    if (distanceKm <= 2)
+        return 3;
+    return 3 + (distanceKm - 2) * 1.5;
+}
 exports.orderController = {
     create: async (req, res) => {
         const userId = req.user.id;
@@ -26,6 +47,17 @@ exports.orderController = {
         if (!address || address.userId !== userId) {
             return res.status(400).json({ error: 'Endereço inválido' });
         }
+        const addressLat = address.lat;
+        const addressLng = address.lng;
+        if (typeof addressLat !== 'number' || typeof addressLng !== 'number') {
+            return res.status(400).json({ error: 'Endereço do cliente sem coordenadas (lat/lng).' });
+        }
+        console.log('Coordenadas loja:', STORE_LOCATION);
+        console.log('Coordenadas cliente:', addressLat, addressLng);
+        const distanceKm = calculateDistance(STORE_LOCATION.lat, STORE_LOCATION.lng, addressLat, addressLng);
+        console.log('Distância calculada (km):', distanceKm);
+        const deliveryFee = Math.round((calculateDeliveryFee(distanceKm) + Number.EPSILON) * 100) / 100;
+        console.log('Taxa de entrega calculada:', deliveryFee);
         const cart = await prisma_1.default.cart.findUnique({
             where: { userId },
             include: { items: { include: { product: true } } },
@@ -42,7 +74,52 @@ exports.orderController = {
                 return res.status(400).json({ error: `Estoque insuficiente para o produto '${produto.name}'.` });
             }
         }
-        const total = cart.items.reduce((sum, item) => { var _a; return sum + ((_a = item.price) !== null && _a !== void 0 ? _a : item.product.price) * item.quantity; }, 0);
+        const totalProdutos = cart.items.reduce((sum, item) => { var _a; return sum + ((_a = item.price) !== null && _a !== void 0 ? _a : item.product.price) * item.quantity; }, 0);
+        const total = totalProdutos + deliveryFee;
+        if (paymentMethod.name.toLowerCase().includes('pix')) {
+            const mpRes = await mercadopago_1.default.payment.create({
+                body: {
+                    transaction_amount: total,
+                    description: 'Pedido na Adega',
+                    payment_method_id: 'pix',
+                    payer: {
+                        email: req.user.email,
+                    },
+                },
+            });
+            const pixData = mpRes.body.point_of_interaction.transaction_data;
+            const order = await prisma_1.default.order.create({
+                data: {
+                    userId,
+                    addressId,
+                    paymentMethodId,
+                    total,
+                    instructions,
+                    deliveryFee: deliveryFee,
+                    pixStatus: 'AGUARDANDO',
+                    pixPaymentId: mpRes.body.id.toString(),
+                    pixQrCode: pixData.qr_code,
+                    pixQrCodeImage: pixData.qr_code_base64,
+                    items: {
+                        create: cart.items.map((item) => {
+                            var _a;
+                            return ({
+                                productId: item.productId,
+                                quantity: item.quantity,
+                                price: (_a = item.price) !== null && _a !== void 0 ? _a : item.product.price,
+                            });
+                        }),
+                    },
+                },
+                include: {
+                    items: { include: { product: true } },
+                    address: true,
+                    user: { select: { name: true, email: true } },
+                },
+            });
+            await prisma_1.default.cartItem.deleteMany({ where: { cartId: cart.id } });
+            return res.status(201).json(Object.assign(Object.assign({}, order), { pixQrCode: pixData.qr_code, pixQrCodeImage: pixData.qr_code_base64 }));
+        }
         const order = await prisma_1.default.order.create({
             data: {
                 userId,
@@ -50,6 +127,7 @@ exports.orderController = {
                 paymentMethodId,
                 total,
                 instructions,
+                deliveryFee: deliveryFee,
                 items: {
                     create: cart.items.map((item) => {
                         var _a;
@@ -203,5 +281,28 @@ exports.orderController = {
             io.to(order.userId).emit('order-updated', { order });
         }
         res.json(order);
+    },
+    calculateDeliveryFee: async (req, res) => {
+        const { addressId } = req.body;
+        if (!addressId) {
+            return res.status(400).json({ error: 'Endereço de entrega é obrigatório' });
+        }
+        const userId = req.user.id;
+        const address = await prisma_1.default.address.findUnique({ where: { id: addressId } });
+        if (!address || address.userId !== userId) {
+            return res.status(400).json({ error: 'Endereço inválido' });
+        }
+        const addressLat = address.lat;
+        const addressLng = address.lng;
+        if (typeof addressLat !== 'number' || typeof addressLng !== 'number') {
+            return res.status(400).json({ error: 'Endereço do cliente sem coordenadas (lat/lng).' });
+        }
+        console.log('Coordenadas loja:', STORE_LOCATION);
+        console.log('Coordenadas cliente:', addressLat, addressLng);
+        const distanceKm = calculateDistance(STORE_LOCATION.lat, STORE_LOCATION.lng, addressLat, addressLng);
+        console.log('Distância calculada (km):', distanceKm);
+        const deliveryFee = Math.round((calculateDeliveryFee(distanceKm) + Number.EPSILON) * 100) / 100;
+        console.log('Taxa de entrega calculada:', deliveryFee);
+        res.json({ deliveryFee });
     },
 };

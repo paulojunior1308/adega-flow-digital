@@ -17,7 +17,7 @@ exports.addressController = {
     },
     create: async (req, res) => {
         const userId = req.user.id;
-        const { title, street, number, complement, neighborhood, city, state, zipcode, isDefault } = req.body;
+        const { title, street, number, complement, neighborhood, city, state, zipcode, isDefault, lat, lng } = req.body;
         if (isDefault) {
             await prisma_1.default.address.updateMany({
                 where: { userId },
@@ -36,6 +36,8 @@ exports.addressController = {
                 state,
                 zipcode,
                 isDefault: !!isDefault,
+                lat: lat ? parseFloat(lat) : null,
+                lng: lng ? parseFloat(lng) : null,
             },
         });
         res.status(201).json(address);
