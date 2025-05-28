@@ -2,6 +2,23 @@ import { PrismaClient } from '@prisma/client';
 import { execSync } from 'child_process';
 const prisma = new PrismaClient();
 
+console.log('--- RESETANDO BANCO E APLICANDO MIGRATIONS ---');
+try {
+  execSync('npx prisma migrate reset --force --skip-seed', { stdio: 'inherit' });
+  execSync('npx prisma generate', { stdio: 'inherit' });
+  execSync('npx prisma migrate deploy', { stdio: 'inherit' });
+  console.log('Banco resetado e migrations aplicadas!');
+} catch (err) {
+  console.error('Erro ao resetar/aplicar migrations:', err);
+  process.exit(1);
+}
+
+// Aqui você pode rodar o seed normal (criar admin, categorias, etc)
+import('./seedData').then(() => {
+  console.log('Seed concluído!');
+  process.exit(0);
+});
+
 async function main() {
   // Gera o client do Prisma e aplica as migrations
   console.log('--- SETUP PRISMA ---');
@@ -24,7 +41,7 @@ async function main() {
   console.log('Tabelas existentes no banco:', tables.map(t => t.table_name));
 
   // Apagar todas as tabelas do banco (exceto _prisma_migrations)
-await prisma.$executeRawUnsafe(`
+/*await prisma.$executeRawUnsafe(`
   DO $$ DECLARE
     r RECORD;
   BEGIN
@@ -65,7 +82,7 @@ console.log('Tabelas apagadas com sucesso!');
       data: { name, active: true },
     });
   }
-  console.log('Categorias adicionadas com sucesso!'+ prisma.category.findMany());
+  console.log('Categorias adicionadas com sucesso!'+ prisma.category.findMany());*/
 }
 
 main()
