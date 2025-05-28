@@ -98,6 +98,11 @@ export const orderController = {
     const totalProdutos = cart.items.reduce((sum: number, item: any) => sum + (item.price ?? item.product.price) * item.quantity, 0);
     const total = totalProdutos + deliveryFee;
 
+    // Buscar dados do usuário para o PIX
+    const user = await prisma.user.findUnique({ where: { id: userId }, select: { email: true, name: true, cpf: true } });
+    if (!user || !user.cpf) {
+      return res.status(400).json({ error: 'Usuário sem CPF cadastrado.' });
+    }
     // Verifica se o método de pagamento é PIX
     if (paymentMethod.name.toLowerCase().includes('pix')) {
       // Cria cobrança PIX via Mercado Pago
@@ -107,7 +112,13 @@ export const orderController = {
           description: 'Pedido na Adega',
           payment_method_id: 'pix',
           payer: {
-            email: (req as any).user.email,
+            email: user.email,
+            first_name: user.name ? user.name.split(' ')[0] : 'Cliente',
+            last_name: user.name ? user.name.split(' ').slice(1).join(' ') || 'App' : 'App',
+            identification: {
+              type: 'CPF',
+              number: user.cpf
+            }
           },
         },
       });

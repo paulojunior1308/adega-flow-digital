@@ -7,7 +7,7 @@ exports.orderController = void 0;
 const prisma_1 = __importDefault(require("../config/prisma"));
 const errorHandler_1 = require("../config/errorHandler");
 const socketInstance_1 = require("../config/socketInstance");
-const mercadopago_1 = __importDefault(require("../config/mercadopago"));
+const mercadopago_1 = require("../config/mercadopago");
 const STORE_LOCATION = {
     lat: -23.75516809248333,
     lng: -46.69815114446251
@@ -76,18 +76,34 @@ exports.orderController = {
         }
         const totalProdutos = cart.items.reduce((sum, item) => { var _a; return sum + ((_a = item.price) !== null && _a !== void 0 ? _a : item.product.price) * item.quantity; }, 0);
         const total = totalProdutos + deliveryFee;
+        const user = await prisma_1.default.user.findUnique({ where: { id: userId }, select: { email: true, name: true, cpf: true } });
+        if (!user || !user.cpf) {
+            return res.status(400).json({ error: 'Usuário sem CPF cadastrado.' });
+        }
         if (paymentMethod.name.toLowerCase().includes('pix')) {
-            const mpRes = await mercadopago_1.default.payment.create({
+            const mpRes = await mercadopago_1.payment.create({
                 body: {
                     transaction_amount: total,
                     description: 'Pedido na Adega',
                     payment_method_id: 'pix',
                     payer: {
-                        email: req.user.email,
+                        email: user.email,
+                        first_name: user.name ? user.name.split(' ')[0] : 'Cliente',
+                        last_name: user.name ? user.name.split(' ').slice(1).join(' ') || 'App' : 'App',
+                        identification: {
+                            type: 'CPF',
+                            number: user.cpf
+                        }
                     },
                 },
             });
-            const pixData = mpRes.body.point_of_interaction.transaction_data;
+            if (!mpRes.point_of_interaction || !mpRes.point_of_interaction.transaction_data) {
+                return res.status(500).json({ error: 'Erro ao gerar cobrança PIX. Tente novamente.' });
+            }
+            const pixData = mpRes.point_of_interaction.transaction_data;
+            if (!mpRes.id || !pixData.qr_code || !pixData.qr_code_base64) {
+                return res.status(500).json({ error: 'Erro ao gerar QR Code PIX. Tente novamente.' });
+            }
             const order = await prisma_1.default.order.create({
                 data: {
                     userId,
@@ -97,7 +113,7 @@ exports.orderController = {
                     instructions,
                     deliveryFee: deliveryFee,
                     pixStatus: 'AGUARDANDO',
-                    pixPaymentId: mpRes.body.id.toString(),
+                    pixPaymentId: mpRes.id.toString(),
                     pixQrCode: pixData.qr_code,
                     pixQrCodeImage: pixData.qr_code_base64,
                     items: {

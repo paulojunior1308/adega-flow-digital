@@ -162,7 +162,7 @@ exports.adminController = {
         res.json({ produtos, combos });
     },
     createUser: async (req, res) => {
-        const { name, email, password, role } = req.body;
+        const { name, email, password, role, cpf } = req.body;
         if (!['ADMIN', 'MOTOBOY', 'USER'].includes(role)) {
             throw new errorHandler_1.AppError('Tipo de usuário inválido. Só é permitido ADMIN, MOTOBOY ou USER.', 400);
         }
@@ -178,6 +178,7 @@ exports.adminController = {
                 name,
                 email,
                 password: hashedPassword,
+                cpf,
                 role,
             },
         });

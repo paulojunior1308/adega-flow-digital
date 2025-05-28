@@ -183,7 +183,7 @@ export const adminController = {
   },
 
   createUser: async (req: Request, res: Response) => {
-    const { name, email, password, role } = req.body;
+    const { name, email, password, role, cpf } = req.body;
 
     if (!['ADMIN', 'MOTOBOY', 'USER'].includes(role)) {
       throw new AppError('Tipo de usuário inválido. Só é permitido ADMIN, MOTOBOY ou USER.', 400);
@@ -204,6 +204,7 @@ export const adminController = {
         name,
         email,
         password: hashedPassword,
+        cpf,
         role,
       },
     });
@@ -294,7 +295,7 @@ export const adminController = {
       where: { id: { in: validItems.map(i => i.productId) } },
       select: { id: true }
     });
-    const validProductIds = new Set(allProducts.map(p => p.id));
+    const validProductIds = new Set(allProducts.map((p: any) => p.id));
     const reallyValidItems = validItems.filter(item => validProductIds.has(item.productId));
     console.log('Itens realmente válidos para venda:', reallyValidItems);
     // Verificar estoque antes de criar a venda
