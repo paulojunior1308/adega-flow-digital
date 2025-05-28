@@ -1,40 +1,10 @@
-import { PrismaClient } from '@prisma/client';
-import { execSync } from 'child_process';
+import { PrismaClient, Role } from '@prisma/client';
+import bcrypt from 'bcryptjs';
+
 const prisma = new PrismaClient();
 
-console.log('--- RESETANDO BANCO E APLICANDO MIGRATIONS ---');
-try {
-  execSync('npx prisma migrate reset --force --skip-seed', { stdio: 'inherit' });
-  execSync('npx prisma generate', { stdio: 'inherit' });
-  execSync('npx prisma migrate deploy', { stdio: 'inherit' });
-  console.log('Banco resetado e migrations aplicadas!');
-} catch (err) {
-  console.error('Erro ao resetar/aplicar migrations:', err);
-  process.exit(1);
-}
-
-// Aqui você pode rodar o seed normal (criar admin, categorias, etc)
-import('./seedData').then(() => {
-  console.log('Seed concluído!');
-  process.exit(0);
-});
-
 async function main() {
-  // Gera o client do Prisma e aplica as migrations
-  console.log('--- SETUP PRISMA ---');
-  try {
-    console.log('\nExecutando: npx prisma generate');
-    execSync('npx prisma generate', { stdio: 'inherit' });
-    console.log('Comando concluído: npx prisma generate\n');
 
-    console.log('\nExecutando: npx prisma migrate deploy');
-    execSync('npx prisma migrate deploy', { stdio: 'inherit' });
-    console.log('Comando concluído: npx prisma migrate deploy\n');
-  } catch (err) {
-    console.error('Erro ao executar setup do Prisma:', err);
-    process.exit(1);
-  }
-  console.log('--- PRISMA OK! ---');
   // Log das tabelas existentes
   const tables = await prisma.$queryRaw<Array<{ table_name: string }>>`
     SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'`;
@@ -50,7 +20,7 @@ async function main() {
     END LOOP;
   END $$;
 `);
-console.log('Tabelas apagadas com sucesso!');
+console.log('Tabelas apagadas com sucesso!');*/
 
   // Adicionar usuário admin
   await prisma.user.upsert({
@@ -60,6 +30,7 @@ console.log('Tabelas apagadas com sucesso!');
       email: 'pauloesjr2@gmail.com',
       password: await bcrypt.hash('Paulo1308**', 10),
       name: 'Paulo Junior',
+      cpf: '45032534846',
       role: Role.ADMIN,
       active: true,
     },
@@ -82,7 +53,7 @@ console.log('Tabelas apagadas com sucesso!');
       data: { name, active: true },
     });
   }
-  console.log('Categorias adicionadas com sucesso!'+ prisma.category.findMany());*/
+  console.log('Categorias adicionadas com sucesso!'+ prisma.category.findMany());
 }
 
 main()
