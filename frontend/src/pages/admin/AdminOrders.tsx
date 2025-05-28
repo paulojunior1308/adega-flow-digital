@@ -76,6 +76,7 @@ interface Order {
   status: 'pending' | 'preparing' | 'delivering' | 'delivered' | 'cancelled';
   timestamp: Date;
   paymentMethod: string;
+  pixStatus?: 'AGUARDANDO' | 'APROVADO' | 'EXPIRADO' | 'CANCELADO';
   contactPhone?: string;
   deliveryNotes?: string;
   deliveryLat?: number;
@@ -212,6 +213,7 @@ const AdminOrders = () => {
         status: (order.status ?? 'pending').toLowerCase(),
         timestamp: order.createdAt ?? order.updatedAt ?? null,
         paymentMethod: order.paymentMethod,
+        pixStatus: order.pixStatus,
         contactPhone: order.user?.phone ?? '',
         deliveryNotes: order.instructions ?? ''
       }));
@@ -348,6 +350,9 @@ const AdminOrders = () => {
                 <CardContent>
                   <p><strong>Método:</strong> {selectedOrder.paymentMethod}</p>
                   <p><strong>Total:</strong> R$ {selectedOrder.total.toFixed(2)}</p>
+                  {selectedOrder.paymentMethod?.toLowerCase() === 'pix' && (
+                    <p><strong>Status PIX:</strong> {selectedOrder.pixStatus === 'APROVADO' ? 'Aprovado' : selectedOrder.pixStatus === 'EXPIRADO' ? 'Expirado' : selectedOrder.pixStatus === 'CANCELADO' ? 'Cancelado' : 'Aguardando'}</p>
+                  )}
                 </CardContent>
               </Card>
               
@@ -618,6 +623,7 @@ const AdminOrders = () => {
                   <TableHead>Data</TableHead>
                   <TableHead>Total</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Pagamento PIX</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
@@ -634,6 +640,21 @@ const AdminOrders = () => {
                     </TableCell>
                     <TableCell>R$ {order.total.toFixed(2)}</TableCell>
                     <TableCell>{getStatusLabel(order.status)}</TableCell>
+                    <TableCell>
+                      {order.paymentMethod?.toLowerCase() === 'pix' ? (
+                        order.pixStatus === 'APROVADO' ? (
+                          <Badge className="bg-green-100 text-green-700 border-green-200">Aprovado</Badge>
+                        ) : order.pixStatus === 'EXPIRADO' ? (
+                          <Badge className="bg-gray-100 text-gray-700 border-gray-200">Expirado</Badge>
+                        ) : order.pixStatus === 'CANCELADO' ? (
+                          <Badge className="bg-red-100 text-red-700 border-red-200">Cancelado</Badge>
+                        ) : (
+                          <Badge className="bg-yellow-100 text-yellow-700 border-yellow-200">Aguardando</Badge>
+                        )
+                      ) : (
+                        <span className="text-xs text-gray-400">-</span>
+                      )}
+                    </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
                         {order.status === 'pending' && (

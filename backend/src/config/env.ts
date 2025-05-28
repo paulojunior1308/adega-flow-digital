@@ -39,6 +39,9 @@ const envSchema = z.object({
   // Upload
   uploadDir: z.string().default('uploads'),
   maxFileSize: z.coerce.number().default(5 * 1024 * 1024), // 5MB
+  
+  // Mercado Pago
+  MP_ACCESS_TOKEN: z.string(),
 });
 
 const _env = envSchema.safeParse({
@@ -60,6 +63,7 @@ const _env = envSchema.safeParse({
   googleClientSecret: process.env.GOOGLE_CLIENT_SECRET,
   uploadDir: process.env.UPLOAD_DIR,
   maxFileSize: process.env.MAX_FILE_SIZE,
+  MP_ACCESS_TOKEN: process.env.MP_ACCESS_TOKEN,
 });
 
 if (!_env.success) {

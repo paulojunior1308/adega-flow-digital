@@ -1,5 +1,6 @@
 import express, { Request, Response } from 'express';
 import prisma from '../config/prisma';
+import { mercadopagoController } from '../controllers/mercadopago';
 
 const router = express.Router();
 
@@ -86,5 +87,7 @@ router.get('/combos', async (req: Request, res: Response) => {
     res.status(500).json({ error: 'Erro ao listar combos' });
   }
 });
+
+router.post('/mercadopago/webhook', mercadopagoController.webhook);
 
 export default router; 

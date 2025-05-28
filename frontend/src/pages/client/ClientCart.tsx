@@ -127,6 +127,11 @@ const ClientCart = () => {
   const [comboDescontos, setComboDescontos] = useState<any[]>([]);
   const [deliveryFee, setDeliveryFee] = useState(0);
   
+  const [pixModalOpen, setPixModalOpen] = useState(false);
+  const [pixQrCode, setPixQrCode] = useState<string | null>(null);
+  const [pixQrCodeImage, setPixQrCodeImage] = useState<string | null>(null);
+  const [pixStatus, setPixStatus] = useState<string>('AGUARDANDO');
+  
   useEffect(() => {
     const descontos = localStorage.getItem('comboDescontos');
     if (descontos) {
@@ -287,22 +292,43 @@ const ClientCart = () => {
       const res = await api.post('/orders', payload);
       const { id: orderId } = res.data;
 
-    setCurrentOrderId(orderId);
-    setOrderStatus({
-      status: "pending",
-      statusText: "Aguardando confirmação",
-      timestamp: new Date()
-    });
-    toast({
-      title: "Pedido enviado!",
-      description: `Seu pedido #${orderId} foi enviado para processamento`,
-      duration: 3000,
-    });
-    setOrderPlaced(true);
-    setCart([]);
-    setTimeout(() => {
-      navigate('/cliente-pedidos');
-    }, 2000);
+      // Se vier QR Code PIX, exibe modal
+      if (res.data.pixQrCode && res.data.pixQrCodeImage) {
+        setPixQrCode(res.data.pixQrCode);
+        setPixQrCodeImage(res.data.pixQrCodeImage);
+        setPixStatus(res.data.pixStatus || 'AGUARDANDO');
+        setPixModalOpen(true);
+        // Polling para atualizar status do pagamento
+        const interval = setInterval(async () => {
+          const orderRes = await api.get(`/orders/${orderId}`);
+          if (orderRes.data.pixStatus === 'APROVADO') {
+            setPixStatus('APROVADO');
+            clearInterval(interval);
+            toast({ title: 'Pagamento aprovado!', description: 'Seu pagamento via PIX foi aprovado.', duration: 3000 });
+            setTimeout(() => {
+              setPixModalOpen(false);
+              navigate('/cliente-pedidos');
+            }, 2000);
+          }
+        }, 3000);
+      } else {
+        setCurrentOrderId(orderId);
+        setOrderStatus({
+          status: "pending",
+          statusText: "Aguardando confirmação",
+          timestamp: new Date()
+        });
+        toast({
+          title: "Pedido enviado!",
+          description: `Seu pedido #${orderId} foi enviado para processamento`,
+          duration: 3000,
+        });
+        setOrderPlaced(true);
+        setCart([]);
+        setTimeout(() => {
+          navigate('/cliente-pedidos');
+        }, 2000);
+      }
     } catch (error: any) {
       toast({
         title: "Erro ao finalizar pedido",
@@ -562,6 +588,28 @@ const ClientCart = () => {
           )}
         </div>
       </div>
+      <Dialog open={pixModalOpen} onOpenChange={setPixModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Pagamento via PIX</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col items-center gap-4 py-4">
+            {pixQrCodeImage && (
+              <img src={`data:image/png;base64,${pixQrCodeImage}`} alt="QR Code PIX" className="w-56 h-56" />
+            )}
+            <div className="text-center">
+              <p className="font-medium mb-2">Escaneie o QR Code acima no app do seu banco para pagar.</p>
+              <p className="text-xs text-gray-500 break-all">Ou copie o código abaixo:</p>
+              <Input value={pixQrCode || ''} readOnly className="mb-2 text-xs" onFocus={e => e.target.select()} />
+              <Button onClick={() => { navigator.clipboard.writeText(pixQrCode || ''); toast({ title: 'Código copiado!' }); }} size="sm" variant="outline">Copiar código</Button>
+            </div>
+            <div className="mt-4">
+              {pixStatus === 'AGUARDANDO' && <span className="text-yellow-600 font-semibold">Aguardando pagamento...</span>}
+              {pixStatus === 'APROVADO' && <span className="text-green-600 font-semibold">Pagamento aprovado!</span>}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import prisma from '../config/prisma';
 import { AppError } from '../config/errorHandler';
 import { getSocketInstance } from '../config/socketInstance';
+import mercadopago from '../config/mercadopago';
 
 type OrderStatus = 'PENDING' | 'CONFIRMED' | 'PREPARING' | 'DELIVERING' | 'DELIVERED' | 'CANCELLED';
 
@@ -96,6 +97,53 @@ export const orderController = {
     // Calcula total usando o preço ajustado do cartItem
     const totalProdutos = cart.items.reduce((sum: number, item: any) => sum + (item.price ?? item.product.price) * item.quantity, 0);
     const total = totalProdutos + deliveryFee;
+
+    // Verifica se o método de pagamento é PIX
+    if (paymentMethod.name.toLowerCase().includes('pix')) {
+      // Cria cobrança PIX via Mercado Pago
+      const mpRes = await (mercadopago as any).payment.create({
+        body: {
+          transaction_amount: total,
+          description: 'Pedido na Adega',
+          payment_method_id: 'pix',
+          payer: {
+            email: (req as any).user.email,
+          },
+        },
+      });
+      const pixData = mpRes.body.point_of_interaction.transaction_data;
+      // Cria o pedido com status aguardando pagamento PIX
+      const order = await prisma.order.create({
+        data: {
+          userId,
+          addressId,
+          paymentMethodId,
+          total,
+          instructions,
+          deliveryFee: deliveryFee as any,
+          pixStatus: 'AGUARDANDO',
+          pixPaymentId: mpRes.body.id.toString(),
+          pixQrCode: pixData.qr_code,
+          pixQrCodeImage: pixData.qr_code_base64,
+          items: {
+            create: cart.items.map((item: any) => ({
+              productId: item.productId,
+              quantity: item.quantity,
+              price: item.price ?? item.product.price,
+            })),
+          },
+        } as any,
+        include: {
+          items: { include: { product: true } },
+          address: true,
+          user: { select: { name: true, email: true } },
+        },
+      });
+      // Limpa o carrinho
+      await prisma.cartItem.deleteMany({ where: { cartId: cart.id } });
+      // Retorna o QR Code PIX e dados do pedido
+      return res.status(201).json({ ...order, pixQrCode: pixData.qr_code, pixQrCodeImage: pixData.qr_code_base64 });
+    }
 
     // Cria o pedido
     const order = await prisma.order.create({
