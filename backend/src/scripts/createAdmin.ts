@@ -25,7 +25,7 @@ async function createAdmin() {
         name: 'Paulo Junior',
         email: adminEmail,
         password: hashedPassword,
-        cpf: '12345678909', // CPF fictício, altere se necessário
+        cpf: '45032534846', // CPF fictício, altere se necessário
         role: 'ADMIN',
         active: true,
       },
