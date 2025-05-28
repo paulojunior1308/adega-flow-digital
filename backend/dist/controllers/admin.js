@@ -255,7 +255,7 @@ exports.adminController = {
             where: { id: { in: validItems.map(i => i.productId) } },
             select: { id: true }
         });
-        const validProductIds = new Set(allProducts.map(p => p.id));
+        const validProductIds = new Set(allProducts.map((p) => p.id));
         const reallyValidItems = validItems.filter(item => validProductIds.has(item.productId));
         console.log('Itens realmente válidos para venda:', reallyValidItems);
         for (const item of reallyValidItems) {
