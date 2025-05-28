@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import prisma from '../config/prisma';
 import { AppError } from '../config/errorHandler';
 import { getSocketInstance } from '../config/socketInstance';
-import mercadopago from '../config/mercadopago';
+import { payment } from '../config/mercadopago';
 
 type OrderStatus = 'PENDING' | 'CONFIRMED' | 'PREPARING' | 'DELIVERING' | 'DELIVERED' | 'CANCELLED';
 
@@ -101,7 +101,7 @@ export const orderController = {
     // Verifica se o método de pagamento é PIX
     if (paymentMethod.name.toLowerCase().includes('pix')) {
       // Cria cobrança PIX via Mercado Pago
-      const mpRes = await (mercadopago as any).payment.create({
+      const mpRes = await payment.create({
         body: {
           transaction_amount: total,
           description: 'Pedido na Adega',
@@ -111,7 +111,13 @@ export const orderController = {
           },
         },
       });
-      const pixData = mpRes.body.point_of_interaction.transaction_data;
+      if (!mpRes.point_of_interaction || !mpRes.point_of_interaction.transaction_data) {
+        return res.status(500).json({ error: 'Erro ao gerar cobrança PIX. Tente novamente.' });
+      }
+      const pixData = mpRes.point_of_interaction.transaction_data;
+      if (!mpRes.id || !pixData.qr_code || !pixData.qr_code_base64) {
+        return res.status(500).json({ error: 'Erro ao gerar QR Code PIX. Tente novamente.' });
+      }
       // Cria o pedido com status aguardando pagamento PIX
       const order = await prisma.order.create({
         data: {
@@ -122,7 +128,7 @@ export const orderController = {
           instructions,
           deliveryFee: deliveryFee as any,
           pixStatus: 'AGUARDANDO',
-          pixPaymentId: mpRes.body.id.toString(),
+          pixPaymentId: mpRes.id.toString(),
           pixQrCode: pixData.qr_code,
           pixQrCodeImage: pixData.qr_code_base64,
           items: {
