@@ -9,15 +9,19 @@ export const clientController = {
     console.log('Início do cadastro de cliente', req.body);
     const { name, email, password, cpf } = req.body;
 
+    if (!cpf) {
+      return res.status(400).json({ error: 'CPF é obrigatório para cadastro.' });
+    }
+
     const userExists = await prisma.user.findUnique({ where: { email } });
     if (userExists) {
       console.log('Email já cadastrado:', email);
       throw new AppError('Email já cadastrado', 400);
     }
-    const cpfExists = await prisma.user.findUnique({ where: { cpf: cpf } });
+    const cpfExists = await prisma.user.findUnique({ where: { cpf } });
     if (cpfExists) {
       console.log('CPF já cadastrado:', cpf);
-      throw new AppError('CPF já cadastrado', 400);
+      return res.status(400).json({ error: 'CPF já cadastrado' });
     }
     const hashedPassword = await hashPassword(password);
     console.log('Senha criptografada');
