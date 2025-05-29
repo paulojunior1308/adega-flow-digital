@@ -105,61 +105,70 @@ export const orderController = {
     }
     // Verifica se o método de pagamento é PIX
     if (paymentMethod.name.toLowerCase().includes('pix')) {
-      // Cria cobrança PIX via Mercado Pago
-      const mpRes = await payment.create({
-        body: {
-          transaction_amount: total,
-          description: 'Pedido na Adega',
-          payment_method_id: 'pix',
-          payer: {
-            email: user.email,
-            first_name: user.name ? user.name.split(' ')[0] : 'Cliente',
-            last_name: user.name ? user.name.split(' ').slice(1).join(' ') || 'App' : 'App',
-            identification: {
-              type: 'CPF',
-              number: user.cpf
-            }
+      try {
+        console.log('Iniciando criação de cobrança PIX via Mercado Pago...');
+        const mpRes = await payment.create({
+          body: {
+            transaction_amount: total,
+            description: 'Pedido na Adega',
+            payment_method_id: 'pix',
+            payer: {
+              email: user.email,
+              first_name: user.name ? user.name.split(' ')[0] : 'Cliente',
+              last_name: user.name ? user.name.split(' ').slice(1).join(' ') || 'App' : 'App',
+              identification: {
+                type: 'CPF',
+                number: user.cpf
+              }
+            },
           },
-        },
-      });
-      if (!mpRes.point_of_interaction || !mpRes.point_of_interaction.transaction_data) {
-        return res.status(500).json({ error: 'Erro ao gerar cobrança PIX. Tente novamente.' });
-      }
-      const pixData = mpRes.point_of_interaction.transaction_data;
-      if (!mpRes.id || !pixData.qr_code || !pixData.qr_code_base64) {
-        return res.status(500).json({ error: 'Erro ao gerar QR Code PIX. Tente novamente.' });
-      }
-      // Cria o pedido com status aguardando pagamento PIX
-      const order = await prisma.order.create({
-        data: {
-          userId,
-          addressId,
-          paymentMethodId,
-          total,
-          instructions,
-          deliveryFee: deliveryFee as any,
-          pixStatus: 'AGUARDANDO',
-          pixPaymentId: mpRes.id.toString(),
-          pixQrCode: pixData.qr_code,
-          pixQrCodeImage: pixData.qr_code_base64,
-          items: {
-            create: cart.items.map((item: any) => ({
-              productId: item.productId,
-              quantity: item.quantity,
-              price: item.price ?? item.product.price,
-            })),
+        });
+        console.log('Resposta Mercado Pago:', JSON.stringify(mpRes, null, 2));
+        if (!mpRes.point_of_interaction || !mpRes.point_of_interaction.transaction_data) {
+          return res.status(500).json({ error: 'Erro ao gerar cobrança PIX. Tente novamente.' });
+        }
+        const pixData = mpRes.point_of_interaction.transaction_data;
+        if (!mpRes.id || !pixData.qr_code || !pixData.qr_code_base64) {
+          return res.status(500).json({ error: 'Erro ao gerar QR Code PIX. Tente novamente.' });
+        }
+        // Cria o pedido com status aguardando pagamento PIX
+        const order = await prisma.order.create({
+          data: {
+            userId,
+            addressId,
+            paymentMethodId,
+            total,
+            instructions,
+            deliveryFee: deliveryFee as any,
+            pixStatus: 'AGUARDANDO',
+            pixPaymentId: mpRes.id.toString(),
+            pixQrCode: pixData.qr_code,
+            pixQrCodeImage: pixData.qr_code_base64,
+            items: {
+              create: cart.items.map((item: any) => ({
+                productId: item.productId,
+                quantity: item.quantity,
+                price: item.price ?? item.product.price,
+              })),
+            },
+          } as any,
+          include: {
+            items: { include: { product: true } },
+            address: true,
+            user: { select: { name: true, email: true } },
           },
-        } as any,
-        include: {
-          items: { include: { product: true } },
-          address: true,
-          user: { select: { name: true, email: true } },
-        },
-      });
-      // Limpa o carrinho
-      await prisma.cartItem.deleteMany({ where: { cartId: cart.id } });
-      // Retorna o QR Code PIX e dados do pedido
-      return res.status(201).json({ ...order, pixQrCode: pixData.qr_code, pixQrCodeImage: pixData.qr_code_base64 });
+        });
+        // Limpa o carrinho
+        await prisma.cartItem.deleteMany({ where: { cartId: cart.id } });
+        // Retorna o QR Code PIX e dados do pedido
+        return res.status(201).json({ ...order, pixQrCode: pixData.qr_code, pixQrCodeImage: pixData.qr_code_base64 });
+      } catch (err: any) {
+        console.error('Erro ao criar cobrança PIX no Mercado Pago:', err?.response?.data || err);
+        return res.status(500).json({
+          error: 'Erro ao criar cobrança PIX no Mercado Pago.',
+          details: err?.response?.data || err?.message || err
+        });
+      }
     }
 
     // Cria o pedido

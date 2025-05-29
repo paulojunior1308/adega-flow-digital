@@ -11,7 +11,7 @@ async function main() {
   console.log('Tabelas existentes no banco:', tables.map(t => t.table_name));
 
   // Apagar todas as tabelas do banco (exceto _prisma_migrations)
-/*await prisma.$executeRawUnsafe(`
+await prisma.$executeRawUnsafe(`
   DO $$ DECLARE
     r RECORD;
   BEGIN
@@ -20,7 +20,7 @@ async function main() {
     END LOOP;
   END $$;
 `);
-console.log('Tabelas apagadas com sucesso!');*/
+console.log('Tabelas apagadas com sucesso!');
 
   // Adicionar usuário admin
   await prisma.user.upsert({
