@@ -102,11 +102,8 @@ export const orderController = {
     if (!user || !user.cpf) {
       return res.status(400).json({ error: 'Usuário sem CPF cadastrado.' });
     }
-    // Se o método de pagamento for PIX, apenas cria o pedido com status aguardando pagamento
-    let status = 'PENDING';
-    if (paymentMethod.name.toLowerCase().includes('pix')) {
-      status = 'AGUARDANDO_PAGAMENTO';
-    }
+    // Sempre criar o pedido com status 'PENDING'
+    const status: OrderStatus = 'PENDING';
     const order = await prisma.order.create({
       data: {
         userId,
