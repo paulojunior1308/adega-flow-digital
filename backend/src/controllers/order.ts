@@ -103,6 +103,18 @@ export const orderController = {
     if (!user || !user.cpf) {
       return res.status(400).json({ error: 'Usuário sem CPF cadastrado.' });
     }
+    // Sanitizar CPF (apenas números)
+    const sanitizedCpf = user.cpf.replace(/\D/g, '');
+    console.log('Dados enviados para o Mercado Pago (PIX):', {
+      email: user.email,
+      first_name: user.name ? user.name.split(' ')[0] : 'Cliente',
+      last_name: user.name ? user.name.split(' ').slice(1).join(' ') || 'App' : 'App',
+      identification: {
+        type: 'CPF',
+        number: sanitizedCpf
+      },
+      transaction_amount: total
+    });
     // Verifica se o método de pagamento é PIX
     if (paymentMethod.name.toLowerCase().includes('pix')) {
       try {
@@ -118,7 +130,7 @@ export const orderController = {
               last_name: user.name ? user.name.split(' ').slice(1).join(' ') || 'App' : 'App',
               identification: {
                 type: 'CPF',
-                number: user.cpf
+                number: sanitizedCpf
               }
             },
           },
