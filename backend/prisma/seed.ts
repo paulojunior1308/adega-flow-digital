@@ -31,6 +31,7 @@ console.log('Tabelas apagadas com sucesso!');*/
       password: await bcrypt.hash('Paulo1308**', 10),
       name: 'Paulo Junior',
       cpf: '45032534846',
+      phone: '11999999999',
       role: Role.ADMIN,
       active: true,
     },
