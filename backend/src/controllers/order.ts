@@ -2,7 +2,6 @@ import { Request, Response } from 'express';
 import prisma from '../config/prisma';
 import { AppError } from '../config/errorHandler';
 import { getSocketInstance } from '../config/socketInstance';
-import { payment } from '../config/mercadopago';
 
 type OrderStatus = 'PENDING' | 'CONFIRMED' | 'PREPARING' | 'DELIVERING' | 'DELIVERED' | 'CANCELLED';
 
