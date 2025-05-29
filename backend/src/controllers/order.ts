@@ -175,13 +175,19 @@ export const orderController = {
         // Retorna o QR Code PIX e dados do pedido
         return res.status(201).json({ ...order, pixQrCode: pixData.qr_code, pixQrCodeImage: pixData.qr_code_base64 });
       } catch (err: any) {
-        console.error('Erro ao criar cobrança PIX no Mercado Pago:', err?.response?.data || err);
+        // Loga o erro completo
+        console.error('Erro ao criar cobrança PIX no Mercado Pago (objeto completo):', JSON.stringify(err, null, 2));
+        if (err?.response) {
+          console.error('Erro .response:', JSON.stringify(err.response, null, 2));
+        }
         if (err?.stack) {
           console.error('Stack trace do erro:', err.stack);
         }
         return res.status(500).json({
           error: 'Erro ao criar cobrança PIX no Mercado Pago.',
           details: err?.response?.data || err?.message || err,
+          fullError: err,
+          response: err?.response || null,
           stack: err?.stack || null
         });
       }
