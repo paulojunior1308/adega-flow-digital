@@ -176,9 +176,13 @@ export const orderController = {
         return res.status(201).json({ ...order, pixQrCode: pixData.qr_code, pixQrCodeImage: pixData.qr_code_base64 });
       } catch (err: any) {
         console.error('Erro ao criar cobrança PIX no Mercado Pago:', err?.response?.data || err);
+        if (err?.stack) {
+          console.error('Stack trace do erro:', err.stack);
+        }
         return res.status(500).json({
           error: 'Erro ao criar cobrança PIX no Mercado Pago.',
-          details: err?.response?.data || err?.message || err
+          details: err?.response?.data || err?.message || err,
+          stack: err?.stack || null
         });
       }
     }
