@@ -86,7 +86,6 @@ exports.orderController = {
                     instructions,
                     deliveryFee: deliveryFee,
                     status: 'PENDING',
-                    pixPaymentStatus: 'PENDING',
                     items: {
                         create: cart.items.map((item) => {
                             var _a;

@@ -100,7 +100,7 @@ export const orderController = {
     // Cria o pedido
     let order;
     if (paymentMethod.name.toLowerCase().includes('pix')) {
-      // Se for PIX, status especial e pixPaymentStatus PENDING
+      // Se for PIX, status especial
       order = await prisma.order.create({
         data: {
           userId,
@@ -110,7 +110,6 @@ export const orderController = {
           instructions,
           deliveryFee: deliveryFee as any,
           status: 'PENDING',
-          pixPaymentStatus: 'PENDING',
           items: {
             create: cart.items.map((item: any) => ({
               productId: item.productId,
