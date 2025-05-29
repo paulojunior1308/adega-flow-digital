@@ -341,13 +341,10 @@ export const orderController = {
     if (!order || order.userId !== userId) {
       return res.status(404).json({ error: 'Pedido não encontrado.' });
     }
-    if (order.pixPaymentStatus !== 'PENDING') {
-      return res.status(400).json({ error: 'Pagamento já aprovado ou rejeitado.' });
-    }
-    // Atualiza status para aprovado
+    // Atualiza status para CONFIRMED
     const updatedOrder = await prisma.order.update({
       where: { id: orderId },
-      data: { pixPaymentStatus: 'APPROVED' },
+      data: { status: 'CONFIRMED' },
       include: { items: { include: { product: true } }, address: true, user: { select: { name: true, email: true } } }
     });
     // Agora sim, emitir evento para admin

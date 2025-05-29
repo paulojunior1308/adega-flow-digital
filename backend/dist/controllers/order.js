@@ -289,12 +289,9 @@ exports.orderController = {
         if (!order || order.userId !== userId) {
             return res.status(404).json({ error: 'Pedido não encontrado.' });
         }
-        if (order.pixPaymentStatus !== 'PENDING') {
-            return res.status(400).json({ error: 'Pagamento já aprovado ou rejeitado.' });
-        }
         const updatedOrder = await prisma_1.default.order.update({
             where: { id: orderId },
-            data: { pixPaymentStatus: 'APPROVED' },
+            data: { status: 'CONFIRMED' },
             include: { items: { include: { product: true } }, address: true, user: { select: { name: true, email: true } } }
         });
         const io = (0, socketInstance_1.getSocketInstance)();
