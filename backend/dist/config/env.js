@@ -23,7 +23,6 @@ const envSchema = zod_1.z.object({
     googleClientSecret: zod_1.z.string().optional(),
     uploadDir: zod_1.z.string().default('uploads'),
     maxFileSize: zod_1.z.coerce.number().default(5 * 1024 * 1024),
-    MP_ACCESS_TOKEN: zod_1.z.string(),
 });
 const _env = envSchema.safeParse({
     nodeEnv: process.env.NODE_ENV,
@@ -44,7 +43,6 @@ const _env = envSchema.safeParse({
     googleClientSecret: process.env.GOOGLE_CLIENT_SECRET,
     uploadDir: process.env.UPLOAD_DIR,
     maxFileSize: process.env.MAX_FILE_SIZE,
-    MP_ACCESS_TOKEN: process.env.MP_ACCESS_TOKEN,
 });
 if (!_env.success) {
     console.error('❌ Variáveis de ambiente inválidas:', _env.error.format());

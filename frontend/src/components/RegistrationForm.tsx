@@ -35,21 +35,16 @@ const RegistrationForm = () => {
         name: nome,
         email,
         password: senha,
-        cpf,
       });
       toast({
         title: "Cadastro realizado com sucesso",
         description: "Bem-vindo à Element Adega!"
       });
       navigate('/login');
-    } catch (error: any) {
-      let description = "Não foi possível realizar o cadastro.";
-      if (error?.response?.data?.error?.includes('CPF já cadastrado')) {
-        description = "Já existe um usuário cadastrado com este CPF.";
-      }
+    } catch (error) {
       toast({
         title: "Erro de cadastro",
-        description,
+        description: "Não foi possível realizar o cadastro.",
         variant: "destructive",
       });
     } finally {

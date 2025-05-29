@@ -7,30 +7,27 @@ import { AppError } from '../config/errorHandler';
 export const clientController = {
   register: async (req: Request, res: Response) => {
     console.log('Início do cadastro de cliente', req.body);
-    const { name, email, password, cpf } = req.body;
+    const { name, email, password } = req.body;
 
-    if (!cpf) {
-      return res.status(400).json({ error: 'CPF é obrigatório para cadastro.' });
-    }
+    const userExists = await prisma.user.findUnique({
+      where: { email },
+    });
 
-    const userExists = await prisma.user.findUnique({ where: { email } });
+    console.log('Usuário já existe?', !!userExists);
+
     if (userExists) {
       console.log('Email já cadastrado:', email);
       throw new AppError('Email já cadastrado', 400);
     }
-    const cpfExists = await prisma.user.findUnique({ where: { cpf } });
-    if (cpfExists) {
-      console.log('CPF já cadastrado:', cpf);
-      return res.status(400).json({ error: 'CPF já cadastrado' });
-    }
+
     const hashedPassword = await hashPassword(password);
     console.log('Senha criptografada');
+
     const user = await prisma.user.create({
       data: {
         name,
         email,
         password: hashedPassword,
-        cpf,
         role: 'USER',
       },
     });

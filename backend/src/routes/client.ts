@@ -39,5 +39,6 @@ router.delete('/cart/:itemId', cartController.removeItem);
 router.get('/orders', orderController.list);
 router.post('/orders', orderController.create);
 router.post('/orders/calculate-delivery-fee', orderController.calculateDeliveryFee);
+router.post('/orders/approve-pix-payment', orderController.approvePixPayment);
 
 export default router; 

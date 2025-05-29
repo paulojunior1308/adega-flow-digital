@@ -76,7 +76,7 @@ interface Order {
   status: 'pending' | 'preparing' | 'delivering' | 'delivered' | 'cancelled';
   timestamp: Date;
   paymentMethod: string;
-  pixStatus?: 'AGUARDANDO' | 'APROVADO' | 'EXPIRADO' | 'CANCELADO';
+  pixPaymentStatus?: 'PENDING' | 'APPROVED';
   contactPhone?: string;
   deliveryNotes?: string;
   deliveryLat?: number;
@@ -213,7 +213,7 @@ const AdminOrders = () => {
         status: (order.status ?? 'pending').toLowerCase(),
         timestamp: order.createdAt ?? order.updatedAt ?? null,
         paymentMethod: order.paymentMethod,
-        pixStatus: order.pixStatus,
+        pixPaymentStatus: order.pixPaymentStatus,
         contactPhone: order.user?.phone ?? '',
         deliveryNotes: order.instructions ?? ''
       }));
@@ -350,8 +350,15 @@ const AdminOrders = () => {
                 <CardContent>
                   <p><strong>Método:</strong> {selectedOrder.paymentMethod}</p>
                   <p><strong>Total:</strong> R$ {selectedOrder.total.toFixed(2)}</p>
-                  {selectedOrder.paymentMethod?.toLowerCase() === 'pix' && (
-                    <p><strong>Status PIX:</strong> {selectedOrder.pixStatus === 'APROVADO' ? 'Aprovado' : selectedOrder.pixStatus === 'EXPIRADO' ? 'Expirado' : selectedOrder.pixStatus === 'CANCELADO' ? 'Cancelado' : 'Aguardando'}</p>
+                  {selectedOrder.paymentMethod.toLowerCase().includes('pix') && (
+                    <p>
+                      <strong>Status do pagamento PIX:</strong>{' '}
+                      {selectedOrder.pixPaymentStatus === 'APPROVED' ? (
+                        <Badge className="bg-green-100 text-green-700 border-green-200">Aprovado</Badge>
+                      ) : (
+                        <Badge className="bg-yellow-100 text-yellow-700 border-yellow-200">Pendente</Badge>
+                      )}
+                    </p>
                   )}
                 </CardContent>
               </Card>
@@ -623,7 +630,7 @@ const AdminOrders = () => {
                   <TableHead>Data</TableHead>
                   <TableHead>Total</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Pagamento PIX</TableHead>
+                  <TableHead>Método de Pagamento</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
@@ -641,18 +648,15 @@ const AdminOrders = () => {
                     <TableCell>R$ {order.total.toFixed(2)}</TableCell>
                     <TableCell>{getStatusLabel(order.status)}</TableCell>
                     <TableCell>
-                      {order.paymentMethod?.toLowerCase() === 'pix' ? (
-                        order.pixStatus === 'APROVADO' ? (
-                          <Badge className="bg-green-100 text-green-700 border-green-200">Aprovado</Badge>
-                        ) : order.pixStatus === 'EXPIRADO' ? (
-                          <Badge className="bg-gray-100 text-gray-700 border-gray-200">Expirado</Badge>
-                        ) : order.pixStatus === 'CANCELADO' ? (
-                          <Badge className="bg-red-100 text-red-700 border-red-200">Cancelado</Badge>
-                        ) : (
-                          <Badge className="bg-yellow-100 text-yellow-700 border-yellow-200">Aguardando</Badge>
-                        )
-                      ) : (
-                        <span className="text-xs text-gray-400">-</span>
+                      {order.paymentMethod}
+                      {order.paymentMethod.toLowerCase().includes('pix') && (
+                        <span className="ml-2 align-middle">
+                          {order.pixPaymentStatus === 'APPROVED' ? (
+                            <Badge className="bg-green-100 text-green-700 border-green-200">PIX aprovado</Badge>
+                          ) : (
+                            <Badge className="bg-yellow-100 text-yellow-700 border-yellow-200">PIX pendente</Badge>
+                          )}
+                        </span>
                       )}
                     </TableCell>
                     <TableCell className="text-right">

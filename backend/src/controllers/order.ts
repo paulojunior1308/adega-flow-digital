@@ -2,7 +2,6 @@ import { Request, Response } from 'express';
 import prisma from '../config/prisma';
 import { AppError } from '../config/errorHandler';
 import { getSocketInstance } from '../config/socketInstance';
-import { payment } from '../config/mercadopago';
 
 type OrderStatus = 'PENDING' | 'CONFIRMED' | 'PREPARING' | 'DELIVERING' | 'DELIVERED' | 'CANCELLED';
 
@@ -98,142 +97,68 @@ export const orderController = {
     const totalProdutos = cart.items.reduce((sum: number, item: any) => sum + (item.price ?? item.product.price) * item.quantity, 0);
     const total = totalProdutos + deliveryFee;
 
-    // Buscar dados do usuário para o PIX
-    const user = await prisma.user.findUnique({ where: { id: userId }, select: { email: true, name: true, cpf: true } });
-    if (!user || !user.cpf) {
-      return res.status(400).json({ error: 'Usuário sem CPF cadastrado.' });
-    }
-    // Sanitizar CPF (apenas números)
-    const sanitizedCpf = user.cpf.replace(/\D/g, '');
-    console.log('Dados enviados para o Mercado Pago (PIX):', {
-      email: user.email,
-      first_name: user.name ? user.name.split(' ')[0] : 'Cliente',
-      last_name: user.name ? user.name.split(' ').slice(1).join(' ') || 'App' : 'App',
-      identification: {
-        type: 'CPF',
-        number: sanitizedCpf
-      },
-      transaction_amount: total
-    });
-    // Verifica se o método de pagamento é PIX
+    // Cria o pedido
+    let order;
     if (paymentMethod.name.toLowerCase().includes('pix')) {
-      try {
-        console.log('Iniciando criação de cobrança PIX via Mercado Pago...');
-        const mpRes = await payment.create({
-          body: {
-            transaction_amount: total,
-            description: 'Pedido na Adega',
-            payment_method_id: 'pix',
-            payer: {
-              email: user.email,
-              first_name: user.name ? user.name.split(' ')[0] : 'Cliente',
-              last_name: user.name ? user.name.split(' ').slice(1).join(' ') || 'App' : 'App',
-              identification: {
-                type: 'CPF',
-                number: sanitizedCpf
-              }
-            },
+      // Se for PIX, status especial e pixPaymentStatus PENDING
+      order = await prisma.order.create({
+        data: {
+          userId,
+          addressId,
+          paymentMethodId,
+          total,
+          instructions,
+          deliveryFee: deliveryFee as any,
+          status: 'PENDING',
+          pixPaymentStatus: 'PENDING',
+          items: {
+            create: cart.items.map((item: any) => ({
+              productId: item.productId,
+              quantity: item.quantity,
+              price: item.price ?? item.product.price,
+            })),
           },
-        });
-        console.log('Resposta Mercado Pago:', JSON.stringify(mpRes, null, 2));
-        if (!mpRes.point_of_interaction || !mpRes.point_of_interaction.transaction_data) {
-          return res.status(500).json({ error: 'Erro ao gerar cobrança PIX. Tente novamente.' });
-        }
-        const pixData = mpRes.point_of_interaction.transaction_data;
-        if (!mpRes.id || !pixData.qr_code || !pixData.qr_code_base64) {
-          return res.status(500).json({ error: 'Erro ao gerar QR Code PIX. Tente novamente.' });
-        }
-        // Cria o pedido com status aguardando pagamento PIX
-        const order = await prisma.order.create({
-          data: {
-            userId,
-            addressId,
-            paymentMethodId,
-            total,
-            instructions,
-            deliveryFee: deliveryFee as any,
-            pixStatus: 'AGUARDANDO',
-            pixPaymentId: mpRes.id.toString(),
-            pixQrCode: pixData.qr_code,
-            pixQrCodeImage: pixData.qr_code_base64,
-            items: {
-              create: cart.items.map((item: any) => ({
-                productId: item.productId,
-                quantity: item.quantity,
-                price: item.price ?? item.product.price,
-              })),
-            },
-          } as any,
-          include: {
-            items: { include: { product: true } },
-            address: true,
-            user: { select: { name: true, email: true } },
+        } as any,
+        include: {
+          items: { include: { product: true } },
+          address: true,
+          user: { select: { name: true, email: true } }
+        },
+      });
+      // NÃO emitir evento para admin ainda
+    } else {
+      // Pedido normal
+      order = await prisma.order.create({
+        data: {
+          userId,
+          addressId,
+          paymentMethodId,
+          total,
+          instructions,
+          deliveryFee: deliveryFee as any,
+          items: {
+            create: cart.items.map((item: any) => ({
+              productId: item.productId,
+              quantity: item.quantity,
+              price: item.price ?? item.product.price,
+            })),
           },
-        });
-        // Limpa o carrinho
-        await prisma.cartItem.deleteMany({ where: { cartId: cart.id } });
-        // Retorna o QR Code PIX e dados do pedido
-        return res.status(201).json({ ...order, pixQrCode: pixData.qr_code, pixQrCodeImage: pixData.qr_code_base64 });
-      } catch (err: any) {
-        // Loga o erro completo
-        console.error('Erro ao criar cobrança PIX no Mercado Pago (objeto completo):', JSON.stringify(err, null, 2));
-        if (err?.response) {
-          console.error('Erro .response:', JSON.stringify(err.response, null, 2));
-        }
-        if (err?.stack) {
-          console.error('Stack trace do erro:', err.stack);
-        }
-        return res.status(500).json({
-          error: 'Erro ao criar cobrança PIX no Mercado Pago.',
-          details: err?.response?.data || err?.message || err,
-          fullError: err,
-          response: err?.response || null,
-          stack: err?.stack || null
-        });
+        } as any,
+        include: {
+          items: { include: { product: true } },
+          address: true,
+          user: { select: { name: true, email: true } }
+        },
+      });
+      // Emitir evento de novo pedido para admins
+      const io = getSocketInstance();
+      if (io) {
+        io.emit('new-order', { order });
       }
     }
 
-    // Cria o pedido
-    const order = await prisma.order.create({
-      data: {
-        userId,
-        addressId,
-        paymentMethodId,
-        total,
-        instructions,
-        deliveryFee: deliveryFee as any,
-        items: {
-          create: cart.items.map((item: any) => ({
-            productId: item.productId,
-            quantity: item.quantity,
-            price: item.price ?? item.product.price,
-          })),
-        },
-      } as any,
-      include: { 
-        items: { 
-          include: { 
-            product: true 
-          } 
-        }, 
-        address: true,
-        user: {
-          select: {
-            name: true,
-            email: true
-          }
-        }
-      },
-    });
-
     // Limpa o carrinho
     await prisma.cartItem.deleteMany({ where: { cartId: cart.id } });
-
-    // Emitir evento de novo pedido para admins
-    const io = getSocketInstance();
-    if (io) {
-      io.emit('new-order', { order });
-    }
 
     res.status(201).json(order);
   },
@@ -406,5 +331,31 @@ export const orderController = {
     const deliveryFee = Math.round((calculateDeliveryFee(distanceKm) + Number.EPSILON) * 100) / 100;
     console.log('Taxa de entrega calculada:', deliveryFee);
     res.json({ deliveryFee });
+  },
+
+  // Cliente: marcar pagamento PIX como aprovado
+  approvePixPayment: async (req: Request, res: Response) => {
+    // @ts-ignore
+    const userId = req.user.id;
+    const { orderId } = req.body;
+    const order = await prisma.order.findUnique({ where: { id: orderId } });
+    if (!order || order.userId !== userId) {
+      return res.status(404).json({ error: 'Pedido não encontrado.' });
+    }
+    if (order.pixPaymentStatus !== 'PENDING') {
+      return res.status(400).json({ error: 'Pagamento já aprovado ou rejeitado.' });
+    }
+    // Atualiza status para aprovado
+    const updatedOrder = await prisma.order.update({
+      where: { id: orderId },
+      data: { pixPaymentStatus: 'APPROVED' },
+      include: { items: { include: { product: true } }, address: true, user: { select: { name: true, email: true } } }
+    });
+    // Agora sim, emitir evento para admin
+    const io = getSocketInstance();
+    if (io) {
+      io.emit('new-order', { order: updatedOrder });
+    }
+    res.json({ success: true, order: updatedOrder });
   },
 }; 

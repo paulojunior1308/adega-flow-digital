@@ -12,7 +12,6 @@ model User {
   email     String     @unique
   password  String
   name      String
-  cpf       String     @unique
   role      Role       @default(USER)
   active    Boolean    @default(true)
   createdAt DateTime   @default(now())
@@ -205,10 +204,8 @@ model Order {
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
   paymentMethodId String?
-  pixStatus       String?        @default("")
-  pixPaymentId    String?
-  pixQrCode       String?
-  pixQrCodeImage  String?
+  pixPaymentStatus PixPaymentStatus? @default(PENDING)
+  pixReceiptUrl   String?
   address         Address        @relation(fields: [addressId], references: [id])
   paymentMethod   PaymentMethod? @relation(fields: [paymentMethodId], references: [id])
   user            User           @relation(fields: [userId], references: [id])
@@ -313,4 +310,10 @@ enum OrderStatus {
 enum AccountStatus {
   PENDING
   PAID
+}
+
+enum PixPaymentStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }
