@@ -594,18 +594,19 @@ const ClientCart = () => {
             <DialogTitle>Pagamento via PIX</DialogTitle>
           </DialogHeader>
           <div className="flex flex-col items-center gap-4 py-4">
-            {pixQrCodeImage && (
-              <img src={`data:image/png;base64,${pixQrCodeImage}`} alt="QR Code PIX" className="w-56 h-56" />
-            )}
             <div className="text-center">
-              <p className="font-medium mb-2">Escaneie o QR Code acima no app do seu banco para pagar.</p>
-              <p className="text-xs text-gray-500 break-all">Ou copie o código abaixo:</p>
-              <Input value={pixQrCode || ''} readOnly className="mb-2 text-xs" onFocus={e => e.target.select()} />
-              <Button onClick={() => { navigator.clipboard.writeText(pixQrCode || ''); toast({ title: 'Código copiado!' }); }} size="sm" variant="outline">Copiar código</Button>
+              <p className="font-medium mb-2">Copie a chave PIX abaixo e faça o pagamento no app do seu banco.</p>
+              <p className="text-xs text-gray-500 break-all">Chave PIX:</p>
+              <input
+                value="elementstore516@gmail.com"
+                readOnly
+                className="mb-2 text-xs w-full text-center border rounded p-2"
+                onFocus={e => e.target.select()}
+              />
+              <Button onClick={() => { navigator.clipboard.writeText('elementstore516@gmail.com'); toast({ title: 'Chave copiada!' }); }} size="sm" variant="outline">Copiar chave</Button>
             </div>
             <div className="mt-4">
-              {pixStatus === 'AGUARDANDO' && <span className="text-yellow-600 font-semibold">Aguardando pagamento...</span>}
-              {pixStatus === 'APROVADO' && <span className="text-green-600 font-semibold">Pagamento aprovado!</span>}
+              <span className="text-yellow-600 font-semibold">Aguardando pagamento...</span>
             </div>
           </div>
         </DialogContent>
