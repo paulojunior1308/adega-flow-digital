@@ -183,27 +183,18 @@ export const adminController = {
   },
 
   createUser: async (req: Request, res: Response) => {
-    const { name, email, password, role, cpf } = req.body;
+    const { name, email, password, role } = req.body;
 
     if (!['ADMIN', 'MOTOBOY', 'USER'].includes(role)) {
       throw new AppError('Tipo de usuário inválido. Só é permitido ADMIN, MOTOBOY ou USER.', 400);
     }
 
-    if (!cpf) {
-      throw new AppError('CPF é obrigatório', 400);
-    }
-
-    const userExists = await prisma.user.findFirst({
-      where: {
-        OR: [
-          { email },
-          { cpf }
-        ]
-      }
+    const userExists = await prisma.user.findUnique({
+      where: { email },
     });
 
     if (userExists) {
-      throw new AppError('Email ou CPF já cadastrado', 400);
+      throw new AppError('Email já cadastrado', 400);
     }
 
     const hashedPassword = await hashPassword(password);
@@ -214,7 +205,6 @@ export const adminController = {
         email,
         password: hashedPassword,
         role,
-        cpf
       },
     });
 
@@ -304,7 +294,7 @@ export const adminController = {
       where: { id: { in: validItems.map(i => i.productId) } },
       select: { id: true }
     });
-    const validProductIds = new Set(allProducts.map((p: any) => p.id));
+    const validProductIds = new Set(allProducts.map(p => p.id));
     const reallyValidItems = validItems.filter(item => validProductIds.has(item.productId));
     console.log('Itens realmente válidos para venda:', reallyValidItems);
     // Verificar estoque antes de criar a venda

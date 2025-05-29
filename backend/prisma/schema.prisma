@@ -10,9 +10,9 @@ datasource db {
 model User {
   id        String     @id @default(uuid())
   email     String     @unique
+  cpf String @unique
   password  String
   name      String
-  cpf       String     @unique
   role      Role       @default(USER)
   active    Boolean    @default(true)
   createdAt DateTime   @default(now())
@@ -206,7 +206,6 @@ model Order {
   updatedAt       DateTime       @updatedAt
   paymentMethodId String?
   pixPaymentStatus PixPaymentStatus? @default(PENDING)
-  pixReceiptUrl   String?
   address         Address        @relation(fields: [addressId], references: [id])
   paymentMethod   PaymentMethod? @relation(fields: [paymentMethodId], references: [id])
   user            User           @relation(fields: [userId], references: [id])

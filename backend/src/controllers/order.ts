@@ -98,66 +98,48 @@ export const orderController = {
     const total = totalProdutos + deliveryFee;
 
     // Cria o pedido
-    let order;
-    if (paymentMethod.name.toLowerCase().includes('pix')) {
-      // Se for PIX, status especial
-      order = await prisma.order.create({
-        data: {
-          userId,
-          addressId,
-          paymentMethodId,
-          total,
-          instructions,
-          deliveryFee: deliveryFee as any,
-          status: 'PENDING',
-          items: {
-            create: cart.items.map((item: any) => ({
-              productId: item.productId,
-              quantity: item.quantity,
-              price: item.price ?? item.product.price,
-            })),
-          },
-        } as any,
-        include: {
-          items: { include: { product: true } },
-          address: true,
-          user: { select: { name: true, email: true } }
+    const isPix = paymentMethod.name && paymentMethod.name.toLowerCase().includes('pix');
+    const order = await prisma.order.create({
+      data: {
+        userId,
+        addressId,
+        paymentMethodId,
+        total,
+        instructions,
+        deliveryFee: deliveryFee as any,
+        pixPaymentStatus: isPix ? 'PENDING' : undefined,
+        items: {
+          create: cart.items.map((item: any) => ({
+            productId: item.productId,
+            quantity: item.quantity,
+            price: item.price ?? item.product.price,
+          })),
         },
-      });
-      // NÃO emitir evento para admin ainda
-    } else {
-      // Pedido normal
-      order = await prisma.order.create({
-        data: {
-          userId,
-          addressId,
-          paymentMethodId,
-          total,
-          instructions,
-          deliveryFee: deliveryFee as any,
-          items: {
-            create: cart.items.map((item: any) => ({
-              productId: item.productId,
-              quantity: item.quantity,
-              price: item.price ?? item.product.price,
-            })),
-          },
-        } as any,
-        include: {
-          items: { include: { product: true } },
-          address: true,
-          user: { select: { name: true, email: true } }
-        },
-      });
-      // Emitir evento de novo pedido para admins
-      const io = getSocketInstance();
-      if (io) {
-        io.emit('new-order', { order });
-      }
-    }
+      } as any,
+      include: { 
+        items: { 
+          include: { 
+            product: true 
+          } 
+        }, 
+        address: true,
+        user: {
+          select: {
+            name: true,
+            email: true
+          }
+        }
+      },
+    });
 
     // Limpa o carrinho
     await prisma.cartItem.deleteMany({ where: { cartId: cart.id } });
+
+    // Emitir evento de novo pedido para admins
+    const io = getSocketInstance();
+    if (io) {
+      io.emit('new-order', { order });
+    }
 
     res.status(201).json(order);
   },
@@ -332,26 +314,23 @@ export const orderController = {
     res.json({ deliveryFee });
   },
 
-  // Cliente: marcar pagamento PIX como aprovado
-  approvePixPayment: async (req: Request, res: Response) => {
-    // @ts-ignore
-    const userId = req.user.id;
-    const { orderId } = req.body;
-    const order = await prisma.order.findUnique({ where: { id: orderId } });
-    if (!order || order.userId !== userId) {
-      return res.status(404).json({ error: 'Pedido não encontrado.' });
+  // Admin: atualizar status do pagamento PIX
+  updatePixStatus: async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const { pixPaymentStatus } = req.body;
+    if (!['PENDING', 'APPROVED', 'REJECTED'].includes(pixPaymentStatus)) {
+      return res.status(400).json({ error: 'Status PIX inválido.' });
     }
-    // Atualiza status para CONFIRMED
-    const updatedOrder = await prisma.order.update({
-      where: { id: orderId },
-      data: { status: 'CONFIRMED' },
-      include: { items: { include: { product: true } }, address: true, user: { select: { name: true, email: true } } }
+    const order = await prisma.order.update({
+      where: { id },
+      data: { pixPaymentStatus },
+      include: { items: { include: { product: true } }, address: true },
     });
-    // Agora sim, emitir evento para admin
+    // Emitir evento para o cliente
     const io = getSocketInstance();
     if (io) {
-      io.emit('new-order', { order: updatedOrder });
+      io.to(order.userId).emit('order-updated', { order });
     }
-    res.json({ success: true, order: updatedOrder });
+    res.json(order);
   },
 }; 

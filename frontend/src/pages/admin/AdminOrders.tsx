@@ -76,7 +76,7 @@ interface Order {
   status: 'pending' | 'preparing' | 'delivering' | 'delivered' | 'cancelled';
   timestamp: Date;
   paymentMethod: string;
-  pixPaymentStatus?: 'PENDING' | 'APPROVED';
+  pixPaymentStatus?: 'PENDING' | 'APPROVED' | 'REJECTED';
   contactPhone?: string;
   deliveryNotes?: string;
   deliveryLat?: number;
@@ -350,16 +350,6 @@ const AdminOrders = () => {
                 <CardContent>
                   <p><strong>Método:</strong> {selectedOrder.paymentMethod}</p>
                   <p><strong>Total:</strong> R$ {selectedOrder.total.toFixed(2)}</p>
-                  {selectedOrder.paymentMethod.toLowerCase().includes('pix') && (
-                    <p>
-                      <strong>Status do pagamento PIX:</strong>{' '}
-                      {selectedOrder.pixPaymentStatus === 'APPROVED' ? (
-                        <Badge className="bg-green-100 text-green-700 border-green-200">Aprovado</Badge>
-                      ) : (
-                        <Badge className="bg-yellow-100 text-yellow-700 border-yellow-200">Pendente</Badge>
-                      )}
-                    </p>
-                  )}
                 </CardContent>
               </Card>
               
@@ -538,6 +528,38 @@ const AdminOrders = () => {
             </div>
           </div>
           
+          {selectedOrder.paymentMethod && selectedOrder.paymentMethod.toLowerCase().includes('pix') && (
+            <Card className="mb-4">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg">Pagamento PIX</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-2 mb-2">
+                  <span>Status do pagamento:</span>
+                  {selectedOrder.pixPaymentStatus === 'APPROVED' && <Badge className="bg-green-100 text-green-700">Aprovado</Badge>}
+                  {selectedOrder.pixPaymentStatus === 'REJECTED' && <Badge className="bg-red-100 text-red-700">Rejeitado</Badge>}
+                  {(!selectedOrder.pixPaymentStatus || selectedOrder.pixPaymentStatus === 'PENDING') && <Badge className="bg-yellow-100 text-yellow-700">Pendente</Badge>}
+                </div>
+                {selectedOrder.pixPaymentStatus === 'PENDING' && (
+                  <div className="flex gap-2 mt-2">
+                    <Button size="sm" className="bg-green-600 text-white" onClick={async () => {
+                      await api.patch(`/admin/orders/${selectedOrder.id}/pix-status`, { pixPaymentStatus: 'APPROVED' });
+                      setOrders(orders => orders.map(o => o.id === selectedOrder.id ? { ...o, pixPaymentStatus: 'APPROVED' } : o));
+                      setSelectedOrder({ ...selectedOrder, pixPaymentStatus: 'APPROVED' });
+                      toast({ title: 'Pagamento aprovado!' });
+                    }}>Aprovar</Button>
+                    <Button size="sm" variant="destructive" onClick={async () => {
+                      await api.patch(`/admin/orders/${selectedOrder.id}/pix-status`, { pixPaymentStatus: 'REJECTED' });
+                      setOrders(orders => orders.map(o => o.id === selectedOrder.id ? { ...o, pixPaymentStatus: 'REJECTED' } : o));
+                      setSelectedOrder({ ...selectedOrder, pixPaymentStatus: 'REJECTED' });
+                      toast({ title: 'Pagamento rejeitado!' });
+                    }}>Rejeitar</Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+          
           <DialogFooter className="flex items-center justify-between">
             <div className="text-sm text-muted-foreground">
               ID: {selectedOrder.id}
@@ -630,7 +652,6 @@ const AdminOrders = () => {
                   <TableHead>Data</TableHead>
                   <TableHead>Total</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Método de Pagamento</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
@@ -647,18 +668,6 @@ const AdminOrders = () => {
                     </TableCell>
                     <TableCell>R$ {order.total.toFixed(2)}</TableCell>
                     <TableCell>{getStatusLabel(order.status)}</TableCell>
-                    <TableCell>
-                      {order.paymentMethod}
-                      {order.paymentMethod.toLowerCase().includes('pix') && (
-                        <span className="ml-2 align-middle">
-                          {order.pixPaymentStatus === 'APPROVED' ? (
-                            <Badge className="bg-green-100 text-green-700 border-green-200">PIX aprovado</Badge>
-                          ) : (
-                            <Badge className="bg-yellow-100 text-yellow-700 border-yellow-200">PIX pendente</Badge>
-                          )}
-                        </span>
-                      )}
-                    </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
                         {order.status === 'pending' && (

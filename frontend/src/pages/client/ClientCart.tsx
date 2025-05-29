@@ -4,7 +4,7 @@ import ClientSidebar from '@/components/client/ClientSidebar';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ShoppingCart, Plus, Minus, Trash2, ArrowRight, MapPin, Search, CreditCard, Truck, Check, Clock, Map } from 'lucide-react';
+import { ShoppingCart, Plus, Minus, Trash2, ArrowRight, MapPin, Search, CreditCard, Truck, Check, Clock, Map, Copy } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { 
@@ -42,7 +42,6 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from "@/components/ui/dialog";
 import {
   Tabs,
@@ -129,8 +128,8 @@ const ClientCart = () => {
   const [deliveryFee, setDeliveryFee] = useState(0);
   
   const [showPixModal, setShowPixModal] = useState(false);
-  const [pendingPixOrderId, setPendingPixOrderId] = useState<string | null>(null);
-  const [isApprovingPix, setIsApprovingPix] = useState(false);
+  const [pixCopied, setPixCopied] = useState(false);
+  const PIX_KEY = 'Elementstore516@gmail.com';
   
   useEffect(() => {
     const descontos = localStorage.getItem('comboDescontos');
@@ -258,27 +257,12 @@ const ClientCart = () => {
     }
   };
   
-  const getSelectedPaymentMethod = () => paymentMethods.find(m => m.id === paymentMethod);
-  
-  const checkout = async () => {
-    if (!selectedAddress) {
-      toast({
-        title: "Endereço obrigatório",
-        description: "Por favor, selecione um endereço de entrega",
-        variant: "destructive",
-        duration: 3000,
-      });
-      return;
-    }
-    if (!paymentMethod) {
-      toast({
-        title: "Forma de pagamento obrigatória",
-        description: "Por favor, selecione uma forma de pagamento",
-        variant: "destructive",
-        duration: 3000,
-      });
-      return;
-    }
+  const handlePixConfirm = async () => {
+    setShowPixModal(false);
+    await sendOrder();
+  };
+
+  const sendOrder = async () => {
     try {
       const payload = {
         addressId: selectedAddress,
@@ -288,12 +272,6 @@ const ClientCart = () => {
       };
       const res = await api.post('/orders', payload);
       const { id: orderId } = res.data;
-      const selectedMethod = getSelectedPaymentMethod();
-      if (selectedMethod && selectedMethod.name.toLowerCase().includes('pix')) {
-        setPendingPixOrderId(orderId);
-        setShowPixModal(true);
-        return;
-      }
       setCurrentOrderId(orderId);
       setOrderStatus({
         status: "pending",
@@ -318,6 +296,34 @@ const ClientCart = () => {
         duration: 3000,
       });
     }
+  };
+
+  const checkout = async () => {
+    if (!selectedAddress) {
+      toast({
+        title: "Endereço obrigatório",
+        description: "Por favor, selecione um endereço de entrega",
+        variant: "destructive",
+        duration: 3000,
+      });
+      return;
+    }
+    if (!paymentMethod) {
+      toast({
+        title: "Forma de pagamento obrigatória",
+        description: "Por favor, selecione uma forma de pagamento",
+        variant: "destructive",
+        duration: 3000,
+      });
+      return;
+    }
+    // Se for PIX, mostrar modal antes de enviar pedido
+    const selectedPayment = paymentMethods.find(m => m.id === paymentMethod);
+    if (selectedPayment && selectedPayment.name.toLowerCase().includes('pix')) {
+      setShowPixModal(true);
+      return;
+    }
+    await sendOrder();
   };
   
   return (
@@ -569,56 +575,41 @@ const ClientCart = () => {
           )}
         </div>
       </div>
-      
-      {/* Modal PIX */}
-      <Dialog open={showPixModal} onOpenChange={setShowPixModal}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Pagamento via PIX</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <p>Para finalizar seu pedido, faça um PIX para a chave abaixo:</p>
-            <div className="bg-gray-100 rounded p-4 text-center text-lg font-bold select-all">
-              Elementstore516@gmail.com
+      {showPixModal && (
+        <Dialog open={showPixModal} onOpenChange={setShowPixModal}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Pagamento via PIX</DialogTitle>
+              <DialogDescription>
+                Para finalizar seu pedido, faça um PIX para a chave abaixo e clique em "Já paguei".
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex items-center gap-2 bg-gray-100 rounded p-2 select-all">
+              <span className="font-mono text-sm">{PIX_KEY}</span>
+              <Button
+                type="button"
+                size="icon"
+                variant="ghost"
+                onClick={() => {
+                  navigator.clipboard.writeText(PIX_KEY);
+                  setPixCopied(true);
+                  setTimeout(() => setPixCopied(false), 1500);
+                }}
+              >
+                <Copy className="h-4 w-4" />
+              </Button>
+              {pixCopied && <span className="text-green-600 text-xs ml-2">Copiado!</span>}
             </div>
-            <p className="text-sm text-gray-500">Após realizar o pagamento, clique em "Já paguei" para liberar seu pedido para o estabelecimento.</p>
-          </div>
-          <DialogFooter>
-            <Button
-              className="w-full bg-element-blue-neon text-element-gray-dark hover:bg-element-blue-neon/90"
-              disabled={isApprovingPix}
-              onClick={async () => {
-                if (!pendingPixOrderId) return;
-                setIsApprovingPix(true);
-                try {
-                  await api.post('/orders/approve-pix-payment', { orderId: pendingPixOrderId });
-                  setShowPixModal(false);
-                  setOrderPlaced(true);
-                  setCart([]);
-                  toast({
-                    title: "Pedido enviado!",
-                    description: `Seu pedido foi liberado para o estabelecimento! Aguarde a confirmação.`,
-                    duration: 3000,
-                  });
-                  setTimeout(() => {
-                    navigate('/cliente-pedidos');
-                  }, 2000);
-                } catch (err) {
-                  toast({
-                    title: "Erro ao aprovar pagamento PIX",
-                    description: "Tente novamente ou entre em contato com o suporte.",
-                    variant: "destructive",
-                  });
-                } finally {
-                  setIsApprovingPix(false);
-                }
-              }}
-            >
-              Já paguei
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            <div className="text-xs text-gray-500 mt-2">
+              <b>Importante:</b> O pedido só será processado após a confirmação do pagamento pelo estabelecimento.
+            </div>
+            <div className="flex justify-end gap-2 mt-4">
+              <Button variant="outline" onClick={() => setShowPixModal(false)}>Cancelar</Button>
+              <Button onClick={handlePixConfirm} className="bg-element-blue-neon text-element-gray-dark hover:bg-element-blue-neon/90">Já paguei</Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 };

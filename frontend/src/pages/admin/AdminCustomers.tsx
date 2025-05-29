@@ -24,7 +24,7 @@ const AdminCustomers = () => {
   const [customersData, setCustomersData] = React.useState([]);
   const [modalType, setModalType] = React.useState(null); // 'new' | 'details' | 'edit'
   const [selectedCustomer, setSelectedCustomer] = React.useState(null);
-  const [form, setForm] = React.useState({ name: '', email: '', phone: '', password: '' });
+  const [form, setForm] = React.useState({ name: '', email: '', phone: '', password: '', cpf: '' });
   const [search, setSearch] = React.useState('');
   const [deleteId, setDeleteId] = React.useState(null);
 
@@ -40,7 +40,7 @@ const AdminCustomers = () => {
 
   // Handlers
   const openNew = () => {
-    setForm({ name: '', email: '', phone: '', password: '' });
+    setForm({ name: '', email: '', phone: '', password: '', cpf: '' });
     setModalType('new');
   };
   const openDetails = (customer) => {
@@ -161,6 +161,7 @@ const AdminCustomers = () => {
             <div className="space-y-4">
               <Input name="name" placeholder="Nome" value={form.name} onChange={handleFormChange} />
               <Input name="email" placeholder="Email" value={form.email} onChange={handleFormChange} />
+              <Input name="cpf" placeholder="CPF" value={form.cpf} onChange={handleFormChange} />
               <Input name="phone" placeholder="Telefone" value={form.phone} onChange={handleFormChange} />
               <Input name="password" placeholder="Senha" type="password" value={form.password} onChange={handleFormChange} />
             </div>
@@ -205,6 +206,7 @@ const AdminCustomers = () => {
             <div className="space-y-4">
               <Input name="name" placeholder="Nome" value={form.name} onChange={handleFormChange} />
               <Input name="email" placeholder="Email" value={form.email} onChange={handleFormChange} />
+              <Input name="cpf" placeholder="CPF" value={form.cpf} onChange={handleFormChange} />
               <Input name="phone" placeholder="Telefone" value={form.phone} onChange={handleFormChange} />
               <Input name="password" placeholder="Senha (deixe em branco para não alterar)" type="password" value={form.password} onChange={handleFormChange} />
             </div>

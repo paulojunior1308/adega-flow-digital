@@ -45,6 +45,7 @@ interface Order {
   products: OrderProduct[];
   address: string;
   paymentMethod: string;
+  pixPaymentStatus?: 'PENDING' | 'APPROVED' | 'REJECTED';
   deliveryLat?: number;
   deliveryLng?: number;
   deliveryFee?: number;
@@ -91,6 +92,7 @@ const ClientOrders = () => {
         ? `${order.address.title} - ${order.address.street}, ${order.address.number}${order.address.complement ? ' ' + order.address.complement : ''}, ${order.address.neighborhood}, ${order.address.city} - ${order.address.state}, CEP: ${order.address.zipcode}`
         : '-',
       paymentMethod: order.paymentMethod,
+      pixPaymentStatus: order.pixPaymentStatus,
       products: (order.items ?? []).map((item: any) => ({
         id: item.product?.id ?? '',
         name: item.product?.name ?? '',
@@ -429,6 +431,26 @@ const ClientOrders = () => {
                       <p className="text-sm">{selectedOrder.paymentMethod}</p>
                     </div>
                   </div>
+                  
+                  {selectedOrder && selectedOrder.paymentMethod && selectedOrder.paymentMethod.toLowerCase().includes('pix') && (
+                    <div className="border-t pt-4">
+                      <h4 className="font-medium mb-1">Status do pagamento PIX</h4>
+                      <div className="flex items-center gap-2">
+                        {selectedOrder.pixPaymentStatus === 'APPROVED' && <Badge className="bg-green-100 text-green-700">Aprovado</Badge>}
+                        {selectedOrder.pixPaymentStatus === 'REJECTED' && <Badge className="bg-red-100 text-red-700">Rejeitado</Badge>}
+                        {(!selectedOrder.pixPaymentStatus || selectedOrder.pixPaymentStatus === 'PENDING') && <Badge className="bg-yellow-100 text-yellow-700">Pendente</Badge>}
+                      </div>
+                      {selectedOrder.pixPaymentStatus === 'REJECTED' && (
+                        <div className="text-xs text-red-600 mt-1">Pagamento não identificado. Entre em contato com o estabelecimento.</div>
+                      )}
+                      {selectedOrder.pixPaymentStatus === 'PENDING' && (
+                        <div className="text-xs text-yellow-600 mt-1">Aguardando confirmação do pagamento pelo estabelecimento.</div>
+                      )}
+                      {selectedOrder.pixPaymentStatus === 'APPROVED' && (
+                        <div className="text-xs text-green-600 mt-1">Pagamento aprovado! Seu pedido será processado.</div>
+                      )}
+                    </div>
+                  )}
                   
                   {selectedOrder && selectedOrder.status === 'shipped' && selectedOrder.deliveryLat && selectedOrder.deliveryLng && (
                     <div className="mt-6">

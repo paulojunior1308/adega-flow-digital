@@ -21,7 +21,7 @@ const API_URL = 'https://adega-flow-digital.onrender.com/api';
 const AdminUsers = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [users, setUsers] = useState([]);
-  const [form, setForm] = useState({ name: '', email: '', password: '', type: 'admin' });
+  const [form, setForm] = useState({ name: '', email: '', password: '', cpf: '', type: 'admin' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const { token } = useAuth();
@@ -50,7 +50,7 @@ const AdminUsers = () => {
   }, [token]);
 
   const handleOpenModal = () => {
-    setForm({ name: '', email: '', password: '', type: 'admin' });
+    setForm({ name: '', email: '', password: '', cpf: '', type: 'admin' });
     setIsModalOpen(true);
   };
 
@@ -75,6 +75,7 @@ const AdminUsers = () => {
         name: form.name,
         email: form.email,
         password: form.password,
+        cpf: form.cpf,
         role: form.type.toUpperCase(),
       }, {
         headers: {
@@ -171,6 +172,10 @@ const AdminUsers = () => {
               <div>
                 <Label htmlFor="email">E-mail</Label>
                 <Input id="email" name="email" type="email" value={form.email} onChange={handleChange} required />
+              </div>
+              <div>
+                <Label htmlFor="cpf">CPF</Label>
+                <Input id="cpf" name="cpf" type="text" value={form.cpf} onChange={handleChange} required />
               </div>
               <div>
                 <Label htmlFor="password">Senha</Label>

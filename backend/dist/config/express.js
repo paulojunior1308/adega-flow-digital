@@ -7,6 +7,7 @@ exports.initializeExpress = void 0;
 const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
 const helmet_1 = __importDefault(require("helmet"));
+const express_rate_limit_1 = __importDefault(require("express-rate-limit"));
 const compression_1 = __importDefault(require("compression"));
 const morgan_1 = __importDefault(require("morgan"));
 const swagger_ui_express_1 = __importDefault(require("swagger-ui-express"));
@@ -20,8 +21,12 @@ const initializeExpress = (app) => {
     app.use(express_1.default.urlencoded({ extended: true }));
     app.use((0, cors_1.default)({
         origin: [
+            'http://172.17.77.169:8080',
+            'http://172.17.77.169:3000',
+            'http://172.17.77.169:5173',
             'https://adega-element.netlify.app',
-            'https://www.adega-element.netlify.app',
+            'https://adega-element.netlify.app:3000',
+            'https://adega-element.netlify.app:5173',
         ],
         methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
         allowedHeaders: ['Content-Type', 'Authorization'],
@@ -30,6 +35,12 @@ const initializeExpress = (app) => {
     app.use((0, helmet_1.default)({
         crossOriginResourcePolicy: { policy: 'cross-origin' }
     }));
+    const limiter = (0, express_rate_limit_1.default)({
+        windowMs: 15 * 60 * 1000,
+        max: 100,
+        message: 'Muitas requisições deste IP, tente novamente mais tarde.'
+    });
+    app.use(limiter);
     app.use((0, compression_1.default)());
     app.use((0, morgan_1.default)('combined', {
         stream: {

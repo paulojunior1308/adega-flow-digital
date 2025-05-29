@@ -47,6 +47,7 @@ router.delete('/users/:id', adminController.deleteUser);
 router.get('/orders', orderController.adminList);
 router.patch('/orders/:id/status', orderController.updateStatus);
 router.patch('/orders/:id/location', orderController.updateLocation);
+router.patch('/orders/:id/pix-status', orderController.updatePixStatus);
 
 // Rotas de produtos
 router.get('/products', productController.list);

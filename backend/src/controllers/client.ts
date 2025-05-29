@@ -7,7 +7,7 @@ import { AppError } from '../config/errorHandler';
 export const clientController = {
   register: async (req: Request, res: Response) => {
     console.log('Início do cadastro de cliente', req.body);
-    const { name, email, password, cpf } = req.body;
+    const { name, email, password } = req.body;
 
     const userExists = await prisma.user.findUnique({
       where: { email },
@@ -29,7 +29,6 @@ export const clientController = {
         email,
         password: hashedPassword,
         role: 'USER',
-        cpf
       },
     });
 
