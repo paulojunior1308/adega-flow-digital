@@ -4,7 +4,6 @@ import { User, ArrowLeft } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 import api from '@/lib/axios';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 const RegistrationForm = () => {
   const [nome, setNome] = useState('');
@@ -14,7 +13,6 @@ const RegistrationForm = () => {
   const [senha, setSenha] = useState('');
   const [confirmarSenha, setConfirmarSenha] = useState('');
   const [loading, setLoading] = useState(false);
-  const [pixModalOpen, setPixModalOpen] = useState(false);
   
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -189,30 +187,6 @@ const RegistrationForm = () => {
           <ArrowLeft className="mr-2 h-4 w-4" /> Voltar para o início
         </Button>
       </form>
-
-      <Dialog open={pixModalOpen} onOpenChange={setPixModalOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Pagamento via PIX</DialogTitle>
-          </DialogHeader>
-          <div className="flex flex-col items-center gap-4 py-4">
-            <div className="text-center">
-              <p className="font-medium mb-2">Copie a chave PIX abaixo e faça o pagamento no app do seu banco.</p>
-              <p className="text-xs text-gray-500 break-all">Chave PIX:</p>
-              <input
-                value="elementstore516@gmail.com"
-                readOnly
-                className="mb-2 text-xs w-full text-center border rounded p-2"
-                onFocus={e => e.target.select()}
-              />
-              <Button onClick={() => { navigator.clipboard.writeText('elementstore516@gmail.com'); toast({ title: 'Chave copiada!' }); }} size="sm" variant="outline">Copiar chave</Button>
-            </div>
-            <div className="mt-4">
-              <span className="text-yellow-600 font-semibold">Aguardando pagamento...</span>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };

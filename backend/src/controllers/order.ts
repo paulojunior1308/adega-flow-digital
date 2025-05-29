@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import prisma from '../config/prisma';
 import { AppError } from '../config/errorHandler';
 import { getSocketInstance } from '../config/socketInstance';
+import { payment } from '../config/mercadopago';
 
 type OrderStatus = 'PENDING' | 'CONFIRMED' | 'PREPARING' | 'DELIVERING' | 'DELIVERED' | 'CANCELLED';
 
@@ -102,8 +103,97 @@ export const orderController = {
     if (!user || !user.cpf) {
       return res.status(400).json({ error: 'Usuário sem CPF cadastrado.' });
     }
-    // Sempre criar o pedido com status 'PENDING'
-    const status: OrderStatus = 'PENDING';
+    // Sanitizar CPF (apenas números)
+    const sanitizedCpf = user.cpf.replace(/\D/g, '');
+    console.log('Dados enviados para o Mercado Pago (PIX):', {
+      email: user.email,
+      first_name: user.name ? user.name.split(' ')[0] : 'Cliente',
+      last_name: user.name ? user.name.split(' ').slice(1).join(' ') || 'App' : 'App',
+      identification: {
+        type: 'CPF',
+        number: sanitizedCpf
+      },
+      transaction_amount: total
+    });
+    // Verifica se o método de pagamento é PIX
+    if (paymentMethod.name.toLowerCase().includes('pix')) {
+      try {
+        console.log('Iniciando criação de cobrança PIX via Mercado Pago...');
+        const mpRes = await payment.create({
+          body: {
+            transaction_amount: total,
+            description: 'Pedido na Adega',
+            payment_method_id: 'pix',
+            payer: {
+              email: user.email,
+              first_name: user.name ? user.name.split(' ')[0] : 'Cliente',
+              last_name: user.name ? user.name.split(' ').slice(1).join(' ') || 'App' : 'App',
+              identification: {
+                type: 'CPF',
+                number: sanitizedCpf
+              }
+            },
+          },
+        });
+        console.log('Resposta Mercado Pago:', JSON.stringify(mpRes, null, 2));
+        if (!mpRes.point_of_interaction || !mpRes.point_of_interaction.transaction_data) {
+          return res.status(500).json({ error: 'Erro ao gerar cobrança PIX. Tente novamente.' });
+        }
+        const pixData = mpRes.point_of_interaction.transaction_data;
+        if (!mpRes.id || !pixData.qr_code || !pixData.qr_code_base64) {
+          return res.status(500).json({ error: 'Erro ao gerar QR Code PIX. Tente novamente.' });
+        }
+        // Cria o pedido com status aguardando pagamento PIX
+        const order = await prisma.order.create({
+          data: {
+            userId,
+            addressId,
+            paymentMethodId,
+            total,
+            instructions,
+            deliveryFee: deliveryFee as any,
+            pixStatus: 'AGUARDANDO',
+            pixPaymentId: mpRes.id.toString(),
+            pixQrCode: pixData.qr_code,
+            pixQrCodeImage: pixData.qr_code_base64,
+            items: {
+              create: cart.items.map((item: any) => ({
+                productId: item.productId,
+                quantity: item.quantity,
+                price: item.price ?? item.product.price,
+              })),
+            },
+          } as any,
+          include: {
+            items: { include: { product: true } },
+            address: true,
+            user: { select: { name: true, email: true } },
+          },
+        });
+        // Limpa o carrinho
+        await prisma.cartItem.deleteMany({ where: { cartId: cart.id } });
+        // Retorna o QR Code PIX e dados do pedido
+        return res.status(201).json({ ...order, pixQrCode: pixData.qr_code, pixQrCodeImage: pixData.qr_code_base64 });
+      } catch (err: any) {
+        // Loga o erro completo
+        console.error('Erro ao criar cobrança PIX no Mercado Pago (objeto completo):', JSON.stringify(err, null, 2));
+        if (err?.response) {
+          console.error('Erro .response:', JSON.stringify(err.response, null, 2));
+        }
+        if (err?.stack) {
+          console.error('Stack trace do erro:', err.stack);
+        }
+        return res.status(500).json({
+          error: 'Erro ao criar cobrança PIX no Mercado Pago.',
+          details: err?.response?.data || err?.message || err,
+          fullError: err,
+          response: err?.response || null,
+          stack: err?.stack || null
+        });
+      }
+    }
+
+    // Cria o pedido
     const order = await prisma.order.create({
       data: {
         userId,
@@ -112,7 +202,6 @@ export const orderController = {
         total,
         instructions,
         deliveryFee: deliveryFee as any,
-        status,
         items: {
           create: cart.items.map((item: any) => ({
             productId: item.productId,
@@ -121,15 +210,32 @@ export const orderController = {
           })),
         },
       } as any,
-      include: {
-        items: { include: { product: true } },
+      include: { 
+        items: { 
+          include: { 
+            product: true 
+          } 
+        }, 
         address: true,
-        user: { select: { name: true, email: true } },
+        user: {
+          select: {
+            name: true,
+            email: true
+          }
+        }
       },
     });
+
     // Limpa o carrinho
     await prisma.cartItem.deleteMany({ where: { cartId: cart.id } });
-    return res.status(201).json(order);
+
+    // Emitir evento de novo pedido para admins
+    const io = getSocketInstance();
+    if (io) {
+      io.emit('new-order', { order });
+    }
+
+    res.status(201).json(order);
   },
 
   // Listar pedidos do usuário logado
