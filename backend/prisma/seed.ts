@@ -1,5 +1,6 @@
 import { PrismaClient, Role } from '@prisma/client';
 import bcrypt from 'bcryptjs';
+import * as process from 'process';
 
 const prisma = new PrismaClient();
 
@@ -55,9 +56,48 @@ console.log('Tabelas apagadas com sucesso!');
   console.log('Categorias adicionadas com sucesso!'+ prisma.category.findMany());*/
 }
 
+// Script para garantir que o campo pixPaymentStatus exista no banco do Render
+async function ensurePixPaymentStatus() {
+  // Adiciona o enum se não existir (Postgres)
+  await prisma.$executeRawUnsafe(`
+    DO $$
+    BEGIN
+      IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'PixPaymentStatus') THEN
+        CREATE TYPE "PixPaymentStatus" AS ENUM ('PENDING', 'APPROVED', 'REJECTED');
+      END IF;
+    END
+    $$;
+  `);
+
+  // Adiciona a coluna se não existir
+  await prisma.$executeRawUnsafe(`
+    DO $$
+    BEGIN
+      IF NOT EXISTS (
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_name='Order' AND column_name='pixPaymentStatus'
+      ) THEN
+        ALTER TABLE "Order" ADD COLUMN "pixPaymentStatus" "PixPaymentStatus" DEFAULT 'PENDING';
+      END IF;
+    END
+    $$;
+  `);
+}
+
 main()
   .catch((e) => {
     console.error(e);
+    process.exit(1);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
+  });
+
+// Executa o script de garantia do campo pixPaymentStatus
+ensurePixPaymentStatus()
+  .catch((e) => {
+    console.error('Erro ao garantir campo pixPaymentStatus:', e);
     process.exit(1);
   })
   .finally(async () => {

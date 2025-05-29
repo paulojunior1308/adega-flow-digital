@@ -289,10 +289,10 @@ const ClientCart = () => {
         navigate('/cliente-pedidos');
       }, 2000);
     } catch (error: any) {
-      toast({
+        toast({
         title: "Erro ao finalizar pedido",
         description: error?.response?.data?.error || error?.response?.data?.message || error?.message || "Tente novamente mais tarde.",
-        variant: "destructive",
+          variant: "destructive",
         duration: 3000,
       });
     }
@@ -433,7 +433,7 @@ const ClientCart = () => {
                         </TabsList>
                         
                         <TabsContent value="address" className="pt-4">
-                        <div className="space-y-4">
+                          <div className="space-y-4">
                           <div className="flex items-center justify-between">
                             <h3 className="font-medium">Selecione um endereço</h3>
                             <Button 
