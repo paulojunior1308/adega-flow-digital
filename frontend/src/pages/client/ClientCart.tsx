@@ -131,6 +131,9 @@ const ClientCart = () => {
   const [pixCopied, setPixCopied] = useState(false);
   const PIX_KEY = 'Elementstore516@gmail.com';
   
+  // Adicionar state para user
+  const [user, setUser] = useState<{ name: string; phone: string } | null>(null);
+  
   useEffect(() => {
     const descontos = localStorage.getItem('comboDescontos');
     if (descontos) {
@@ -193,6 +196,13 @@ const ClientCart = () => {
       if (res.data.length > 0) {
         setPaymentMethod(res.data[0].id); // Seleciona o primeiro método automaticamente
       }
+    });
+  }, []);
+
+  // Buscar perfil do usuário ao carregar a página
+  useEffect(() => {
+    api.get('/cliente-perfil').then(res => {
+      setUser({ name: res.data.name, phone: res.data.phone });
     });
   }, []);
 
@@ -259,7 +269,20 @@ const ClientCart = () => {
   
   const handlePixConfirm = async () => {
     setShowPixModal(false);
-    await sendOrder();
+    const orderId = await sendOrder();
+    // Após finalizar o pedido, abrir WhatsApp
+    if (user && orderId) {
+      const numeroWhatsApp = '5511949885625'; // Coloque o número do estabelecimento aqui, ex: 5511999999999
+      const mensagem = encodeURIComponent(
+        `Olá! Acabei de realizar o pagamento via PIX.%0A%0A` +
+        `Nome: ${user.name}%0A` +
+        `Telefone: ${user.phone}%0A` +
+        `Pedido: #${orderId}%0A%0A` +
+        `Segue o comprovante em anexo.`
+      );
+      const link = `https://wa.me/${numeroWhatsApp}?text=${mensagem}`;
+      window.open(link, '_blank');
+    }
   };
 
   const sendOrder = async () => {
@@ -288,13 +311,15 @@ const ClientCart = () => {
       setTimeout(() => {
         navigate('/cliente-pedidos');
       }, 2000);
+      return orderId;
     } catch (error: any) {
-        toast({
+      toast({
         title: "Erro ao finalizar pedido",
         description: error?.response?.data?.error || error?.response?.data?.message || error?.message || "Tente novamente mais tarde.",
-          variant: "destructive",
+        variant: "destructive",
         duration: 3000,
       });
+      return null;
     }
   };
 
