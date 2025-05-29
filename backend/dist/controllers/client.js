@@ -12,15 +12,13 @@ exports.clientController = {
     register: async (req, res) => {
         console.log('Início do cadastro de cliente', req.body);
         const { name, email, password, cpf } = req.body;
-        const userExists = await prisma_1.default.user.findUnique({ where: { email } });
+        const userExists = await prisma_1.default.user.findUnique({
+            where: { email },
+        });
+        console.log('Usuário já existe?', !!userExists);
         if (userExists) {
             console.log('Email já cadastrado:', email);
             throw new errorHandler_1.AppError('Email já cadastrado', 400);
-        }
-        const cpfExists = await prisma_1.default.user.findUnique({ where: { cpf: cpf } });
-        if (cpfExists) {
-            console.log('CPF já cadastrado:', cpf);
-            throw new errorHandler_1.AppError('CPF já cadastrado', 400);
         }
         const hashedPassword = await (0, bcrypt_1.hashPassword)(password);
         console.log('Senha criptografada');
@@ -29,8 +27,8 @@ exports.clientController = {
                 name,
                 email,
                 password: hashedPassword,
-                cpf,
                 role: 'USER',
+                cpf
             },
         });
         console.log('Usuário criado com sucesso:', user);

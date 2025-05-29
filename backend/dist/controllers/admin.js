@@ -166,11 +166,19 @@ exports.adminController = {
         if (!['ADMIN', 'MOTOBOY', 'USER'].includes(role)) {
             throw new errorHandler_1.AppError('Tipo de usuário inválido. Só é permitido ADMIN, MOTOBOY ou USER.', 400);
         }
-        const userExists = await prisma_1.default.user.findUnique({
-            where: { email },
+        if (!cpf) {
+            throw new errorHandler_1.AppError('CPF é obrigatório', 400);
+        }
+        const userExists = await prisma_1.default.user.findFirst({
+            where: {
+                OR: [
+                    { email },
+                    { cpf }
+                ]
+            }
         });
         if (userExists) {
-            throw new errorHandler_1.AppError('Email já cadastrado', 400);
+            throw new errorHandler_1.AppError('Email ou CPF já cadastrado', 400);
         }
         const hashedPassword = await (0, bcrypt_1.hashPassword)(password);
         const user = await prisma_1.default.user.create({
@@ -178,8 +186,8 @@ exports.adminController = {
                 name,
                 email,
                 password: hashedPassword,
-                cpf,
                 role,
+                cpf
             },
         });
         res.json({
