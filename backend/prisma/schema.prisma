@@ -10,9 +10,10 @@ datasource db {
 model User {
   id        String     @id @default(uuid())
   email     String     @unique
-  cpf String @unique
+  cpf       String     @unique
   password  String
   name      String
+  phone     String?
   role      Role       @default(USER)
   active    Boolean    @default(true)
   createdAt DateTime   @default(now())

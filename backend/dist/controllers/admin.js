@@ -206,12 +206,23 @@ exports.adminController = {
                 id: true,
                 name: true,
                 email: true,
+                phone: true,
                 role: true,
                 createdAt: true,
                 updatedAt: true,
+                orders: {
+                    select: {
+                        total: true,
+                    }
+                }
             },
         });
-        res.json(users);
+        const usersWithStats = users.map((user) => {
+            const orders = user.orders || [];
+            const totalSpent = orders.reduce((sum, o) => sum + (o.total || 0), 0);
+            return Object.assign(Object.assign({}, user), { orders: orders.length, totalSpent });
+        });
+        res.json(usersWithStats);
     },
     updateUser: async (req, res) => {
         const { id } = req.params;
@@ -259,7 +270,7 @@ exports.adminController = {
             where: { id: { in: validItems.map(i => i.productId) } },
             select: { id: true }
         });
-        const validProductIds = new Set(allProducts.map(p => p.id));
+        const validProductIds = new Set(allProducts.map((p) => p.id));
         const reallyValidItems = validItems.filter(item => validProductIds.has(item.productId));
         console.log('Itens realmente válidos para venda:', reallyValidItems);
         for (const item of reallyValidItems) {

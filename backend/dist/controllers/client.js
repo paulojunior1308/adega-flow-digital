@@ -11,7 +11,7 @@ const errorHandler_1 = require("../config/errorHandler");
 exports.clientController = {
     register: async (req, res) => {
         console.log('Início do cadastro de cliente', req.body);
-        const { name, email, password, cpf } = req.body;
+        const { name, email, password, cpf, phone } = req.body;
         if (!cpf) {
             throw new errorHandler_1.AppError('CPF é obrigatório.', 400);
         }
@@ -32,6 +32,7 @@ exports.clientController = {
                 password: hashedPassword,
                 role: 'USER',
                 cpf,
+                phone,
             },
         });
         console.log('Usuário criado com sucesso:', user);
