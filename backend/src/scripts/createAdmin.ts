@@ -26,6 +26,7 @@ async function createAdmin() {
         email: adminEmail,
         password: hashedPassword,
         role: 'ADMIN',
+        cpf: '00000000000', // CPF padrão para admin
       },
     });
 

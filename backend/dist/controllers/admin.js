@@ -167,18 +167,13 @@ exports.adminController = {
             throw new errorHandler_1.AppError('Tipo de usuário inválido. Só é permitido ADMIN, MOTOBOY ou USER.', 400);
         }
         if (!cpf) {
-            throw new errorHandler_1.AppError('CPF é obrigatório', 400);
+            throw new errorHandler_1.AppError('CPF é obrigatório.', 400);
         }
-        const userExists = await prisma_1.default.user.findFirst({
-            where: {
-                OR: [
-                    { email },
-                    { cpf }
-                ]
-            }
+        const userExists = await prisma_1.default.user.findUnique({
+            where: { email },
         });
         if (userExists) {
-            throw new errorHandler_1.AppError('Email ou CPF já cadastrado', 400);
+            throw new errorHandler_1.AppError('Email já cadastrado', 400);
         }
         const hashedPassword = await (0, bcrypt_1.hashPassword)(password);
         const user = await prisma_1.default.user.create({
@@ -187,7 +182,7 @@ exports.adminController = {
                 email,
                 password: hashedPassword,
                 role,
-                cpf
+                cpf,
             },
         });
         res.json({
@@ -195,6 +190,7 @@ exports.adminController = {
             name: user.name,
             email: user.email,
             role: user.role,
+            cpf: user.cpf,
         });
     },
     getUsers: async (req, res) => {
@@ -263,7 +259,7 @@ exports.adminController = {
             where: { id: { in: validItems.map(i => i.productId) } },
             select: { id: true }
         });
-        const validProductIds = new Set(allProducts.map((p) => p.id));
+        const validProductIds = new Set(allProducts.map(p => p.id));
         const reallyValidItems = validItems.filter(item => validProductIds.has(item.productId));
         console.log('Itens realmente válidos para venda:', reallyValidItems);
         for (const item of reallyValidItems) {

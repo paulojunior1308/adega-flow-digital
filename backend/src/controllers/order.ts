@@ -107,7 +107,7 @@ export const orderController = {
         total,
         instructions,
         deliveryFee: deliveryFee as any,
-        pixPaymentStatus: isPix ? 'PENDING' : undefined,
+        pixPaymentStatus: isPix ? 'PENDING' as any : undefined,
         items: {
           create: cart.items.map((item: any) => ({
             productId: item.productId,
@@ -323,7 +323,7 @@ export const orderController = {
     }
     const order = await prisma.order.update({
       where: { id },
-      data: { pixPaymentStatus },
+      data: { pixPaymentStatus: pixPaymentStatus as any },
       include: { items: { include: { product: true } }, address: true },
     });
     // Emitir evento para o cliente

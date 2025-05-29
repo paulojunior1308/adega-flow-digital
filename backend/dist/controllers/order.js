@@ -75,67 +75,47 @@ exports.orderController = {
         }
         const totalProdutos = cart.items.reduce((sum, item) => { var _a; return sum + ((_a = item.price) !== null && _a !== void 0 ? _a : item.product.price) * item.quantity; }, 0);
         const total = totalProdutos + deliveryFee;
-        let order;
-        if (paymentMethod.name.toLowerCase().includes('pix')) {
-            order = await prisma_1.default.order.create({
-                data: {
-                    userId,
-                    addressId,
-                    paymentMethodId,
-                    total,
-                    instructions,
-                    deliveryFee: deliveryFee,
-                    status: 'PENDING',
-                    items: {
-                        create: cart.items.map((item) => {
-                            var _a;
-                            return ({
-                                productId: item.productId,
-                                quantity: item.quantity,
-                                price: (_a = item.price) !== null && _a !== void 0 ? _a : item.product.price,
-                            });
-                        }),
-                    },
+        const isPix = paymentMethod.name && paymentMethod.name.toLowerCase().includes('pix');
+        const order = await prisma_1.default.order.create({
+            data: {
+                userId,
+                addressId,
+                paymentMethodId,
+                total,
+                instructions,
+                deliveryFee: deliveryFee,
+                pixPaymentStatus: isPix ? 'PENDING' : undefined,
+                items: {
+                    create: cart.items.map((item) => {
+                        var _a;
+                        return ({
+                            productId: item.productId,
+                            quantity: item.quantity,
+                            price: (_a = item.price) !== null && _a !== void 0 ? _a : item.product.price,
+                        });
+                    }),
                 },
-                include: {
-                    items: { include: { product: true } },
-                    address: true,
-                    user: { select: { name: true, email: true } }
+            },
+            include: {
+                items: {
+                    include: {
+                        product: true
+                    }
                 },
-            });
-        }
-        else {
-            order = await prisma_1.default.order.create({
-                data: {
-                    userId,
-                    addressId,
-                    paymentMethodId,
-                    total,
-                    instructions,
-                    deliveryFee: deliveryFee,
-                    items: {
-                        create: cart.items.map((item) => {
-                            var _a;
-                            return ({
-                                productId: item.productId,
-                                quantity: item.quantity,
-                                price: (_a = item.price) !== null && _a !== void 0 ? _a : item.product.price,
-                            });
-                        }),
-                    },
-                },
-                include: {
-                    items: { include: { product: true } },
-                    address: true,
-                    user: { select: { name: true, email: true } }
-                },
-            });
-            const io = (0, socketInstance_1.getSocketInstance)();
-            if (io) {
-                io.emit('new-order', { order });
-            }
-        }
+                address: true,
+                user: {
+                    select: {
+                        name: true,
+                        email: true
+                    }
+                }
+            },
+        });
         await prisma_1.default.cartItem.deleteMany({ where: { cartId: cart.id } });
+        const io = (0, socketInstance_1.getSocketInstance)();
+        if (io) {
+            io.emit('new-order', { order });
+        }
         res.status(201).json(order);
     },
     list: async (req, res) => {
@@ -282,22 +262,21 @@ exports.orderController = {
         console.log('Taxa de entrega calculada:', deliveryFee);
         res.json({ deliveryFee });
     },
-    approvePixPayment: async (req, res) => {
-        const userId = req.user.id;
-        const { orderId } = req.body;
-        const order = await prisma_1.default.order.findUnique({ where: { id: orderId } });
-        if (!order || order.userId !== userId) {
-            return res.status(404).json({ error: 'Pedido não encontrado.' });
+    updatePixStatus: async (req, res) => {
+        const { id } = req.params;
+        const { pixPaymentStatus } = req.body;
+        if (!['PENDING', 'APPROVED', 'REJECTED'].includes(pixPaymentStatus)) {
+            return res.status(400).json({ error: 'Status PIX inválido.' });
         }
-        const updatedOrder = await prisma_1.default.order.update({
-            where: { id: orderId },
-            data: { status: 'CONFIRMED' },
-            include: { items: { include: { product: true } }, address: true, user: { select: { name: true, email: true } } }
+        const order = await prisma_1.default.order.update({
+            where: { id },
+            data: { pixPaymentStatus: pixPaymentStatus },
+            include: { items: { include: { product: true } }, address: true },
         });
         const io = (0, socketInstance_1.getSocketInstance)();
         if (io) {
-            io.emit('new-order', { order: updatedOrder });
+            io.to(order.userId).emit('order-updated', { order });
         }
-        res.json({ success: true, order: updatedOrder });
+        res.json(order);
     },
 };

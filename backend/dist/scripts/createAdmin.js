@@ -7,14 +7,8 @@ async function createAdmin() {
     try {
         const adminEmail = 'admin@adegaflow.com';
         const adminPassword = 'admin123';
-        const adminCPF = '00000000191';
-        const existingAdmin = await prisma.user.findFirst({
-            where: {
-                OR: [
-                    { email: adminEmail },
-                    { cpf: adminCPF }
-                ]
-            }
+        const existingAdmin = await prisma.user.findUnique({
+            where: { email: adminEmail },
         });
         if (existingAdmin) {
             console.log('Admin já existe!');
@@ -27,13 +21,12 @@ async function createAdmin() {
                 email: adminEmail,
                 password: hashedPassword,
                 role: 'ADMIN',
-                cpf: adminCPF
+                cpf: '00000000000',
             },
         });
         console.log('Admin criado com sucesso!');
         console.log('Email:', adminEmail);
         console.log('Senha:', adminPassword);
-        console.log('CPF:', adminCPF);
     }
     catch (error) {
         console.error('Erro ao criar admin:', error);

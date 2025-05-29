@@ -12,6 +12,9 @@ exports.clientController = {
     register: async (req, res) => {
         console.log('Início do cadastro de cliente', req.body);
         const { name, email, password, cpf } = req.body;
+        if (!cpf) {
+            throw new errorHandler_1.AppError('CPF é obrigatório.', 400);
+        }
         const userExists = await prisma_1.default.user.findUnique({
             where: { email },
         });
@@ -28,7 +31,7 @@ exports.clientController = {
                 email,
                 password: hashedPassword,
                 role: 'USER',
-                cpf
+                cpf,
             },
         });
         console.log('Usuário criado com sucesso:', user);
@@ -39,6 +42,7 @@ exports.clientController = {
                 name: user.name,
                 email: user.email,
                 role: user.role,
+                cpf: user.cpf,
             },
             token,
         });

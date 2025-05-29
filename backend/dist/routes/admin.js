@@ -38,6 +38,7 @@ router.delete('/users/:id', admin_1.adminController.deleteUser);
 router.get('/orders', order_1.orderController.adminList);
 router.patch('/orders/:id/status', order_1.orderController.updateStatus);
 router.patch('/orders/:id/location', order_1.orderController.updateLocation);
+router.patch('/orders/:id/pix-status', order_1.orderController.updatePixStatus);
 router.get('/products', product_1.productController.list);
 router.get('/products/categories', product_1.productController.listCategories);
 router.post('/products', upload.single('image'), product_1.productController.create);
