@@ -269,20 +269,20 @@ const ClientCart = () => {
   
   const handlePixConfirm = async () => {
     setShowPixModal(false);
-    const orderId = await sendOrder();
-    // Após finalizar o pedido, abrir WhatsApp
-    if (user && orderId) {
-      const numeroWhatsApp = '5511949885625'; // Coloque o número do estabelecimento aqui, ex: 5511999999999
+    // Gera o link do WhatsApp ANTES do await
+    if (user) {
+      const numeroWhatsApp = '5511949885625'; // Coloque o número do estabelecimento aqui
       const mensagem = encodeURIComponent(
         `Olá! Acabei de realizar o pagamento via PIX.%0A%0A` +
         `Nome: ${user.name}%0A` +
         `Telefone: ${user.phone}%0A` +
-        `Pedido: #${orderId}%0A%0A` +
+        (currentOrderId ? `Pedido: #${currentOrderId}%0A%0A` : '') +
         `Segue o comprovante em anexo.`
       );
       const link = `https://wa.me/${numeroWhatsApp}?text=${mensagem}`;
       window.open(link, '_blank');
     }
+    await sendOrder();
   };
 
   const sendOrder = async () => {
@@ -313,10 +313,10 @@ const ClientCart = () => {
       }, 2000);
       return orderId;
     } catch (error: any) {
-      toast({
+        toast({
         title: "Erro ao finalizar pedido",
         description: error?.response?.data?.error || error?.response?.data?.message || error?.message || "Tente novamente mais tarde.",
-        variant: "destructive",
+          variant: "destructive",
         duration: 3000,
       });
       return null;
