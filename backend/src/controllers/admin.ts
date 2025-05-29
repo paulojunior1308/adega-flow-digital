@@ -229,12 +229,27 @@ export const adminController = {
         id: true,
         name: true,
         email: true,
+        phone: true,
         role: true,
         createdAt: true,
         updatedAt: true,
+        orders: {
+          select: {
+            total: true,
+          }
+        }
       },
     });
-    res.json(users);
+    const usersWithStats = users.map((user: any) => {
+      const orders = user.orders || [];
+      const totalSpent = orders.reduce((sum: number, o: any) => sum + (o.total || 0), 0);
+      return {
+        ...user,
+        orders: orders.length,
+        totalSpent,
+      };
+    });
+    res.json(usersWithStats);
   },
 
   updateUser: async (req: Request, res: Response) => {

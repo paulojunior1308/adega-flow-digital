@@ -36,6 +36,7 @@ const RegistrationForm = () => {
         email,
         password: senha,
         cpf,
+        phone: telefone,
       });
       toast({
         title: "Cadastro realizado com sucesso",
