@@ -1,15 +1,25 @@
-import { useLocation } from 'react-router-dom';
+import React from 'react';
+import { useLocation, Link } from 'react-router-dom';
 
-const location = useLocation();
-const hideCartButton = [
-  '/',
-  '/promocoes',
-  '/combos',
-  '/narguile',
-  '/bebidas',
-  '/login',
-].includes(location.pathname);
+const Header = () => {
+  const location = useLocation();
+  const hideCartButton = [
+    '/',
+    '/promocoes',
+    '/combos',
+    '/narguile',
+    '/bebidas',
+    '/login',
+  ].includes(location.pathname);
 
-{!hideCartButton && (
-  // ... código do botão de carrinho ...
-)} 
+  return (
+    <header>
+      {/* ...outros elementos do header... */}
+      {!hideCartButton && (
+        <Link to="/carrinho">Carrinho</Link>
+      )}
+    </header>
+  );
+};
+
+export default Header; 
