@@ -324,7 +324,7 @@ const AdminPDV = () => {
             </div>
 
             {/* Search bar */}
-            <div className="flex gap-2 mb-4">
+            <div className="flex flex-col md:flex-row gap-2 mb-4">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                 <Input 
@@ -335,7 +335,7 @@ const AdminPDV = () => {
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
-              <div className="w-32">
+              <div className="w-full md:w-32">
                 <Input 
                   type="text" 
                   placeholder="Cód.Prod" 
@@ -343,7 +343,7 @@ const AdminPDV = () => {
                   onChange={(e) => setProductCode(e.target.value)}
                 />
               </div>
-              <div className="w-16">
+              <div className="w-full md:w-16">
                 <Input 
                   type="number" 
                   min="1" 
@@ -351,7 +351,7 @@ const AdminPDV = () => {
                   onChange={(e) => setProductQuantity(parseInt(e.target.value) || 1)}
                 />
               </div>
-              <Button onClick={handleAddProductByCode} className="px-3">
+              <Button onClick={handleAddProductByCode} className="px-3 w-full md:w-auto">
                 <Plus className="h-4 w-4" />
               </Button>
             </div>
@@ -394,8 +394,8 @@ const AdminPDV = () => {
             </div>
 
             {/* Cart items */}
-            <div className="flex-1 overflow-y-auto">
-              <Table>
+            <div className="flex-1 overflow-x-auto">
+              <Table className="min-w-[600px]">
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-12">Item</TableHead>
@@ -479,7 +479,7 @@ const AdminPDV = () => {
         </div>
 
         {/* Bottom Buttons */}
-        <div className="grid grid-cols-6 gap-1 bg-gray-200 p-1">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-1 bg-gray-200 p-1">
           <Button 
             variant="outline" 
             className="bg-cyan-400 hover:bg-cyan-500 text-white flex flex-col items-center justify-center py-4 h-auto"
@@ -530,13 +530,13 @@ const AdminPDV = () => {
 
         {/* Quick Products Modal */}
         <Dialog open={quickProductsOpen} onOpenChange={setQuickProductsOpen}>
-          <DialogContent className="sm:max-w-[600px]">
+          <DialogContent className="sm:max-w-[600px] w-full p-2 sm:p-6">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 Selecionar Produtos Rápidos
               </DialogTitle>
             </DialogHeader>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 py-4 max-h-[60vh] overflow-y-auto">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 py-4 max-h-[60vh] overflow-y-auto">
               {allItems.map((item) => (
                 <div 
                   key={item.id} 
@@ -568,7 +568,7 @@ const AdminPDV = () => {
 
         {/* CPF/CNPJ Modal */}
         <Dialog open={cpfCnpjDialogOpen} onOpenChange={setCpfCnpjDialogOpen}>
-          <DialogContent className="sm:max-w-[400px]">
+          <DialogContent className="sm:max-w-[400px] w-full p-2 sm:p-6">
             <DialogHeader>
               <DialogTitle>Adicionar CPF/CNPJ</DialogTitle>
             </DialogHeader>

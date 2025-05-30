@@ -338,7 +338,7 @@ export default function AdminPromotionsAndCombos() {
               </Button>
             </div>
             <TabsContent value="combos">
-              <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 xl:grid-cols-3">
                 {combos.map((combo) => (
                   <Card key={combo.id} className="min-h-[180px]">
                     <CardHeader>
@@ -407,7 +407,7 @@ export default function AdminPromotionsAndCombos() {
 
             <TabsContent value="promocoes">
               <div className="grid gap-6">
-                <div className="flex justify-between items-center">
+                <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
                   <h2 className="text-2xl font-bold">Gerenciar Promoções</h2>
                   <Dialog open={isPromotionDialogOpen} onOpenChange={setIsPromotionDialogOpen}>
                     <DialogTrigger asChild>
@@ -503,7 +503,7 @@ export default function AdminPromotionsAndCombos() {
                   </Dialog>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
                   {promotions.map((promotion) => (
                     <Card key={promotion.id}>
                       <CardHeader>
@@ -577,7 +577,7 @@ export default function AdminPromotionsAndCombos() {
       </div>
       {/* Modal de edição de combo */}
       <Dialog open={!!editingCombo} onOpenChange={(open) => { if (!open) resetForm(); }}>
-        <DialogContent className="max-w-3xl">
+        <DialogContent className="max-w-3xl w-full p-2 sm:p-6">
           <DialogHeader>
             <DialogTitle>Editar Combo</DialogTitle>
           </DialogHeader>
@@ -587,7 +587,7 @@ export default function AdminPromotionsAndCombos() {
               className="space-y-6"
               encType="multipart/form-data"
             >
-              <div className="grid gap-4">
+              <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
                 <div>
                   <Label htmlFor="name">Nome do Combo</Label>
                   <Input id="name" name="name" defaultValue={editingCombo.name} required />
@@ -715,7 +715,7 @@ export default function AdminPromotionsAndCombos() {
       </Dialog>
       {/* Modal de criação de combo */}
       <Dialog open={isComboDialogOpen} onOpenChange={setIsComboDialogOpen}>
-        <DialogContent className="max-w-3xl">
+        <DialogContent className="max-w-3xl w-full p-2 sm:p-6">
           <DialogHeader>
             <DialogTitle>Criar Novo Combo</DialogTitle>
           </DialogHeader>
@@ -724,7 +724,7 @@ export default function AdminPromotionsAndCombos() {
             className="space-y-6"
             encType="multipart/form-data"
           >
-            <div className="grid gap-4">
+            <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
               <div>
                 <Label htmlFor="name">Nome do Combo</Label>
                 <Input id="name" name="name" required />
@@ -850,7 +850,7 @@ export default function AdminPromotionsAndCombos() {
       </Dialog>
       {/* Modal de edição de promoção */}
       <Dialog open={!!editingPromotion} onOpenChange={(open) => { if (!open) resetForm(); }}>
-        <DialogContent className="max-w-3xl">
+        <DialogContent className="max-w-3xl w-full p-2 sm:p-6">
           <DialogHeader>
             <DialogTitle>Editar Promoção</DialogTitle>
           </DialogHeader>
@@ -860,7 +860,7 @@ export default function AdminPromotionsAndCombos() {
               className="space-y-6"
               encType="multipart/form-data"
             >
-              <div className="grid gap-4">
+              <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
                 <div>
                   <Label htmlFor="name">Nome da Promoção</Label>
                   <Input id="name" name="name" defaultValue={editingPromotion.name} required />
