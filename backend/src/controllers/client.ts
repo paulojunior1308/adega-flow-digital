@@ -303,4 +303,27 @@ export const clientController = {
 
     res.json({ message: 'Senha alterada com sucesso!' });
   },
+
+  getNotifications: async (req: Request, res: Response) => {
+    // @ts-ignore
+    const userId = req.user.id;
+    const notifications = await prisma.notification.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+      include: { order: true },
+    });
+    res.json(notifications);
+  },
+
+  readNotification: async (req: Request, res: Response) => {
+    // @ts-ignore
+    const userId = req.user.id;
+    const { id } = req.params;
+    const notification = await prisma.notification.findFirst({ where: { id, userId } });
+    if (!notification) {
+      return res.status(404).json({ error: 'Notificação não encontrada.' });
+    }
+    await prisma.notification.update({ where: { id }, data: { read: true } });
+    res.json({ success: true });
+  },
 }; 

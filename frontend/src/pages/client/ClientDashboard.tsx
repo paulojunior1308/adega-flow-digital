@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { api } from '@/lib/api';
+import NotificationDropdown from '@/components/NotificationDropdown';
+import { useAuth } from '@/hooks/useAuth';
 
 interface ProductCardProps {
   image: string;
@@ -73,6 +75,7 @@ const ClientDashboard = () => {
   const [recentProducts, setRecentProducts] = React.useState([]);
   const [categories, setCategories] = React.useState([]);
   const [specialPromotionIndex, setSpecialPromotionIndex] = React.useState(0);
+  const { user } = useAuth();
   
   // Buscar dados reais ao montar
   React.useEffect(() => {
@@ -133,12 +136,7 @@ const ClientDashboard = () => {
               </div>
               
               <div className="relative">
-                <Button variant="outline" size="icon" className="rounded-full bg-white">
-                  <Bell className="h-5 w-5" />
-                  <span className="absolute -top-1 -right-1 bg-element-blue-neon rounded-full w-4 h-4 flex items-center justify-center text-[10px]">
-                    3
-                  </span>
-                </Button>
+                <NotificationDropdown userId={user?.id || ''} />
               </div>
               
               <div className="relative flex-1 md:w-64">

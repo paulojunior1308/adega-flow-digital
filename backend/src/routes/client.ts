@@ -43,4 +43,8 @@ router.post('/orders/calculate-delivery-fee', orderController.calculateDeliveryF
 // Rota para alteração de senha do cliente
 router.put('/cliente-perfil/senha', clientController.changePassword);
 
+// Notificações do cliente
+router.get('/notifications', clientController.getNotifications);
+router.put('/notifications/:id/read', clientController.readNotification);
+
 export default router; 

@@ -218,9 +218,27 @@ export const orderController = {
         }
       }
     }
+    // Criar notificação para o usuário
+    const statusMessages: Record<string, string> = {
+      PENDING: 'Seu pedido foi recebido e está aguardando confirmação.',
+      CONFIRMED: 'Seu pedido foi confirmado!',
+      PREPARING: 'Seu pedido está sendo preparado.',
+      DELIVERING: 'Seu pedido saiu para entrega!',
+      DELIVERED: 'Seu pedido foi entregue!',
+      CANCELLED: 'Seu pedido foi cancelado.'
+    };
+    const message = statusMessages[statusEnum] || `Status do pedido atualizado: ${statusEnum}`;
+    const notification = await prisma.notification.create({
+      data: {
+        userId: order.userId,
+        orderId: order.id,
+        message,
+      }
+    });
     // Emitir evento para o cliente
     const io = getSocketInstance();
     if (io) {
+      io.to(order.userId).emit('order-notification', { notification });
       io.to(order.userId).emit('order-updated', { order });
     }
     res.json(order);

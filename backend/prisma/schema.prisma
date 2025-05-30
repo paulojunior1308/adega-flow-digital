@@ -23,6 +23,7 @@ model User {
   cashFlows CashFlow[]
   orders    Order[]
   sales     Sale[]
+  notifications Notification[]
 }
 
 model Product {
@@ -211,6 +212,7 @@ model Order {
   paymentMethod   PaymentMethod? @relation(fields: [paymentMethodId], references: [id])
   user            User           @relation(fields: [userId], references: [id])
   items           OrderItem[]
+  notifications   Notification[]
 }
 
 model OrderItem {
@@ -280,6 +282,17 @@ model AccountPayable {
   observations String?
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  orderId   String?
+  message   String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+  order     Order?   @relation(fields: [orderId], references: [id])
 }
 
 enum Role {
