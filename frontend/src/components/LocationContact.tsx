@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { MapPin, Phone, Clock, Mail, Truck } from 'lucide-react';
 
@@ -29,9 +28,9 @@ const LocationContact = () => {
               title="Endereço"
               content={
                 <p className="text-element-gray-dark">
-                  Av. Principal, 123<br />
-                  Vila Nova - São Paulo, SP<br />
-                  CEP: 01234-567
+                  Av. Antonio Carlos Benjamin dos Santos, 1663<br />
+                  Jardim São Bernardo - São Paulo, SP<br />
+                  04844-445
                 </p>
               }
             />
@@ -41,8 +40,7 @@ const LocationContact = () => {
               title="Telefone"
               content={
                 <p className="text-element-gray-dark">
-                  <a href="tel:+5511987654321" className="element-link">(11) 98765-4321</a><br />
-                  <a href="tel:+551123456789" className="element-link">(11) 2345-6789</a>
+                  <a href="tel:+5511958668304" className="element-link">(11) 95866-8304</a>
                 </p>
               }
             />
@@ -52,20 +50,8 @@ const LocationContact = () => {
               title="Horário de Funcionamento"
               content={
                 <p className="text-element-gray-dark">
-                  Segunda - Sábado: 10h às 22h<br />
-                  Domingo: 11h às 20h
-                </p>
-              }
-            />
-            
-            <ContactItem 
-              icon={<Mail className="h-6 w-6 text-element-blue-dark" />}
-              title="Email"
-              content={
-                <p className="text-element-gray-dark">
-                  <a href="mailto:contato@elementadega.com.br" className="element-link">
-                    contato@elementadega.com.br
-                  </a>
+                  SEG A QUI 18:00 AS 00:00<br />
+                  SAB E DOM 12:00 AS 00:00
                 </p>
               }
             />
@@ -75,8 +61,7 @@ const LocationContact = () => {
               title="Entrega"
               content={
                 <p className="text-element-gray-dark">
-                  Entrega rápida em até 40 minutos<br />
-                  Grátis para pedidos acima de R$ 100,00
+                  Máx 15 km
                 </p>
               }
             />
@@ -84,7 +69,7 @@ const LocationContact = () => {
           
           <div className="rounded-lg overflow-hidden shadow-lg h-[500px]">
             <iframe 
-              src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3657.1896436497924!2d-46.6339027!3d-23.5617614!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x94ce59aa91e77201%3A0x7c38a423931953d5!2sAv.%20Paulista%2C%20S%C3%A3o%20Paulo%20-%20SP!5e0!3m2!1spt-BR!2sbr!4v1714582903052!5m2!1spt-BR!2sbr" 
+              src="https://www.google.com/maps?q=Av.+Antonio+Carlos+Benjamin+dos+Santos,+1663+-+Jardim+S%C3%A3o+Bernardo,+S%C3%A3o+Paulo+-+SP,+04844-445&output=embed"
               width="100%" 
               height="100%" 
               style={{ border: 0 }} 
