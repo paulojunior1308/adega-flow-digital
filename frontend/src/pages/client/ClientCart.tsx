@@ -202,7 +202,11 @@ const ClientCart = () => {
   // Buscar perfil do usuário ao carregar a página
   useEffect(() => {
     api.get('/cliente-perfil').then(res => {
-      setUser({ name: res.data.name, phone: res.data.phone });
+      console.log('Perfil do cliente:', res.data);
+      setUser({ 
+        name: res.data.name, 
+        phone: res.data.phone || res.data.telefone || ''
+      });
     });
   }, []);
 
@@ -308,7 +312,7 @@ const ClientCart = () => {
           const quantidade = item.quantity || 1;
           const preco = (item.price ?? item.product?.price ?? 0).toFixed(2).replace('.', ',');
           const totalItem = ((item.price ?? item.product?.price ?? 0) * quantidade).toFixed(2).replace('.', ',');
-          return `- ${quantidade}x ${nome} (R$ ${preco} cada) = R$ ${totalItem}`;
+          return `- *${quantidade}x ${nome}* (R$ ${preco} cada) = R$ ${totalItem}`;
         }).join('\n');
 
         const totalPedido = (total ?? cart.reduce((sum, item) => sum + ((item.price ?? item.product.price) * item.quantity), 0)).toFixed(2).replace('.', ',');
@@ -316,11 +320,11 @@ const ClientCart = () => {
         const mensagem =
           `Olá, realizei o pagamento via PIX e segue o comprovante.\n\n` +
           `Dados do pedido:\n` +
-          `Nome: ${user.name}\n` +
-          `Telefone: ${user.phone}\n` +
-          `Pedido: #${orderId}\n\n` +
+          `Nome: *${user.name}*\n` +
+          `Telefone: *${user.phone}*\n` +
+          `Pedido: *#${orderId}*\n\n` +
           `Itens:\n${produtosMsg}\n\n` +
-          `Total: R$ ${totalPedido}\n\n` +
+          `Total: *R$ ${totalPedido}*\n\n` +
           `Por favor, confirme o pagamento e prossiga com o pedido.`;
         const link = `https://wa.me/${numeroWhatsApp}?text=${encodeURIComponent(mensagem)}`;
         window.open(link, '_blank');
