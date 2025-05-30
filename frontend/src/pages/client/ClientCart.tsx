@@ -305,7 +305,7 @@ const ClientCart = () => {
 
       // Montar mensagem profissional para o WhatsApp
       if (user) {
-        const numeroWhatsApp = '5511949885625'; // Seu número
+        const numeroWhatsApp = '5511958668304'; // Seu número
         // Montar lista de produtos
         const produtosMsg = (items || cart).map((item: any) => {
           const nome = item.product?.name || item.productName || '';
