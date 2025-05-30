@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import AdminSidebar from '@/components/admin/AdminSidebar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, ShoppingCart, X, RefreshCcw, DollarSign, QrCode, CreditCard, IdCard, Plus, Minus } from 'lucide-react';
+import { Search, ShoppingCart, X, RefreshCcw, DollarSign, QrCode, CreditCard, IdCard, Plus, Minus, ChevronUp, ChevronDown } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -50,6 +50,7 @@ const AdminPDV = () => {
   const { toast } = useToast();
   const [cartOpen, setCartOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [showActions, setShowActions] = useState(false);
   
   // Buscar produtos e combos ao carregar
   useEffect(() => {
@@ -544,56 +545,121 @@ const AdminPDV = () => {
           </div>
         </div>
 
-        {/* Bottom Buttons */}
-        <div className="w-full bg-gray-200 p-1 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-1
-          fixed bottom-0 left-0 z-20 md:static md:z-auto">
-          <Button 
-            variant="outline" 
-            className="bg-cyan-400 hover:bg-cyan-500 text-white flex flex-col items-center justify-center py-4 h-auto"
-            onClick={() => cartItems.length > 0 && removeItem(cartItems[cartItems.length - 1].id)}
-          >
-            <X className="h-5 w-5 mb-1" />
-            <span className="text-xs">Cancelar Item</span>
-          </Button>
-          
-          <Button 
-            variant="outline" 
-            className="bg-cyan-400 hover:bg-cyan-500 text-white flex flex-col items-center justify-center py-4 h-auto"
-            onClick={cancelTicket}
-          >
-            <X className="h-5 w-5 mb-1" />
-            <span className="text-xs">Cancelar Tíquete</span>
-          </Button>
-          
-          <Button 
-            variant="outline" 
-            className="bg-cyan-400 hover:bg-cyan-500 text-white flex flex-col items-center justify-center py-4 h-auto"
-            onClick={cancelOperation}
-          >
-            <RefreshCcw className="h-5 w-5 mb-1" />
-            <span className="text-xs">Extornar</span>
-          </Button>
-          
-          {paymentMethods.map((method) => (
-            <Button
-              key={method.id}
-              variant="outline"
-              className="bg-cyan-400 hover:bg-cyan-500 text-white flex flex-col items-center justify-center py-4 h-auto"
-              onClick={() => finishTicket(method.id)}
+        {/* Painel retrátil de botões no rodapé (mobile) */}
+        {isMobile ? (
+          <div className="fixed bottom-0 left-0 w-full z-20 flex flex-col items-center">
+            <button
+              className="bg-element-blue-neon text-white rounded-t-lg shadow-lg flex items-center justify-center w-12 h-7 mb-1 animate-bounce-short"
+              style={{ marginBottom: showActions ? 0 : 8, transition: 'margin-bottom 0.2s' }}
+              onClick={() => setShowActions((v) => !v)}
+              aria-label={showActions ? 'Ocultar ações' : 'Mostrar ações'}
             >
-              <span className="text-xs">{method.name}</span>
+              {showActions ? <ChevronDown className="h-6 w-6" /> : <ChevronUp className="h-6 w-6" />}
+            </button>
+            <div
+              className={`w-full bg-gray-200 transition-all duration-300 overflow-hidden ${showActions ? 'max-h-[500px] py-2' : 'max-h-0 py-0'}`}
+              style={{ boxShadow: showActions ? '0 -2px 16px rgba(0,0,0,0.08)' : 'none' }}
+            >
+              <div className="grid grid-cols-2 gap-1 px-2">
+                <Button 
+                  variant="outline" 
+                  className="bg-cyan-400 hover:bg-cyan-500 text-white flex flex-col items-center justify-center py-4 h-auto"
+                  onClick={() => cartItems.length > 0 && removeItem(cartItems[cartItems.length - 1].id)}
+                >
+                  <X className="h-5 w-5 mb-1" />
+                  <span className="text-xs">Cancelar Item</span>
+                </Button>
+                
+                <Button 
+                  variant="outline" 
+                  className="bg-cyan-400 hover:bg-cyan-500 text-white flex flex-col items-center justify-center py-4 h-auto"
+                  onClick={cancelTicket}
+                >
+                  <X className="h-5 w-5 mb-1" />
+                  <span className="text-xs">Cancelar Tíquete</span>
+                </Button>
+                
+                <Button 
+                  variant="outline" 
+                  className="bg-cyan-400 hover:bg-cyan-500 text-white flex flex-col items-center justify-center py-4 h-auto"
+                  onClick={cancelOperation}
+                >
+                  <RefreshCcw className="h-5 w-5 mb-1" />
+                  <span className="text-xs">Extornar</span>
+                </Button>
+                
+                {paymentMethods.map((method) => (
+                  <Button
+                    key={method.id}
+                    variant="outline"
+                    className="bg-cyan-400 hover:bg-cyan-500 text-white flex flex-col items-center justify-center py-4 h-auto"
+                    onClick={() => finishTicket(method.id)}
+                  >
+                    <span className="text-xs">{method.name}</span>
+                  </Button>
+                ))}
+                
+                <Button 
+                  variant="outline" 
+                  className="bg-cyan-400 hover:bg-cyan-500 text-white flex flex-col items-center justify-center py-4 h-auto"
+                  onClick={() => setCpfCnpjDialogOpen(true)}
+                >
+                  <IdCard className="h-5 w-5 mb-1" />
+                  <span className="text-xs">CPF/CNPJ</span>
+                </Button>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="w-full bg-gray-200 p-1 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-1 md:static md:z-auto">
+            <Button 
+              variant="outline" 
+              className="bg-cyan-400 hover:bg-cyan-500 text-white flex flex-col items-center justify-center py-4 h-auto"
+              onClick={() => cartItems.length > 0 && removeItem(cartItems[cartItems.length - 1].id)}
+            >
+              <X className="h-5 w-5 mb-1" />
+              <span className="text-xs">Cancelar Item</span>
             </Button>
-          ))}
-          
-          <Button 
-            variant="outline" 
-            className="bg-cyan-400 hover:bg-cyan-500 text-white flex flex-col items-center justify-center py-4 h-auto"
-            onClick={() => setCpfCnpjDialogOpen(true)}
-          >
-            <IdCard className="h-5 w-5 mb-1" />
-            <span className="text-xs">CPF/CNPJ</span>
-          </Button>
-        </div>
+            
+            <Button 
+              variant="outline" 
+              className="bg-cyan-400 hover:bg-cyan-500 text-white flex flex-col items-center justify-center py-4 h-auto"
+              onClick={cancelTicket}
+            >
+              <X className="h-5 w-5 mb-1" />
+              <span className="text-xs">Cancelar Tíquete</span>
+            </Button>
+            
+            <Button 
+              variant="outline" 
+              className="bg-cyan-400 hover:bg-cyan-500 text-white flex flex-col items-center justify-center py-4 h-auto"
+              onClick={cancelOperation}
+            >
+              <RefreshCcw className="h-5 w-5 mb-1" />
+              <span className="text-xs">Extornar</span>
+            </Button>
+            
+            {paymentMethods.map((method) => (
+              <Button
+                key={method.id}
+                variant="outline"
+                className="bg-cyan-400 hover:bg-cyan-500 text-white flex flex-col items-center justify-center py-4 h-auto"
+                onClick={() => finishTicket(method.id)}
+              >
+                <span className="text-xs">{method.name}</span>
+              </Button>
+            ))}
+            
+            <Button 
+              variant="outline" 
+              className="bg-cyan-400 hover:bg-cyan-500 text-white flex flex-col items-center justify-center py-4 h-auto"
+              onClick={() => setCpfCnpjDialogOpen(true)}
+            >
+              <IdCard className="h-5 w-5 mb-1" />
+              <span className="text-xs">CPF/CNPJ</span>
+            </Button>
+          </div>
+        )}
 
         {/* Quick Products Modal */}
         <Dialog open={quickProductsOpen} onOpenChange={setQuickProductsOpen}>
