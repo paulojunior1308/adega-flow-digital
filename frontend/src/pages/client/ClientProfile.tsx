@@ -14,6 +14,12 @@ const ClientProfile = () => {
   const [isEditing, setIsEditing] = React.useState(false);
   const [user, setUser] = React.useState<any>(null);
   const [loading, setLoading] = React.useState(true);
+  const [passwords, setPasswords] = React.useState({
+    current: '',
+    new: '',
+    confirm: '',
+  });
+  const [changingPassword, setChangingPassword] = React.useState(false);
 
   React.useEffect(() => {
     api.get('/cliente-perfil').then(res => {
@@ -39,6 +45,44 @@ const ClientProfile = () => {
       duration: 3000,
     });
     setIsEditing(false);
+  };
+
+  const handlePasswordChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!passwords.current || !passwords.new || !passwords.confirm) {
+      toast({
+        title: 'Preencha todos os campos',
+        variant: 'destructive',
+      });
+      return;
+    }
+    if (passwords.new !== passwords.confirm) {
+      toast({
+        title: 'As senhas não coincidem',
+        variant: 'destructive',
+      });
+      return;
+    }
+    setChangingPassword(true);
+    try {
+      await api.put('/cliente-perfil/senha', {
+        currentPassword: passwords.current,
+        newPassword: passwords.new,
+      });
+      toast({
+        title: 'Senha alterada com sucesso!',
+        duration: 3000,
+      });
+      setPasswords({ current: '', new: '', confirm: '' });
+    } catch (err: any) {
+      toast({
+        title: 'Erro ao alterar senha',
+        description: err?.response?.data?.message || 'Tente novamente.',
+        variant: 'destructive',
+      });
+    } finally {
+      setChangingPassword(false);
+    }
   };
 
   if (loading) {
@@ -153,32 +197,52 @@ const ClientProfile = () => {
                 <CardTitle>Segurança</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <form onSubmit={handlePasswordChange} className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="current-password">Senha Atual</Label>
-                      <Input 
-                        id="current-password" 
-                        type="password" 
-                        placeholder="Digite sua senha atual" 
-                        disabled={!isEditing}
+                      <Input
+                        id="current-password"
+                        type="password"
+                        placeholder="Digite sua senha atual"
+                        value={passwords.current}
+                        onChange={e => setPasswords(p => ({ ...p, current: e.target.value }))}
+                        autoComplete="current-password"
                       />
                     </div>
-                    
-                    <div className="space-y-0 md:space-y-2">
-                      <div className="hidden md:block">
-                        <Label htmlFor="spacer">&nbsp;</Label>
-                      </div>
-                      <Button 
-                        variant="outline"
-                        className="w-full md:w-auto" 
-                        disabled={!isEditing}
-                      >
-                        Alterar Senha
-                      </Button>
+                    <div className="space-y-2">
+                      <Label htmlFor="new-password">Nova Senha</Label>
+                      <Input
+                        id="new-password"
+                        type="password"
+                        placeholder="Digite a nova senha"
+                        value={passwords.new}
+                        onChange={e => setPasswords(p => ({ ...p, new: e.target.value }))}
+                        autoComplete="new-password"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="confirm-password">Confirmar Nova Senha</Label>
+                      <Input
+                        id="confirm-password"
+                        type="password"
+                        placeholder="Confirme a nova senha"
+                        value={passwords.confirm}
+                        onChange={e => setPasswords(p => ({ ...p, confirm: e.target.value }))}
+                        autoComplete="new-password"
+                      />
                     </div>
                   </div>
-                </div>
+                  <div className="flex justify-end">
+                    <Button
+                      type="submit"
+                      className="bg-element-blue-neon text-element-gray-dark hover:bg-element-blue-neon/90"
+                      disabled={changingPassword}
+                    >
+                      {changingPassword ? 'Alterando...' : 'Alterar Senha'}
+                    </Button>
+                  </div>
+                </form>
               </CardContent>
             </Card>
           </div>
