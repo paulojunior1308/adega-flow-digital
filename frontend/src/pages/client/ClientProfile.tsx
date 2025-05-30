@@ -90,7 +90,7 @@ const ClientProfile = () => {
   }
 
   return (
-    <div className="min-h-screen bg-element-gray-light">
+    <div className="min-h-screen bg-element-gray-light pt-16 md:pt-0">
       <ClientSidebar />
       
       <div className="lg:pl-64 min-h-screen">
