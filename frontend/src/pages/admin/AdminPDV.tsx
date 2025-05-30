@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import api from '@/lib/axios';
 import { ComboOptionsModal } from '@/components/home/ComboOptionsModal';
+import { Drawer, DrawerContent } from '@/components/ui/drawer';
 
 // Types definition
 interface Product {
@@ -47,6 +48,8 @@ const AdminPDV = () => {
   const [comboModalOpen, setComboModalOpen] = useState(false);
   const [comboToConfigure, setComboToConfigure] = useState<any>(null);
   const { toast } = useToast();
+  const [cartOpen, setCartOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   
   // Buscar produtos e combos ao carregar
   useEffect(() => {
@@ -286,12 +289,315 @@ const AdminPDV = () => {
     }
   };
 
+  // Header responsivo
+  <div className="bg-white shadow-sm p-4 flex flex-col md:flex-row md:justify-between md:items-center gap-2">
+    <div className="flex items-center gap-2">
+      <ShoppingCart className="h-6 w-6 text-element-blue-dark" />
+      <h1 className="text-xl font-medium text-element-blue-dark">PDV - Venda Local</h1>
+    </div>
+    <Button 
+      onClick={() => setQuickProductsOpen(true)} 
+      variant="outline" 
+      className="flex items-center gap-2 w-full md:w-auto"
+    >
+      <span>Produtos Rápidos</span>
+    </Button>
+  </div>
+
+  // Produtos rápidos em carrossel horizontal no mobile
+  <div className="mb-4">
+    <div className="flex gap-2 overflow-x-auto pb-2 md:grid md:grid-cols-3 xl:grid-cols-4 md:gap-2 md:overflow-x-visible">
+      {pinnedProducts.map(product => (
+        <button
+          key={product.id}
+          className="min-w-[220px] md:min-w-0 text-left p-3 border rounded-md hover:border-cyan-400 transition-colors bg-white"
+          onClick={() => addToCart(product)}
+        >
+          <div className="text-sm font-medium truncate">{product.code} - {product.name}</div>
+          <div className="text-sm text-green-600">R$ {product.price.toFixed(2)}</div>
+        </button>
+      ))}
+    </div>
+  </div>
+
+  // Carrinho como drawer/modal em mobile
+  {isMobile && (
+    <Drawer open={cartOpen} onOpenChange={setCartOpen}>
+      <DrawerContent>
+        {/* Conteúdo do carrinho aqui (igual ao desktop) */}
+      </DrawerContent>
+    </Drawer>
+  )}
+  {!isMobile && (
+    <div className="w-96 bg-white shadow-md flex flex-col overflow-hidden">
+      {/* Carrinho desktop */}
+    </div>
+  )}
+
+  // Inputs de busca 100% largura no mobile
+  <div className="flex flex-col md:flex-row gap-2 mb-4">
+    <div className="relative flex-1">
+      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+      <Input 
+        type="text" 
+        placeholder="Buscar por nome ou código..." 
+        className="pl-9"
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
+      />
+    </div>
+    <div className="w-full md:w-32">
+      <Input 
+        type="text" 
+        placeholder="Cód.Prod" 
+        value={productCode}
+        onChange={(e) => setProductCode(e.target.value)}
+      />
+    </div>
+    <div className="w-full md:w-16">
+      <Input 
+        type="number" 
+        min="1" 
+        value={productQuantity}
+        onChange={(e) => setProductQuantity(parseInt(e.target.value) || 1)}
+      />
+    </div>
+    <Button onClick={handleAddProductByCode} className="px-3 w-full md:w-auto">
+      <Plus className="h-4 w-4" />
+    </Button>
+  </div>
+
+  // Botões inferiores fixos no rodapé em mobile
+  <div className="fixed bottom-0 left-0 w-full z-20 bg-gray-200 p-1 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-1">
+    <Button 
+      variant="outline" 
+      className="bg-cyan-400 hover:bg-cyan-500 text-white flex flex-col items-center justify-center py-4 h-auto"
+      onClick={() => cartItems.length > 0 && removeItem(cartItems[cartItems.length - 1].id)}
+    >
+      <X className="h-5 w-5 mb-1" />
+      <span className="text-xs">Cancelar Item</span>
+    </Button>
+    
+    <Button 
+      variant="outline" 
+      className="bg-cyan-400 hover:bg-cyan-500 text-white flex flex-col items-center justify-center py-4 h-auto"
+      onClick={cancelTicket}
+    >
+      <X className="h-5 w-5 mb-1" />
+      <span className="text-xs">Cancelar Tíquete</span>
+    </Button>
+    
+    <Button 
+      variant="outline" 
+      className="bg-cyan-400 hover:bg-cyan-500 text-white flex flex-col items-center justify-center py-4 h-auto"
+      onClick={cancelOperation}
+    >
+      <RefreshCcw className="h-5 w-5 mb-1" />
+      <span className="text-xs">Extornar</span>
+    </Button>
+    
+    {paymentMethods.map((method) => (
+      <Button
+        key={method.id}
+        variant="outline"
+        className="bg-cyan-400 hover:bg-cyan-500 text-white flex flex-col items-center justify-center py-4 h-auto"
+        onClick={() => finishTicket(method.id)}
+      >
+        <span className="text-xs">{method.name}</span>
+      </Button>
+    ))}
+    
+    <Button 
+      variant="outline" 
+      className="bg-cyan-400 hover:bg-cyan-500 text-white flex flex-col items-center justify-center py-4 h-auto"
+      onClick={() => setCpfCnpjDialogOpen(true)}
+    >
+      <IdCard className="h-5 w-5 mb-1" />
+      <span className="text-xs">CPF/CNPJ</span>
+    </Button>
+  </div>
+
+  // Quick Products Modal
+  <Dialog open={quickProductsOpen} onOpenChange={setQuickProductsOpen}>
+    <DialogContent className="sm:max-w-[600px] w-full p-2 sm:p-6">
+      <DialogHeader>
+        <DialogTitle className="flex items-center gap-2">
+          Selecionar Produtos Rápidos
+        </DialogTitle>
+      </DialogHeader>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 py-4 max-h-[60vh] overflow-y-auto">
+        {allItems.map((item) => (
+          <div 
+            key={item.id} 
+            className={`border rounded-lg p-4 transition-colors ${item.pinned ? 'border-yellow-400 bg-yellow-50' : 'hover:border-yellow-400'}`}
+          >
+            <div className="flex justify-between items-start mb-2">
+              <span className="text-sm font-medium">{item.code}</span>
+              {item.type === 'product' && (
+                <Checkbox 
+                  id={`product-${item.id}`} 
+                  checked={item.pinned}
+                  onCheckedChange={() => togglePinProduct(item.id)}
+                />
+              )}
+            </div>
+            <div className="text-sm mb-1">{item.name} {item.type === 'combo' && <span className="text-xs text-blue-600">(Combo)</span>}</div>
+            <div className="text-sm text-green-600">R$ {item.price.toFixed(2)}</div>
+          </div>
+        ))}
+      </div>
+      <Button 
+        onClick={() => setQuickProductsOpen(false)} 
+        className="w-full bg-cyan-400 hover:bg-cyan-500 text-white"
+      >
+        Fechar
+      </Button>
+    </DialogContent>
+  </Dialog>
+
+  // CPF/CNPJ Modal
+  <Dialog open={cpfCnpjDialogOpen} onOpenChange={setCpfCnpjDialogOpen}>
+    <DialogContent className="sm:max-w-[400px] w-full p-2 sm:p-6">
+      <DialogHeader>
+        <DialogTitle>Adicionar CPF/CNPJ</DialogTitle>
+      </DialogHeader>
+      <div className="py-4">
+        <Input
+          placeholder="Digite o CPF/CNPJ"
+          value={cpfCnpjValue}
+          onChange={(e) => setCpfCnpjValue(e.target.value)}
+          className="mb-4"
+        />
+        <Button 
+          onClick={handleCpfCnpjSubmit} 
+          className="w-full bg-cyan-400 hover:bg-cyan-500 text-white"
+        >
+          Adicionar
+        </Button>
+      </div>
+    </DialogContent>
+  </Dialog>
+
+  // Combo Options Modal
+  {comboToConfigure && (
+    <ComboOptionsModal
+      open={comboModalOpen}
+      onOpenChange={setComboModalOpen}
+      combo={comboToConfigure}
+      onConfirm={async (choosableSelections) => {
+        // 1. Montar lista de todos os produtos do combo (fixos + escolhidos)
+        const produtosCombo: { productId: string, nome: string, precoOriginal: number, quantidade: number }[] = [];
+        // Fixos
+        for (const item of comboToConfigure.items) {
+          if (!item.isChoosable) {
+            produtosCombo.push({
+              productId: item.productId,
+              nome: item.product?.name || '',
+              precoOriginal: item.product?.price || 0,
+              quantidade: Math.max(1, item.quantity)
+            });
+          }
+        }
+        // Escolhíveis
+        for (const [categoryId, selections] of Object.entries(choosableSelections)) {
+          for (const [productId, quantidade] of Object.entries(selections)) {
+            if (quantidade > 0) {
+              // Buscar o preço do produto nas opções carregadas
+              const categoria = comboToConfigure.items.find((i: any) => i.categoryId === categoryId);
+              let preco = 0;
+              let nome = '';
+              if (categoria && categoria.product && categoria.product.category && categoria.product.category.id === categoryId) {
+                preco = categoria.product.price;
+                nome = categoria.product.name;
+              } else if (comboToConfigure.options && comboToConfigure.options[categoryId]) {
+                const prod = comboToConfigure.options[categoryId].find((p: any) => p.id === productId);
+                if (prod) {
+                  preco = prod.price;
+                  nome = prod.name;
+                }
+              }
+              produtosCombo.push({
+                productId,
+                nome,
+                precoOriginal: preco,
+                quantidade: Number(quantidade)
+              });
+            }
+          }
+        }
+        // 2. Calcular valor total original
+        const totalOriginal = produtosCombo.reduce((sum, p) => sum + p.precoOriginal * p.quantidade, 0);
+        // 3. Distribuir valor do combo proporcionalmente (sem arredondar no loop)
+        const totaisNaoArredondados = produtosCombo.map(p =>
+          totalOriginal > 0
+            ? ((p.precoOriginal * p.quantidade) / totalOriginal) * comboToConfigure.price
+            : p.precoOriginal * p.quantidade
+        );
+        // 4. Arredonde cada total
+        let totaisArredondados = totaisNaoArredondados.map(v => Math.round(v * 100) / 100);
+        // 5. Calcule a diferença
+        let soma = totaisArredondados.reduce((a, b) => a + b, 0);
+        let diff = Math.round((comboToConfigure.price - soma) * 100); // em centavos
+        // 6. Distribua o ajuste entre todos os itens do combo de forma cíclica
+        if (diff !== 0) {
+          const indicesOrdenados = Array.from({ length: totaisArredondados.length }, (_, i) => i);
+          let i = 0;
+          while (diff !== 0) {
+            const idx = indicesOrdenados[i % indicesOrdenados.length];
+            totaisArredondados[idx] += diff > 0 ? 0.01 : -0.01;
+            totaisArredondados[idx] = Math.round(totaisArredondados[idx] * 100) / 100;
+            diff += diff > 0 ? -1 : 1;
+            i++;
+          }
+        }
+        // 7. Calcula preço unitário ajustado e desconto
+        const descontos = produtosCombo.map((p, idx) => {
+          const precoAjustado = Math.round((totaisArredondados[idx] / p.quantidade) * 100) / 100;
+          return {
+            productId: p.productId,
+            precoOriginal: p.precoOriginal,
+            quantidade: p.quantidade,
+            precoAjustado,
+            nome: p.nome,
+            desconto: p.precoOriginal - precoAjustado
+          };
+        });
+        // 8. Adicionar cada produto ao carrinho já com o preço ajustado
+        setCartItems(prev => ([
+          ...prev,
+          ...descontos.map(d => ({
+            id: d.productId + '-' + Math.random().toString(36).substring(2, 8),
+            productId: d.productId,
+            code: d.productId.substring(0, 6),
+            name: d.nome,
+            quantity: d.quantidade,
+            price: d.precoAjustado,
+            total: d.precoAjustado * d.quantidade
+          }))
+        ]));
+        toast({ description: `${comboToConfigure.name} (Combo) adicionado ao carrinho.` });
+        setComboModalOpen(false);
+        setComboToConfigure(null);
+      }}
+    />
+  )}
+
+  // Mobile detection
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    window.addEventListener('resize', handleResize);
+    handleResize();
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   return (
     <div className="flex h-screen bg-gray-100">
       <AdminSidebar />
       <div className="flex-1 flex flex-col overflow-hidden p-0 ml-0 lg:ml-64">
         {/* Header */}
-        <div className="bg-white shadow-sm p-4 flex justify-between items-center">
+        <div className="bg-white shadow-sm p-4 flex flex-col md:flex-row md:justify-between md:items-center gap-2">
           <div className="flex items-center gap-2">
             <ShoppingCart className="h-6 w-6 text-element-blue-dark" />
             <h1 className="text-xl font-medium text-element-blue-dark">PDV - Venda Local</h1>
@@ -299,7 +605,7 @@ const AdminPDV = () => {
           <Button 
             onClick={() => setQuickProductsOpen(true)} 
             variant="outline" 
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 w-full md:w-auto"
           >
             <span>Produtos Rápidos</span>
           </Button>
@@ -310,17 +616,19 @@ const AdminPDV = () => {
           {/* Left side - Product search and display */}
           <div className="flex-1 flex flex-col p-4 overflow-y-auto">
             {/* Pinned Products - Quick access buttons */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-2 mb-4">
-              {pinnedProducts.map(product => (
-                <button
-                  key={product.id}
-                  className="text-left p-3 border rounded-md hover:border-cyan-400 transition-colors bg-white"
-                  onClick={() => addToCart(product)}
-                >
-                  <div className="text-sm font-medium truncate">{product.code} - {product.name}</div>
-                  <div className="text-sm text-green-600">R$ {product.price.toFixed(2)}</div>
-                </button>
-              ))}
+            <div className="mb-4">
+              <div className="flex gap-2 overflow-x-auto pb-2 md:grid md:grid-cols-3 xl:grid-cols-4 md:gap-2 md:overflow-x-visible">
+                {pinnedProducts.map(product => (
+                  <button
+                    key={product.id}
+                    className="min-w-[220px] md:min-w-0 text-left p-3 border rounded-md hover:border-cyan-400 transition-colors bg-white"
+                    onClick={() => addToCart(product)}
+                  >
+                    <div className="text-sm font-medium truncate">{product.code} - {product.name}</div>
+                    <div className="text-sm text-green-600">R$ {product.price.toFixed(2)}</div>
+                  </button>
+                ))}
+              </div>
             </div>
 
             {/* Search bar */}
@@ -386,100 +694,196 @@ const AdminPDV = () => {
           </div>
 
           {/* Right side - Cart */}
-          <div className="w-96 bg-white shadow-md flex flex-col overflow-hidden">
-            {/* Ticket header */}
-            <div className="p-4 bg-gray-100 flex justify-between items-center">
-              <div className="font-medium">Tíquete: {ticketNumber}</div>
-              <div className="text-green-600 font-medium">ABERTO</div>
-            </div>
+          {isMobile && (
+            <Drawer open={cartOpen} onOpenChange={setCartOpen}>
+              <DrawerContent>
+                {/* Ticket header */}
+                <div className="p-4 bg-gray-100 flex justify-between items-center">
+                  <div className="font-medium">Tíquete: {ticketNumber}</div>
+                  <div className="text-green-600 font-medium">ABERTO</div>
+                </div>
 
-            {/* Cart items */}
-            <div className="flex-1 overflow-x-auto">
-              <Table className="min-w-[600px]">
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-12">Item</TableHead>
-                    <TableHead className="w-16">Cód.</TableHead>
-                    <TableHead>Produto</TableHead>
-                    <TableHead className="w-24 text-center">Qtd</TableHead>
-                    <TableHead className="w-20 text-right">Preço</TableHead>
-                    <TableHead className="w-20 text-right">Total</TableHead>
-                    <TableHead className="w-8"></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {cartItems.length > 0 ? (
-                    cartItems.map((item, index) => (
-                      <TableRow key={item.id} className="hover:bg-gray-50">
-                        <TableCell>{index + 1}</TableCell>
-                        <TableCell>{item.code}</TableCell>
-                        <TableCell className="font-medium">{item.name}</TableCell>
-                        <TableCell>
-                          <div className="flex items-center justify-center">
+                {/* Cart items */}
+                <div className="flex-1 overflow-x-auto">
+                  <Table className="min-w-[600px]">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-12">Item</TableHead>
+                        <TableHead className="w-16">Cód.</TableHead>
+                        <TableHead>Produto</TableHead>
+                        <TableHead className="w-24 text-center">Qtd</TableHead>
+                        <TableHead className="w-20 text-right">Preço</TableHead>
+                        <TableHead className="w-20 text-right">Total</TableHead>
+                        <TableHead className="w-8"></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {cartItems.length > 0 ? (
+                        cartItems.map((item, index) => (
+                          <TableRow key={item.id} className="hover:bg-gray-50">
+                            <TableCell>{index + 1}</TableCell>
+                            <TableCell>{item.code}</TableCell>
+                            <TableCell className="font-medium">{item.name}</TableCell>
+                            <TableCell>
+                              <div className="flex items-center justify-center">
+                                <Button 
+                                  variant="outline" 
+                                  size="icon" 
+                                  className="h-6 w-6 rounded-full p-0"
+                                  onClick={() => updateCartItemQuantity(item.id, item.quantity - 1)}
+                                >
+                                  <Minus className="h-3 w-3" />
+                                </Button>
+                                <span className="mx-2">{item.quantity}</span>
+                                <Button 
+                                  variant="outline" 
+                                  size="icon" 
+                                  className="h-6 w-6 rounded-full p-0"
+                                  onClick={() => updateCartItemQuantity(item.id, item.quantity + 1)}
+                                >
+                                  <Plus className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-right">R$ {item.price.toFixed(2)}</TableCell>
+                            <TableCell className="text-right">R$ {item.total.toFixed(2)}</TableCell>
+                            <TableCell>
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-6 w-6 p-0 text-red-500"
+                                onClick={() => removeItem(item.id)}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={7} className="text-center py-8 text-gray-500">
+                            Nenhum item adicionado
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+
+                {/* Totals */}
+                <div className="p-4 border-t">
+                  <div className="flex justify-between mb-1">
+                    <div>Valor:</div>
+                    <div className="font-medium text-green-600">R$ {subtotal.toFixed(2)}</div>
+                  </div>
+                  <div className="flex justify-between mb-1">
+                    <div>Desconto:</div>
+                    <div className="font-medium text-red-600">R$ {discount.toFixed(2)}</div>
+                  </div>
+                  <div className="flex justify-between">
+                    <div>Total:</div>
+                    <div className="font-medium text-element-blue-dark text-lg">R$ {total.toFixed(2)}</div>
+                  </div>
+                </div>
+              </DrawerContent>
+            </Drawer>
+          )}
+          {!isMobile && (
+            <div className="w-96 bg-white shadow-md flex flex-col overflow-hidden">
+              {/* Ticket header */}
+              <div className="p-4 bg-gray-100 flex justify-between items-center">
+                <div className="font-medium">Tíquete: {ticketNumber}</div>
+                <div className="text-green-600 font-medium">ABERTO</div>
+              </div>
+
+              {/* Cart items */}
+              <div className="flex-1 overflow-x-auto">
+                <Table className="min-w-[600px]">
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-12">Item</TableHead>
+                      <TableHead className="w-16">Cód.</TableHead>
+                      <TableHead>Produto</TableHead>
+                      <TableHead className="w-24 text-center">Qtd</TableHead>
+                      <TableHead className="w-20 text-right">Preço</TableHead>
+                      <TableHead className="w-20 text-right">Total</TableHead>
+                      <TableHead className="w-8"></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {cartItems.length > 0 ? (
+                      cartItems.map((item, index) => (
+                        <TableRow key={item.id} className="hover:bg-gray-50">
+                          <TableCell>{index + 1}</TableCell>
+                          <TableCell>{item.code}</TableCell>
+                          <TableCell className="font-medium">{item.name}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center justify-center">
+                              <Button 
+                                variant="outline" 
+                                size="icon" 
+                                className="h-6 w-6 rounded-full p-0"
+                                onClick={() => updateCartItemQuantity(item.id, item.quantity - 1)}
+                              >
+                                <Minus className="h-3 w-3" />
+                              </Button>
+                              <span className="mx-2">{item.quantity}</span>
+                              <Button 
+                                variant="outline" 
+                                size="icon" 
+                                className="h-6 w-6 rounded-full p-0"
+                                onClick={() => updateCartItemQuantity(item.id, item.quantity + 1)}
+                              >
+                                <Plus className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-right">R$ {item.price.toFixed(2)}</TableCell>
+                          <TableCell className="text-right">R$ {item.total.toFixed(2)}</TableCell>
+                          <TableCell>
                             <Button 
-                              variant="outline" 
+                              variant="ghost" 
                               size="icon" 
-                              className="h-6 w-6 rounded-full p-0"
-                              onClick={() => updateCartItemQuantity(item.id, item.quantity - 1)}
+                              className="h-6 w-6 p-0 text-red-500"
+                              onClick={() => removeItem(item.id)}
                             >
-                              <Minus className="h-3 w-3" />
+                              <X className="h-4 w-4" />
                             </Button>
-                            <span className="mx-2">{item.quantity}</span>
-                            <Button 
-                              variant="outline" 
-                              size="icon" 
-                              className="h-6 w-6 rounded-full p-0"
-                              onClick={() => updateCartItemQuantity(item.id, item.quantity + 1)}
-                            >
-                              <Plus className="h-3 w-3" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-right">R$ {item.price.toFixed(2)}</TableCell>
-                        <TableCell className="text-right">R$ {item.total.toFixed(2)}</TableCell>
-                        <TableCell>
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-6 w-6 p-0 text-red-500"
-                            onClick={() => removeItem(item.id)}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center py-8 text-gray-500">
+                          Nenhum item adicionado
                         </TableCell>
                       </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={7} className="text-center py-8 text-gray-500">
-                        Nenhum item adicionado
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
 
-            {/* Totals */}
-            <div className="p-4 border-t">
-              <div className="flex justify-between mb-1">
-                <div>Valor:</div>
-                <div className="font-medium text-green-600">R$ {subtotal.toFixed(2)}</div>
-              </div>
-              <div className="flex justify-between mb-1">
-                <div>Desconto:</div>
-                <div className="font-medium text-red-600">R$ {discount.toFixed(2)}</div>
-              </div>
-              <div className="flex justify-between">
-                <div>Total:</div>
-                <div className="font-medium text-element-blue-dark text-lg">R$ {total.toFixed(2)}</div>
+              {/* Totals */}
+              <div className="p-4 border-t">
+                <div className="flex justify-between mb-1">
+                  <div>Valor:</div>
+                  <div className="font-medium text-green-600">R$ {subtotal.toFixed(2)}</div>
+                </div>
+                <div className="flex justify-between mb-1">
+                  <div>Desconto:</div>
+                  <div className="font-medium text-red-600">R$ {discount.toFixed(2)}</div>
+                </div>
+                <div className="flex justify-between">
+                  <div>Total:</div>
+                  <div className="font-medium text-element-blue-dark text-lg">R$ {total.toFixed(2)}</div>
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Bottom Buttons */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-1 bg-gray-200 p-1">
+        <div className="fixed bottom-0 left-0 w-full z-20 bg-gray-200 p-1 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-1">
           <Button 
             variant="outline" 
             className="bg-cyan-400 hover:bg-cyan-500 text-white flex flex-col items-center justify-center py-4 h-auto"

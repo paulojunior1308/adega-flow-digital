@@ -94,7 +94,7 @@ const AdminSidebar = () => {
         className="lg:hidden fixed z-20 top-4 left-4 p-2 rounded-md bg-element-blue-dark text-white"
         onClick={toggleMobile}
       >
-        {isMobileOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+        <Menu className="h-6 w-6" />
       </button>
       
       {/* Desktop Sidebar */}
@@ -159,7 +159,7 @@ const AdminSidebar = () => {
           <aside className="absolute left-0 top-0 h-full w-64 bg-element-blue-dark shadow-lg animate-slide-in-right">
             <div className="flex flex-col h-full">
               <div className="p-4 flex justify-between items-center border-b border-element-blue-neon/20">
-                <div className="bg-white p-1 rounded flex items-center justify-center">
+                <div className="bg-white p-1 rounded flex items-center justify-center mr-2">
                   <img 
                     src="/lovable-uploads/fde6ed06-8df2-4405-b0ed-5e5f59e91ed4.png" 
                     alt="Element Adega Admin" 
@@ -168,7 +168,7 @@ const AdminSidebar = () => {
                 </div>
                 <button 
                   onClick={toggleMobile}
-                  className="p-2 rounded-md hover:bg-white/10 text-white"
+                  className="p-2 rounded-md hover:bg-white/10 text-white ml-auto"
                 >
                   <X className="h-5 w-5" />
                 </button>
