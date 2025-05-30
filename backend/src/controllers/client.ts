@@ -198,6 +198,7 @@ export const clientController = {
         name: true,
         email: true,
         role: true,
+        phone: true,
         createdAt: true,
         updatedAt: true,
       },
