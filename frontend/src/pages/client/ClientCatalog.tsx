@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import api from '@/lib/axios';
 import { ComboOptionsModal } from '@/components/home/ComboOptionsModal';
+import CartDetails from '@/components/client/CartDetails';
 
 // Defina a URL base do backend
 const API_URL = import.meta.env.VITE_API_URL || 'https://adega-flow-digital.onrender.com';
@@ -322,96 +323,15 @@ const ClientCatalog = () => {
                   </div>
                 </SheetTrigger>
                 <SheetContent className="w-full sm:max-w-md">
-                  <div className="flex flex-col h-full">
-                    <h2 className="text-xl font-bold mb-4">Seu Carrinho</h2>
-                    
-                    {cart.length === 0 ? (
-                      <div className="flex flex-col items-center justify-center flex-1 py-8">
-                        <ShoppingCart className="h-12 w-12 text-gray-300 mb-4" />
-                        <p className="text-gray-500">Seu carrinho está vazio</p>
-                        <Button 
-                          variant="link" 
-                          className="mt-2"
-                          onClick={() => navigate('/cliente-catalogo')}
-                        >
-                          Continuar comprando
-                        </Button>
-                      </div>
-                    ) : (
-                      <>
-                        <div className="flex-1 overflow-y-auto">
-                          {cart.map((item) => (
-                            <div key={item.product.id} className="flex items-center py-4 border-b">
-                              <img 
-                                src={item.product.image && !item.product.image.startsWith('http') ? API_URL + item.product.image : item.product.image} 
-                                alt={item.product.name} 
-                                className="w-16 h-16 object-cover rounded-md mr-3"
-                              />
-                              <div className="flex-1">
-                                <h3 className="font-medium line-clamp-1">{item.product.name}</h3>
-                                <p className="text-sm text-gray-500">
-                                  R$ {item.product.price.toFixed(2)} x {item.quantity}
-                                </p>
-                              </div>
-                              <div className="flex items-center">
-                                <Button 
-                                  variant="outline" 
-                                  size="icon" 
-                                  className="h-8 w-8 rounded-full"
-                                  onClick={() => removeFromCart(item.product.id)}
-                                >
-                                  <svg width="15" height="2" viewBox="0 0 15 2" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                    <path d="M1.17188 1H13.1719" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                                  </svg>
-                                </Button>
-                                <span className="mx-2">{item.quantity}</span>
-                                <Button 
-                                  variant="outline" 
-                                  size="icon" 
-                                  className="h-8 w-8 rounded-full"
-                                  onClick={() => addToCart(item.product)}
-                                >
-                                  <Plus className="h-3 w-3" />
-                                </Button>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                        
-                        <div className="pt-4 border-t mt-auto">
-                          <div className="flex justify-between mb-2">
-                            <span className="text-gray-500">Subtotal</span>
-                            <span className="font-medium">R$ {cartTotal.toFixed(2)}</span>
-                          </div>
-                          <div className="flex justify-between mb-4">
-                            <span className="text-gray-500">Entrega</span>
-                            <span className="font-medium">Grátis</span>
-                          </div>
-                          <div className="flex justify-between mb-6">
-                            <span className="text-lg font-bold">Total</span>
-                            <span className="text-lg font-bold">R$ {cartTotal.toFixed(2)}</span>
-                          </div>
-                          
-                          <div className="flex space-x-2">
-                            <Button 
-                              variant="outline"
-                              className="flex-1"
-                              onClick={clearCart}
-                            >
-                              Limpar
-                            </Button>
-                            <Button 
-                              className="flex-1 bg-element-blue-neon text-element-gray-dark hover:bg-element-blue-neon/90"
-                              onClick={checkout}
-                              disabled={cart.length === 0}
-                            >
-                              Finalizar
-                            </Button>
-                          </div>
-                        </div>
-                      </>
-                    )}
-                  </div>
+                  <CartDetails
+                    cart={cart}
+                    cartTotal={cartTotal}
+                    onAdd={addToCart}
+                    onRemove={removeFromCart}
+                    onClear={clearCart}
+                    onCheckout={checkout}
+                    disabled={cart.length === 0}
+                  />
                 </SheetContent>
               </Sheet>
             </div>
