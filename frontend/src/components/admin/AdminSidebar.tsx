@@ -91,8 +91,7 @@ const AdminSidebar = () => {
     <>
       {/* Mobile Menu Button */}
       <button 
-        className="lg:hidden fixed z-30 top-10 left-5 p-2 rounded-md bg-element-blue-dark text-white shadow-md"
-        style={{ marginTop: 16, marginLeft: 8 }}
+        className="lg:hidden fixed z-30 top-4 left-4 p-2 rounded-md bg-element-blue-dark text-white"
         onClick={toggleMobile}
         aria-label="Abrir menu"
       >
@@ -160,7 +159,7 @@ const AdminSidebar = () => {
           <div className="absolute inset-0 bg-black/50" onClick={toggleMobile}></div>
           <aside className="absolute left-0 top-0 h-full w-64 bg-element-blue-dark shadow-lg animate-slide-in-right flex flex-col">
             <div className="flex items-center justify-between p-4 border-b border-element-blue-neon/20">
-              <div className="bg-white p-1 rounded flex items-center justify-center mt-6 ml-2 mb-2">
+              <div className="bg-white p-1 rounded flex items-center justify-center mr-2 mt-2 mb-2 ml-2">
                 <img 
                   src="/lovable-uploads/fde6ed06-8df2-4405-b0ed-5e5f59e91ed4.png" 
                   alt="Element Adega Admin" 
@@ -169,7 +168,7 @@ const AdminSidebar = () => {
               </div>
               <button 
                 onClick={toggleMobile}
-                className="p-2 rounded-md hover:bg-white/10 text-white ml-auto mt-6"
+                className="p-2 rounded-md hover:bg-white/10 text-white ml-auto mt-2"
                 aria-label="Fechar menu"
               >
                 <X className="h-5 w-5" />

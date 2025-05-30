@@ -62,10 +62,12 @@ const ClientSidebar = () => {
     <>
       {/* Mobile Menu Button */}
       <button 
-        className="lg:hidden fixed z-20 top-4 left-4 p-2 rounded-md bg-element-blue-neon text-element-gray-dark"
+        className="lg:hidden fixed z-40 top-4 left-4 p-3 rounded-md bg-element-blue-neon text-element-gray-dark shadow-md"
+        style={{ marginTop: 'env(safe-area-inset-top, 1rem)' }}
         onClick={toggleMobile}
+        aria-label="Abrir menu"
       >
-        {isMobileOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+        <Menu className="h-6 w-6" />
       </button>
       
       {/* Desktop Sidebar */}
@@ -123,53 +125,52 @@ const ClientSidebar = () => {
       
       {/* Mobile Sidebar */}
       {isMobileOpen && (
-        <div className="fixed inset-0 z-10 lg:hidden">
+        <div className="fixed inset-0 z-50 lg:hidden">
           <div className="absolute inset-0 bg-black/50" onClick={toggleMobile}></div>
-          <aside className="absolute left-0 top-0 h-full w-64 bg-white shadow-lg animate-slide-in-right">
-            <div className="flex flex-col h-full">
-              <div className="p-4 flex justify-between items-center border-b">
-                <img 
-                  src="/lovable-uploads/fde6ed06-8df2-4405-b0ed-5e5f59e91ed4.png" 
-                  alt="Element Adega" 
-                  className="h-10"
-                />
-                <button 
-                  onClick={toggleMobile}
-                  className="p-2 rounded-md hover:bg-element-gray-light text-element-blue-dark"
-                >
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
-              
-              <div className="px-3 py-4 flex-1 overflow-y-auto">
-                <nav className="space-y-2">
-                  {menuItems.map((item) => (
-                    <NavLink
-                      key={item.path}
-                      to={item.path}
-                      className={({ isActive }) => `
-                        flex items-center p-3 rounded-lg transition-colors
-                        ${isActive ? 'bg-element-blue-neon text-element-gray-dark' : 'hover:bg-element-gray-light text-element-gray-dark'}
-                      `}
-                      onClick={toggleMobile}
-                    >
-                      {item.icon}
-                      <span className="ml-3">{item.label}</span>
-                    </NavLink>
-                  ))}
-                </nav>
-              </div>
-              
-              <div className="p-4 border-t">
-                <NavLink
-                  to="/login"
-                  className="flex items-center p-3 rounded-lg text-element-gray-dark hover:bg-element-gray-light transition-colors"
-                  onClick={toggleMobile}
-                >
-                  <LogOut className="h-5 w-5" />
-                  <span className="ml-3">Sair</span>
-                </NavLink>
-              </div>
+          <aside className="absolute left-0 top-0 h-full w-64 bg-white shadow-lg animate-slide-in-right flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b pt-6">
+              <img 
+                src="/lovable-uploads/fde6ed06-8df2-4405-b0ed-5e5f59e91ed4.png" 
+                alt="Element Adega" 
+                className="h-10 ml-2 my-2"
+              />
+              <button 
+                onClick={toggleMobile}
+                className="p-2 rounded-md hover:bg-element-gray-light text-element-blue-dark ml-auto mt-2"
+                aria-label="Fechar menu"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            
+            <div className="px-3 py-4 flex-1 overflow-y-auto">
+              <nav className="space-y-2">
+                {menuItems.map((item) => (
+                  <NavLink
+                    key={item.path}
+                    to={item.path}
+                    className={({ isActive }) => `
+                      flex items-center p-3 rounded-lg transition-colors
+                      ${isActive ? 'bg-element-blue-neon text-element-gray-dark' : 'hover:bg-element-gray-light text-element-gray-dark'}
+                    `}
+                    onClick={toggleMobile}
+                  >
+                    {item.icon}
+                    <span className="ml-3">{item.label}</span>
+                  </NavLink>
+                ))}
+              </nav>
+            </div>
+            
+            <div className="p-4 border-t">
+              <NavLink
+                to="/login"
+                className="flex items-center p-3 rounded-lg text-element-gray-dark hover:bg-element-gray-light transition-colors"
+                onClick={toggleMobile}
+              >
+                <LogOut className="h-5 w-5" />
+                <span className="ml-3">Sair</span>
+              </NavLink>
             </div>
           </aside>
         </div>
