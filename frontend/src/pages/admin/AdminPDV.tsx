@@ -373,7 +373,7 @@ const AdminPDV = () => {
             </div>
 
             {/* Search results */}
-            <div className="flex-1 overflow-y-auto">
+            <div className={`${isMobile ? '' : 'flex-1 overflow-y-auto'}`}>
               {searchQuery.trim() !== '' && (
                 <div className="grid grid-cols-1 gap-2">
                   {filteredProducts.map(product => (
