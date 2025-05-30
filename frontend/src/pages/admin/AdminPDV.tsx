@@ -319,7 +319,7 @@ const AdminPDV = () => {
         </div>
 
         {/* Main content */}
-        <div className="flex flex-1 overflow-hidden">
+        <div className="flex flex-col md:flex-row flex-1 overflow-hidden">
           {/* Left side - Product search and display */}
           <div className="flex-1 flex flex-col p-4 overflow-y-auto">
             {/* Pinned Products - Quick access buttons */}
@@ -401,7 +401,7 @@ const AdminPDV = () => {
           </div>
 
           {/* Carrinho - responsivo: cards no mobile, tabela no desktop */}
-          <div className={`w-full md:w-96 bg-white shadow-md flex flex-col overflow-hidden mt-4 md:mt-0 px-2 ${isMobile ? 'pb-32' : ''}`}>
+          <div className={`w-full md:w-96 bg-white shadow-md flex flex-col overflow-hidden ${isMobile ? 'px-2 pb-32 mt-0' : 'mt-4'} md:mt-0`}>
             {/* Ticket header */}
             <div className="p-4 bg-gray-100 flex justify-between items-center">
               <div className="font-medium">Tíquete: {ticketNumber}</div>
