@@ -8,6 +8,15 @@ const Header = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
+  const hideCartButton = [
+    '/',
+    '/promocoes',
+    '/combos',
+    '/narguile',
+    '/bebidas',
+    '/login',
+  ].includes(location.pathname);
+
   // Função para scroll suave até a seção de contato
   const scrollToContato = () => {
     const section = document.getElementById('contato');
@@ -60,9 +69,11 @@ const Header = () => {
           <Link to="/login" className="element-btn-primary flex items-center">
             <User className="mr-2 h-5 w-5" /> Entrar
           </Link>
-          <Link to="/carrinho" className="element-btn-secondary flex items-center">
-            <ShoppingCart className="mr-2 h-5 w-5" /> Carrinho
-          </Link>
+          {!hideCartButton && (
+            <Link to="/carrinho" className="element-btn-secondary flex items-center">
+              <ShoppingCart className="mr-2 h-5 w-5" /> Carrinho
+            </Link>
+          )}
         </nav>
       </div>
 
@@ -107,13 +118,15 @@ const Header = () => {
               >
                 <User className="mr-2 h-5 w-5" /> Entrar
               </Link>
-              <Link 
-                to="/carrinho" 
-                className="element-btn-secondary flex-1 flex justify-center items-center"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                <ShoppingCart className="mr-2 h-5 w-5" /> Carrinho
-              </Link>
+              {!hideCartButton && (
+                <Link 
+                  to="/carrinho" 
+                  className="element-btn-secondary flex-1 flex justify-center items-center"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  <ShoppingCart className="mr-2 h-5 w-5" /> Carrinho
+                </Link>
+              )}
             </div>
           </div>
         </div>
