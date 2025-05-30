@@ -251,7 +251,7 @@ const ClientOrders = () => {
     <div className="min-h-screen bg-element-gray-light">
       <ClientSidebar />
       
-      <div className="lg:pl-64 min-h-screen">
+      <div className="lg:pl-64 min-h-screen pl-24 md:pl-24 lg:pl-64 transition-all duration-300">
         <div className="p-4 md:p-6 lg:p-8">
           <h1 className="text-2xl md:text-3xl font-bold text-element-blue-dark mb-6">Meus Pedidos</h1>
           

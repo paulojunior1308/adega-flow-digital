@@ -288,7 +288,7 @@ const ClientCatalog = () => {
     <div className="min-h-screen bg-element-gray-light">
       <ClientSidebar />
       
-      <div className="lg:pl-64 min-h-screen">
+      <div className="lg:pl-64 min-h-screen pl-24 md:pl-24 lg:pl-64 transition-all duration-300">
         <div className="p-4 md:p-6 lg:p-8">
           {/* Header com busca e carrinho */}
           <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
