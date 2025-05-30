@@ -590,7 +590,8 @@ const AdminPDV = () => {
         </div>
 
         {/* Bottom Buttons */}
-        <div className="fixed bottom-0 left-0 w-full z-20 bg-gray-200 p-1 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-1">
+        <div className="w-full bg-gray-200 p-1 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-1
+          fixed bottom-0 left-0 z-20 md:static md:z-auto">
           <Button 
             variant="outline" 
             className="bg-cyan-400 hover:bg-cyan-500 text-white flex flex-col items-center justify-center py-4 h-auto"
@@ -647,11 +648,11 @@ const AdminPDV = () => {
                 Selecionar Produtos Rápidos
               </DialogTitle>
             </DialogHeader>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 py-4 max-h-[60vh] overflow-y-auto">
+            <div className="flex gap-2 overflow-x-auto pb-2 md:grid md:grid-cols-3 md:gap-4 md:overflow-x-visible">
               {allItems.map((item) => (
                 <div 
                   key={item.id} 
-                  className={`border rounded-lg p-4 transition-colors ${item.pinned ? 'border-yellow-400 bg-yellow-50' : 'hover:border-yellow-400'}`}
+                  className={`min-w-[220px] md:min-w-0 border rounded-lg p-4 transition-colors ${item.pinned ? 'border-yellow-400 bg-yellow-50' : 'hover:border-yellow-400'}`}
                 >
                   <div className="flex justify-between items-start mb-2">
                     <span className="text-sm font-medium">{item.code}</span>

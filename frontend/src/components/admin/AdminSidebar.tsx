@@ -91,8 +91,9 @@ const AdminSidebar = () => {
     <>
       {/* Mobile Menu Button */}
       <button 
-        className="lg:hidden fixed z-20 top-4 left-4 p-2 rounded-md bg-element-blue-dark text-white"
+        className="lg:hidden fixed z-30 top-4 left-4 p-2 rounded-md bg-element-blue-dark text-white"
         onClick={toggleMobile}
+        aria-label="Abrir menu"
       >
         <Menu className="h-6 w-6" />
       </button>
@@ -154,55 +155,54 @@ const AdminSidebar = () => {
       
       {/* Mobile Sidebar */}
       {isMobileOpen && (
-        <div className="fixed inset-0 z-10 lg:hidden">
+        <div className="fixed inset-0 z-40 lg:hidden">
           <div className="absolute inset-0 bg-black/50" onClick={toggleMobile}></div>
-          <aside className="absolute left-0 top-0 h-full w-64 bg-element-blue-dark shadow-lg animate-slide-in-right">
-            <div className="flex flex-col h-full">
-              <div className="p-4 flex justify-between items-center border-b border-element-blue-neon/20">
-                <div className="bg-white p-1 rounded flex items-center justify-center mr-2">
-                  <img 
-                    src="/lovable-uploads/fde6ed06-8df2-4405-b0ed-5e5f59e91ed4.png" 
-                    alt="Element Adega Admin" 
-                    className="h-8"
-                  />
-                </div>
-                <button 
-                  onClick={toggleMobile}
-                  className="p-2 rounded-md hover:bg-white/10 text-white ml-auto"
-                >
-                  <X className="h-5 w-5" />
-                </button>
+          <aside className="absolute left-0 top-0 h-full w-64 bg-element-blue-dark shadow-lg animate-slide-in-right flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b border-element-blue-neon/20">
+              <div className="bg-white p-1 rounded flex items-center justify-center mr-2 mt-2 mb-2 ml-2">
+                <img 
+                  src="/lovable-uploads/fde6ed06-8df2-4405-b0ed-5e5f59e91ed4.png" 
+                  alt="Element Adega Admin" 
+                  className="h-8"
+                />
               </div>
-              
-              <div className="px-3 py-4 flex-1 overflow-y-auto">
-                <nav className="space-y-2">
-                  {menuItems.map((item) => (
-                    <NavLink
-                      key={item.path}
-                      to={item.path}
-                      className={({ isActive }) => `
-                        flex items-center p-3 rounded-lg transition-colors
-                        ${isActive ? 'bg-element-blue-neon text-element-gray-dark' : 'hover:bg-white/10 text-white'}
-                      `}
-                      onClick={toggleMobile}
-                    >
-                      <span className="flex items-center justify-center w-5 h-5">{item.icon}</span>
-                      <span className="ml-3">{item.label}</span>
-                    </NavLink>
-                  ))}
-                </nav>
-              </div>
-              
-              <div className="p-4 border-t border-element-blue-neon/20">
-                <NavLink
-                  to="/login"
-                  className="flex items-center p-3 rounded-lg text-white hover:bg-white/10 transition-colors"
-                  onClick={toggleMobile}
-                >
-                  <span className="flex items-center justify-center w-5 h-5"><LogOutIcon className="h-5 w-5" /></span>
-                  <span className="ml-3">Sair</span>
-                </NavLink>
-              </div>
+              <button 
+                onClick={toggleMobile}
+                className="p-2 rounded-md hover:bg-white/10 text-white ml-auto mt-2"
+                aria-label="Fechar menu"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            
+            <div className="px-3 py-4 flex-1 overflow-y-auto">
+              <nav className="space-y-2">
+                {menuItems.map((item) => (
+                  <NavLink
+                    key={item.path}
+                    to={item.path}
+                    className={({ isActive }) => `
+                      flex items-center p-3 rounded-lg transition-colors
+                      ${isActive ? 'bg-element-blue-neon text-element-gray-dark' : 'hover:bg-white/10 text-white'}
+                    `}
+                    onClick={toggleMobile}
+                  >
+                    <span className="flex items-center justify-center w-5 h-5">{item.icon}</span>
+                    <span className="ml-3">{item.label}</span>
+                  </NavLink>
+                ))}
+              </nav>
+            </div>
+            
+            <div className="p-4 border-t border-element-blue-neon/20">
+              <NavLink
+                to="/login"
+                className="flex items-center p-3 rounded-lg text-white hover:bg-white/10 transition-colors"
+                onClick={toggleMobile}
+              >
+                <span className="flex items-center justify-center w-5 h-5"><LogOutIcon className="h-5 w-5" /></span>
+                <span className="ml-3">Sair</span>
+              </NavLink>
             </div>
           </aside>
         </div>
