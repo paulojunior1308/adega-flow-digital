@@ -401,7 +401,7 @@ const AdminPDV = () => {
           </div>
 
           {/* Carrinho - responsivo: cards no mobile, tabela no desktop */}
-          <div className="w-full md:w-96 bg-white shadow-md flex flex-col overflow-hidden mt-4 md:mt-0">
+          <div className={`w-full md:w-96 bg-white shadow-md flex flex-col overflow-hidden mt-4 md:mt-0 px-2 ${isMobile ? 'pb-32' : ''}`}>
             {/* Ticket header */}
             <div className="p-4 bg-gray-100 flex justify-between items-center">
               <div className="font-medium">Tíquete: {ticketNumber}</div>
