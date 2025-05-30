@@ -400,7 +400,7 @@ const AdminPDV = () => {
             </div>
           </div>
 
-          {/* Carrinho - sempre visível, responsivo */}
+          {/* Carrinho - responsivo: cards no mobile, tabela no desktop */}
           <div className="w-full md:w-96 bg-white shadow-md flex flex-col overflow-hidden mt-4 md:mt-0">
             {/* Ticket header */}
             <div className="p-4 bg-gray-100 flex justify-between items-center">
@@ -409,71 +409,122 @@ const AdminPDV = () => {
             </div>
 
             {/* Cart items */}
-            <div className="flex-1 overflow-x-auto">
-              <Table className="min-w-[600px]">
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-12">Item</TableHead>
-                    <TableHead className="w-16">Cód.</TableHead>
-                    <TableHead>Produto</TableHead>
-                    <TableHead className="w-24 text-center">Qtd</TableHead>
-                    <TableHead className="w-20 text-right">Preço</TableHead>
-                    <TableHead className="w-20 text-right">Total</TableHead>
-                    <TableHead className="w-8"></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {cartItems.length > 0 ? (
-                    cartItems.map((item, index) => (
-                      <TableRow key={item.id} className="hover:bg-gray-50">
-                        <TableCell>{index + 1}</TableCell>
-                        <TableCell>{item.code}</TableCell>
-                        <TableCell className="font-medium">{item.name}</TableCell>
-                        <TableCell>
-                          <div className="flex items-center justify-center">
+            {isMobile ? (
+              <div className="flex flex-col gap-2 p-2">
+                {cartItems.length > 0 ? (
+                  cartItems.map((item, index) => (
+                    <div key={item.id} className="rounded-lg border p-3 flex flex-col gap-2 bg-gray-50">
+                      <div className="flex justify-between items-center">
+                        <span className="font-semibold text-sm">{item.name}</span>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-6 w-6 p-0 text-red-500"
+                          onClick={() => removeItem(item.id)}
+                          aria-label="Remover item"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <div className="flex justify-between items-center text-xs text-gray-500">
+                        <span>Cód: {item.code}</span>
+                        <span>Preço: R$ {item.price.toFixed(2)}</span>
+                      </div>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Button 
+                          variant="outline" 
+                          size="icon" 
+                          className="h-6 w-6 rounded-full p-0"
+                          onClick={() => updateCartItemQuantity(item.id, item.quantity - 1)}
+                          aria-label="Diminuir quantidade"
+                        >
+                          <Minus className="h-3 w-3" />
+                        </Button>
+                        <span className="mx-2 font-medium">{item.quantity}</span>
+                        <Button 
+                          variant="outline" 
+                          size="icon" 
+                          className="h-6 w-6 rounded-full p-0"
+                          onClick={() => updateCartItemQuantity(item.id, item.quantity + 1)}
+                          aria-label="Aumentar quantidade"
+                        >
+                          <Plus className="h-3 w-3" />
+                        </Button>
+                        <span className="ml-auto font-semibold text-sm">Total: R$ {item.total.toFixed(2)}</span>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-8 text-gray-500">Nenhum item adicionado</div>
+                )}
+              </div>
+            ) : (
+              <div className="flex-1 overflow-x-auto">
+                <Table className="min-w-[600px]">
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-12">Item</TableHead>
+                      <TableHead className="w-16">Cód.</TableHead>
+                      <TableHead>Produto</TableHead>
+                      <TableHead className="w-24 text-center">Qtd</TableHead>
+                      <TableHead className="w-20 text-right">Preço</TableHead>
+                      <TableHead className="w-20 text-right">Total</TableHead>
+                      <TableHead className="w-8"></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {cartItems.length > 0 ? (
+                      cartItems.map((item, index) => (
+                        <TableRow key={item.id} className="hover:bg-gray-50">
+                          <TableCell>{index + 1}</TableCell>
+                          <TableCell>{item.code}</TableCell>
+                          <TableCell className="font-medium">{item.name}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center justify-center">
+                              <Button 
+                                variant="outline" 
+                                size="icon" 
+                                className="h-6 w-6 rounded-full p-0"
+                                onClick={() => updateCartItemQuantity(item.id, item.quantity - 1)}
+                              >
+                                <Minus className="h-3 w-3" />
+                              </Button>
+                              <span className="mx-2">{item.quantity}</span>
+                              <Button 
+                                variant="outline" 
+                                size="icon" 
+                                className="h-6 w-6 rounded-full p-0"
+                                onClick={() => updateCartItemQuantity(item.id, item.quantity + 1)}
+                              >
+                                <Plus className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-right">R$ {item.price.toFixed(2)}</TableCell>
+                          <TableCell className="text-right">R$ {item.total.toFixed(2)}</TableCell>
+                          <TableCell>
                             <Button 
-                              variant="outline" 
+                              variant="ghost" 
                               size="icon" 
-                              className="h-6 w-6 rounded-full p-0"
-                              onClick={() => updateCartItemQuantity(item.id, item.quantity - 1)}
+                              className="h-6 w-6 p-0 text-red-500"
+                              onClick={() => removeItem(item.id)}
                             >
-                              <Minus className="h-3 w-3" />
+                              <X className="h-4 w-4" />
                             </Button>
-                            <span className="mx-2">{item.quantity}</span>
-                            <Button 
-                              variant="outline" 
-                              size="icon" 
-                              className="h-6 w-6 rounded-full p-0"
-                              onClick={() => updateCartItemQuantity(item.id, item.quantity + 1)}
-                            >
-                              <Plus className="h-3 w-3" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-right">R$ {item.price.toFixed(2)}</TableCell>
-                        <TableCell className="text-right">R$ {item.total.toFixed(2)}</TableCell>
-                        <TableCell>
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-6 w-6 p-0 text-red-500"
-                            onClick={() => removeItem(item.id)}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center py-8 text-gray-500">
+                          Nenhum item adicionado
                         </TableCell>
                       </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={7} className="text-center py-8 text-gray-500">
-                        Nenhum item adicionado
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
 
             {/* Totals */}
             <div className="p-4 border-t">
