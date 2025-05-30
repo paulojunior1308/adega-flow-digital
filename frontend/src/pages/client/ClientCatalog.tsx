@@ -309,34 +309,19 @@ const ClientCatalog = () => {
               </div>
               
               {/* Carrinho Sheet */}
-              <Sheet>
-                <SheetTrigger asChild>
-                  <div className="relative">
-                    <Button variant="outline" size="icon" className="rounded-full bg-white relative">
-                      <ShoppingCart className="h-5 w-5" />
-                      {cart.length > 0 && (
-                        <span className="absolute -top-1 -right-1 bg-element-blue-neon rounded-full w-5 h-5 flex items-center justify-center text-[10px] text-white">
-                          {cart.reduce((sum, item) => sum + item.quantity, 0)}
-                        </span>
-                      )}
-                    </Button>
-                  </div>
-                </SheetTrigger>
-                <SheetContent className="w-full sm:max-w-md">
-                  <SheetHeader>
-                    <SheetTitle>Seu Carrinho</SheetTitle>
-                  </SheetHeader>
-                  <CartDetails
-                    cart={cart}
-                    cartTotal={cartTotal}
-                    onAdd={addToCart}
-                    onRemove={removeFromCart}
-                    onClear={clearCart}
-                    onCheckout={checkout}
-                    disabled={cart.length === 0}
-                  />
-                </SheetContent>
-              </Sheet>
+              <Button
+                variant="outline"
+                size="icon"
+                className="rounded-full bg-white relative"
+                onClick={() => navigate('/cliente-carrinho')}
+              >
+                <ShoppingCart className="h-5 w-5" />
+                {cart.length > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-element-blue-neon rounded-full w-5 h-5 flex items-center justify-center text-[10px] text-white">
+                    {cart.reduce((sum, item) => sum + item.quantity, 0)}
+                  </span>
+                )}
+              </Button>
             </div>
           </div>
           
