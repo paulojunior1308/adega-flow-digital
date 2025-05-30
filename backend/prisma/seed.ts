@@ -20,7 +20,7 @@ async function main() {
     END LOOP;
   END $$;
 `);
-console.log('Tabelas apagadas com sucesso!');*/
+console.log('Tabelas apagadas com sucesso!');
 
   // Adicionar usuário admin
   await prisma.user.upsert({

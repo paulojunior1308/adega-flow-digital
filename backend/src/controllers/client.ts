@@ -278,4 +278,29 @@ export const clientController = {
 
     res.json(order);
   },
+
+  changePassword: async (req: Request, res: Response) => {
+    // @ts-ignore
+    const userId = req.user.id;
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      throw new AppError('Preencha todos os campos.', 400);
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      throw new AppError('Usuário não encontrado.', 404);
+    }
+
+    const isMatch = await comparePassword(currentPassword, user.password);
+    if (!isMatch) {
+      throw new AppError('Senha atual incorreta.', 400);
+    }
+
+    const hashed = await hashPassword(newPassword);
+    await prisma.user.update({ where: { id: userId }, data: { password: hashed } });
+
+    res.json({ message: 'Senha alterada com sucesso!' });
+  },
 }; 
