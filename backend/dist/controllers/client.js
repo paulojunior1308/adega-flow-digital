@@ -170,6 +170,7 @@ exports.clientController = {
                 name: true,
                 email: true,
                 role: true,
+                phone: true,
                 createdAt: true,
                 updatedAt: true,
             },
@@ -232,5 +233,42 @@ exports.clientController = {
             },
         });
         res.json(order);
+    },
+    changePassword: async (req, res) => {
+        const userId = req.user.id;
+        const { currentPassword, newPassword } = req.body;
+        if (!currentPassword || !newPassword) {
+            throw new errorHandler_1.AppError('Preencha todos os campos.', 400);
+        }
+        const user = await prisma_1.default.user.findUnique({ where: { id: userId } });
+        if (!user) {
+            throw new errorHandler_1.AppError('Usuário não encontrado.', 404);
+        }
+        const isMatch = await (0, bcrypt_1.comparePassword)(currentPassword, user.password);
+        if (!isMatch) {
+            throw new errorHandler_1.AppError('Senha atual incorreta.', 400);
+        }
+        const hashed = await (0, bcrypt_1.hashPassword)(newPassword);
+        await prisma_1.default.user.update({ where: { id: userId }, data: { password: hashed } });
+        res.json({ message: 'Senha alterada com sucesso!' });
+    },
+    getNotifications: async (req, res) => {
+        const userId = req.user.id;
+        const notifications = await prisma_1.default.notification.findMany({
+            where: { userId },
+            orderBy: { createdAt: 'desc' },
+            include: { order: true },
+        });
+        res.json(notifications);
+    },
+    readNotification: async (req, res) => {
+        const userId = req.user.id;
+        const { id } = req.params;
+        const notification = await prisma_1.default.notification.findFirst({ where: { id, userId } });
+        if (!notification) {
+            return res.status(404).json({ error: 'Notificação não encontrada.' });
+        }
+        await prisma_1.default.notification.update({ where: { id }, data: { read: true } });
+        res.json({ success: true });
     },
 };

@@ -29,4 +29,7 @@ router.delete('/cart/:itemId', cart_1.cartController.removeItem);
 router.get('/orders', order_1.orderController.list);
 router.post('/orders', order_1.orderController.create);
 router.post('/orders/calculate-delivery-fee', order_1.orderController.calculateDeliveryFee);
+router.put('/cliente-perfil/senha', client_1.clientController.changePassword);
+router.get('/notifications', client_1.clientController.getNotifications);
+router.put('/notifications/:id/read', client_1.clientController.readNotification);
 exports.default = router;

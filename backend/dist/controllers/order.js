@@ -177,8 +177,25 @@ exports.orderController = {
                 }
             }
         }
+        const statusMessages = {
+            PENDING: 'Seu pedido foi recebido e está aguardando confirmação.',
+            CONFIRMED: 'Seu pedido foi confirmado!',
+            PREPARING: 'Seu pedido está sendo preparado.',
+            DELIVERING: 'Seu pedido saiu para entrega!',
+            DELIVERED: 'Seu pedido foi entregue!',
+            CANCELLED: 'Seu pedido foi cancelado.'
+        };
+        const message = statusMessages[statusEnum] || `Status do pedido atualizado: ${statusEnum}`;
+        const notification = await prisma_1.default.notification.create({
+            data: {
+                userId: order.userId,
+                orderId: order.id,
+                message,
+            }
+        });
         const io = (0, socketInstance_1.getSocketInstance)();
         if (io) {
+            io.to(order.userId).emit('order-notification', { notification });
             io.to(order.userId).emit('order-updated', { order });
         }
         res.json(order);
