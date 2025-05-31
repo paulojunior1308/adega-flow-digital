@@ -273,7 +273,34 @@ const ClientCart = () => {
   
   const handlePixConfirm = async () => {
     setShowPixModal(false);
-    await sendOrder();
+    const orderId = await sendOrder();
+    // Só envia WhatsApp se for PIX e o pedido foi criado com sucesso
+    const selectedPayment = paymentMethods.find(m => m.id === paymentMethod);
+    if (selectedPayment && selectedPayment.name.toLowerCase().includes('pix') && user && orderId) {
+      const numeroWhatsApp = '5511968681952'; // Seu número
+      // Montar lista de produtos
+      const produtosMsg = cart.map((item: any) => {
+        const nome = item.product?.name || item.productName || '';
+        const quantidade = item.quantity || 1;
+        const preco = (item.price ?? item.product?.price ?? 0).toFixed(2).replace('.', ',');
+        const totalItem = ((item.price ?? item.product?.price ?? 0) * quantidade).toFixed(2).replace('.', ',');
+        return `- *${quantidade}x ${nome}* (R$ ${preco} cada) = R$ ${totalItem}`;
+      }).join('\n');
+
+      const totalPedido = cart.reduce((sum, item) => sum + ((item.price ?? item.product.price) * item.quantity), 0).toFixed(2).replace('.', ',');
+
+      const mensagem =
+        `Olá, realizei o pagamento via PIX e segue o comprovante.\n\n` +
+        `Dados do pedido:\n` +
+        `Nome: *${user.name}*\n` +
+        `Telefone: *${user.phone}*\n` +
+        `Pedido: *#${orderId}*\n\n` +
+        `Itens:\n${produtosMsg}\n\n` +
+        `Total: *R$ ${totalPedido}*\n\n` +
+        `Por favor, confirme o pagamento e prossiga com o pedido.`;
+      const link = `https://wa.me/${numeroWhatsApp}?text=${encodeURIComponent(mensagem)}`;
+      window.open(link, '_blank');
+    }
   };
 
   const sendOrder = async () => {
@@ -302,34 +329,6 @@ const ClientCart = () => {
       setTimeout(() => {
         navigate('/cliente-pedidos');
       }, 2000);
-
-      // Montar mensagem profissional para o WhatsApp
-      if (user) {
-        const numeroWhatsApp = '5511968681952'; // Seu número
-        // Montar lista de produtos
-        const produtosMsg = (items || cart).map((item: any) => {
-          const nome = item.product?.name || item.productName || '';
-          const quantidade = item.quantity || 1;
-          const preco = (item.price ?? item.product?.price ?? 0).toFixed(2).replace('.', ',');
-          const totalItem = ((item.price ?? item.product?.price ?? 0) * quantidade).toFixed(2).replace('.', ',');
-          return `- *${quantidade}x ${nome}* (R$ ${preco} cada) = R$ ${totalItem}`;
-        }).join('\n');
-
-        const totalPedido = (total ?? cart.reduce((sum, item) => sum + ((item.price ?? item.product.price) * item.quantity), 0)).toFixed(2).replace('.', ',');
-
-        const mensagem =
-          `Olá, realizei o pagamento via PIX e segue o comprovante.\n\n` +
-          `Dados do pedido:\n` +
-          `Nome: *${user.name}*\n` +
-          `Telefone: *${user.phone}*\n` +
-          `Pedido: *#${orderId}*\n\n` +
-          `Itens:\n${produtosMsg}\n\n` +
-          `Total: *R$ ${totalPedido}*\n\n` +
-          `Por favor, confirme o pagamento e prossiga com o pedido.`;
-        const link = `https://wa.me/${numeroWhatsApp}?text=${encodeURIComponent(mensagem)}`;
-        window.open(link, '_blank');
-      }
-
       return orderId;
     } catch (error: any) {
         toast({
