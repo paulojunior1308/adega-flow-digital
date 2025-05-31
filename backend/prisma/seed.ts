@@ -20,7 +20,7 @@ async function main() {
     END LOOP;
   END $$;
 `);
-console.log('Tabelas apagadas com sucesso!');
+console.log('Tabelas apagadas com sucesso!');*/
 
   // Adicionar usuário admin
   await prisma.user.upsert({
@@ -53,7 +53,7 @@ console.log('Tabelas apagadas com sucesso!');
       data: { name, active: true },
     });
   }
-  console.log('Categorias adicionadas com sucesso!'+ prisma.category.findMany());*/
+  console.log('Categorias adicionadas com sucesso!'+ prisma.category.findMany());
 }
 
 main()
