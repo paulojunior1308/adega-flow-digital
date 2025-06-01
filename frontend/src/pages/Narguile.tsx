@@ -59,17 +59,21 @@ const Narguile = () => {
   const [loading, setLoading] = useState(true);
   
   useEffect(() => {
-    const ids = [
-      '38b881e9-853a-4cbc-b37b-53e4fa96c553', // Essências
-      'e1415b1d-c6fc-475c-befb-67f5b27bcf27'  // Carvão
-    ];
-    Promise.all(ids.map(id => fetch(`https://adega-flow-digital.onrender.com/api/products?categoryId=${id}`).then(res => res.json())))
-      .then(results => {
-        setProducts(results.flat());
-        console.log('Produtos carregados para Narguile:', results.flat());
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
+    fetch('https://adega-flow-digital.onrender.com/api/products/categories')
+      .then(res => res.json())
+      .then(categories => {
+        const nomes = ['essência', 'essencia', 'carvão', 'carvao'];
+        const ids = categories.filter((cat: any) => 
+          nomes.some(nome => cat.name.toLowerCase().includes(nome))
+        ).map((cat: any) => cat.id);
+        if (ids.length === 0) return setLoading(false);
+        Promise.all(ids.map(id => fetch(`https://adega-flow-digital.onrender.com/api/products?categoryId=${id}`).then(res => res.json())))
+          .then(results => {
+            setProducts(results.flat());
+            setLoading(false);
+          })
+          .catch(() => setLoading(false));
+      });
   }, []);
 
   // Featured products
@@ -139,30 +143,14 @@ const Narguile = () => {
   const CATEGORIA_ESSENCIAS = '38b881e9-853a-4cbc-b37b-53e4fa96c553';
   const CATEGORIA_CARVAO = 'e1415b1d-c6fc-475c-befb-67f5b27bcf27';
   
-  // Filtro de produtos corrigido
+  // Filtro de produtos corrigido por nome da categoria
   const filteredProducts = products.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
       (product.description && product.description.toLowerCase().includes(searchTerm.toLowerCase()));
-
-    // Normaliza categoria para string
-    const categoriaNome = (product.category?.name || product.category || '').toLowerCase();
-    const categoriaId = product.categoryId || product.category?.id || '';
-
-    if (activeCategory === 'todos') {
-      return matchesSearch;
-    }
-    if (activeCategory === 'Essências') {
-      return matchesSearch && (
-        categoriaNome.includes('essênc') ||
-        categoriaId === CATEGORIA_ESSENCIAS
-      );
-    }
-    if (activeCategory === 'Carvão') {
-      return matchesSearch && (
-        categoriaNome.includes('carv') ||
-        categoriaId === CATEGORIA_CARVAO
-      );
-    }
+    const categoryName = (product.category && product.category.name ? product.category.name : product.category || '').toLowerCase();
+    if (activeCategory === 'todos') return matchesSearch;
+    if (activeCategory === 'Essências') return matchesSearch && categoryName.includes('essênc');
+    if (activeCategory === 'Carvão') return matchesSearch && categoryName.includes('carv');
     return matchesSearch;
   });
   

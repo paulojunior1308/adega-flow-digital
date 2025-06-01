@@ -281,14 +281,19 @@ const Bebidas = () => {
   const filteredProducts = products.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           (product.description && product.description.toLowerCase().includes(searchTerm.toLowerCase()));
-    // Novo filtro por categoria
-    const categoryName = (product.category && product.category.name ? product.category.name : product.category || '').toLowerCase();
-    const matchesCategory = activeCategory === 'todos' || categoryName.includes(activeCategory);
+
+    // Normaliza categoria para comparação
+    const categoryName = (product.category && product.category.name ? product.category.name : product.category || '').toLowerCase().normalize('NFD').replace(/[ -\u036f]/g, '');
+    const activeCategoryNormalized = activeCategory.toLowerCase().normalize('NFD').replace(/[ -\u036f]/g, '');
+
+    const matchesCategory = activeCategory === 'todos' || categoryName.includes(activeCategoryNormalized);
+
     // Extract numeric price value (remove 'R$ ' and convert ',' to '.')
     const numericPrice = typeof product.price === 'string'
       ? parseFloat(product.price.replace('R$ ', '').replace(',', '.'))
       : Number(product.price);
     const matchesPriceRange = numericPrice >= priceRange[0] && numericPrice <= priceRange[1];
+
     return matchesSearch && matchesCategory && matchesPriceRange;
   });
   
