@@ -281,15 +281,14 @@ const Bebidas = () => {
   const filteredProducts = products.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           (product.description && product.description.toLowerCase().includes(searchTerm.toLowerCase()));
-    
-    const matchesCategory = activeCategory === 'todos' || (product.category && product.category.name && product.category.name.toLowerCase().includes(activeCategory));
-    
+    // Novo filtro por categoria
+    const categoryName = (product.category && product.category.name ? product.category.name : product.category || '').toLowerCase();
+    const matchesCategory = activeCategory === 'todos' || categoryName.includes(activeCategory);
     // Extract numeric price value (remove 'R$ ' and convert ',' to '.')
     const numericPrice = typeof product.price === 'string'
       ? parseFloat(product.price.replace('R$ ', '').replace(',', '.'))
       : Number(product.price);
     const matchesPriceRange = numericPrice >= priceRange[0] && numericPrice <= priceRange[1];
-    
     return matchesSearch && matchesCategory && matchesPriceRange;
   });
   
@@ -312,27 +311,6 @@ const Bebidas = () => {
                 De cervejas artesanais a destilados premium, temos a bebida perfeita para sua ocasião
               </p>
             </div>
-          </div>
-        </section>
-        
-        {/* Featured Products Carousel */}
-        <section className="py-12 bg-white">
-          <div className="element-container">
-            <h2 className="element-heading mb-8">Destaques</h2>
-            
-            <Carousel className="mx-auto">
-              <CarouselContent>
-                {featuredProducts.map((product) => (
-                  <CarouselItem key={product.id} className="sm:basis-1/2 md:basis-1/3 lg:basis-1/4">
-                    <ProductCard product={product} />
-                  </CarouselItem>
-                ))}
-              </CarouselContent>
-              <div className="hidden md:flex">
-                <CarouselPrevious />
-                <CarouselNext />
-              </div>
-            </Carousel>
           </div>
         </section>
         
@@ -413,16 +391,10 @@ const Bebidas = () => {
             >
               <TabsList className="grid grid-cols-2 md:grid-cols-6 mb-6 bg-white overflow-x-auto">
                 <TabsTrigger value="todos">Todos</TabsTrigger>
-                <TabsTrigger value="cerveja" className="flex items-center">
-                  <Beer className="mr-2 h-4 w-4" /> Cervejas
-                </TabsTrigger>
-                <TabsTrigger value="destilado" className="flex items-center">
-                  <Martini className="mr-2 h-4 w-4" /> Destilados
-                </TabsTrigger>
-                <TabsTrigger value="vinho" className="flex items-center">
-                  <Wine className="mr-2 h-4 w-4" /> Vinhos
-                </TabsTrigger>
+                <TabsTrigger value="whisky">Whisky</TabsTrigger>
+                <TabsTrigger value="gin">GIN</TabsTrigger>
                 <TabsTrigger value="energetico">Energéticos</TabsTrigger>
+                <TabsTrigger value="cerveja">Cervejas</TabsTrigger>
                 <TabsTrigger value="refrigerante">Refrigerantes</TabsTrigger>
               </TabsList>
             </Tabs>

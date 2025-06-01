@@ -72,11 +72,7 @@ const PromoCard = ({ promo }: { promo: PromoCardProps }) => {
       </CardContent>
       
       <CardFooter className="p-0">
-        <div className="grid grid-cols-2 w-full">
-          <Button className="rounded-none bg-element-blue-dark text-white hover:bg-element-blue-neon hover:text-element-gray-dark h-12">
-            <Plus className="w-4 h-4 mr-2" /> Detalhes
-          </Button>
-        </div>
+        {/* Removido botão de detalhes */}
       </CardFooter>
     </Card>
   );

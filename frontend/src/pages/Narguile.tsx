@@ -139,15 +139,31 @@ const Narguile = () => {
   const CATEGORIA_ESSENCIAS = '38b881e9-853a-4cbc-b37b-53e4fa96c553';
   const CATEGORIA_CARVAO = 'e1415b1d-c6fc-475c-befb-67f5b27bcf27';
   
-  // Filtro de produtos
+  // Filtro de produtos corrigido
   const filteredProducts = products.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
       (product.description && product.description.toLowerCase().includes(searchTerm.toLowerCase()));
-    const matchesCategory =
-      activeCategory === 'todos' ||
-      (activeCategory === 'Essências' && (product.categoryId === CATEGORIA_ESSENCIAS || product.category?.id === CATEGORIA_ESSENCIAS)) ||
-      (activeCategory === 'Carvão' && (product.categoryId === CATEGORIA_CARVAO || product.category?.id === CATEGORIA_CARVAO));
-    return matchesSearch && matchesCategory;
+
+    // Normaliza categoria para string
+    const categoriaNome = (product.category?.name || product.category || '').toLowerCase();
+    const categoriaId = product.categoryId || product.category?.id || '';
+
+    if (activeCategory === 'todos') {
+      return matchesSearch;
+    }
+    if (activeCategory === 'Essências') {
+      return matchesSearch && (
+        categoriaNome.includes('essênc') ||
+        categoriaId === CATEGORIA_ESSENCIAS
+      );
+    }
+    if (activeCategory === 'Carvão') {
+      return matchesSearch && (
+        categoriaNome.includes('carv') ||
+        categoriaId === CATEGORIA_CARVAO
+      );
+    }
+    return matchesSearch;
   });
   
   // Após o filtro de produtos
