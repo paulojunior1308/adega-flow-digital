@@ -69,8 +69,8 @@ export const orderController = {
     console.log('Coordenadas cliente:', addressLat, addressLng);
     const distanceKm = calculateDistance(STORE_LOCATION.lat, STORE_LOCATION.lng, addressLat, addressLng);
     console.log('Distância calculada (km):', distanceKm);
-    if (distanceKm > 15) {
-      return res.status(400).json({ error: 'Desculpe, seu endereço está fora do alcance de entrega de 15km da loja.' });
+    if (distanceKm > 5) {
+      return res.status(400).json({ error: 'Desculpe, seu endereço está fora do alcance de entrega de 5km da loja.' });
     }
     const deliveryFee = Math.round((calculateDeliveryFee(distanceKm) + Number.EPSILON) * 100) / 100;
     console.log('Taxa de entrega calculada:', deliveryFee);
