@@ -61,7 +61,7 @@ const LocationContact = () => {
               title="Entrega"
               content={
                 <p className="text-element-gray-dark">
-                  Máx 15 km
+                  Máx 5 km
                 </p>
               }
             />
