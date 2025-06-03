@@ -319,7 +319,7 @@ const ClientCart = () => {
         statusText: "Aguardando confirmação",
         timestamp: new Date()
       });
-      toast({
+        toast({
         title: "Pedido enviado!",
         description: `Seu pedido #${orderId} foi enviado para processamento`,
         duration: 3000,
@@ -369,7 +369,7 @@ const ClientCart = () => {
     await sendOrder();
   };
   
-  return (
+      return (
     <div className="min-h-screen bg-element-gray-light pt-16 md:pt-0">
       <ClientSidebar />
       

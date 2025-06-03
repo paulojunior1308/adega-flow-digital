@@ -272,39 +272,22 @@ const Bebidas = () => {
       });
   }, []);
   
-  // Mapa de equivalência de categorias
-  const categoryMap = {
-    whisky: ['whisky', 'whiskys', 'whiskeys'],
-    gin: ['gin', 'gins'],
-    energetico: ['energetico', 'energético', 'energeticos', 'energéticos'],
-    cerveja: ['cerveja', 'cervejas'],
-    refrigerante: ['refrigerante', 'refrigerantes'],
-  };
-
   const filteredProducts = products.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           (product.description && product.description.toLowerCase().includes(searchTerm.toLowerCase()));
-
-    // Normaliza categoria para comparação (string ou objeto)
+    // Pega o nome exato da categoria
     let categoryName = '';
     if (typeof product.category === 'object' && product.category !== null) {
-      categoryName = (product.category.name || '').toLowerCase().normalize('NFD').replace(/[ -\u036f]/g, '');
+      categoryName = (product.category.name || '').trim();
     } else {
-      categoryName = (product.category || '').toLowerCase().normalize('NFD').replace(/[ -\u036f]/g, '');
+      categoryName = (product.category || '').trim();
     }
-
-    if (activeCategory === 'todos') return matchesSearch;
-
-    // Verifica se a categoria do produto está no grupo do filtro selecionado
-    const equivalentes = categoryMap[activeCategory] || [];
-    const matchesCategory = equivalentes.some(eq => categoryName.includes(eq));
-
-    // Filtro de preço
+    const matchesCategory = activeCategory === 'todos' || categoryName === activeCategory;
+    // Extract numeric price value (remove 'R$ ' and convert ',' to '.')
     const numericPrice = typeof product.price === 'string'
       ? parseFloat(product.price.replace('R$ ', '').replace(',', '.'))
       : Number(product.price);
     const matchesPriceRange = numericPrice >= priceRange[0] && numericPrice <= priceRange[1];
-
     return matchesSearch && matchesCategory && matchesPriceRange;
   });
   
@@ -421,11 +404,11 @@ const Bebidas = () => {
             >
               <TabsList className="grid grid-cols-2 md:grid-cols-6 mb-6 bg-white overflow-x-auto">
                 <TabsTrigger value="todos">Todos</TabsTrigger>
-                <TabsTrigger value="whisky">Whisky</TabsTrigger>
-                <TabsTrigger value="gin">GIN</TabsTrigger>
-                <TabsTrigger value="energetico">Energéticos</TabsTrigger>
-                <TabsTrigger value="cerveja">Cervejas</TabsTrigger>
-                <TabsTrigger value="refrigerante">Refrigerantes</TabsTrigger>
+                <TabsTrigger value="Whisky">Whisky</TabsTrigger>
+                <TabsTrigger value="GIN">GIN</TabsTrigger>
+                <TabsTrigger value="Energéticos">Energéticos</TabsTrigger>
+                <TabsTrigger value="Cervejas">Cervejas</TabsTrigger>
+                <TabsTrigger value="Refrigerantes">Refrigerantes</TabsTrigger>
               </TabsList>
             </Tabs>
           </div>
