@@ -122,18 +122,34 @@ export const cartController = {
       console.error('Produto não encontrado no banco:', productId);
       throw new AppError('Produto não encontrado', 404);
     }
-    // Sempre criar um novo CartItem para produto avulso
-    const item = await prisma.cartItem.create({
-      data: {
-        cartId: cart.id,
-        productId,
-        quantity,
-        comboId: null,
-        ...(price !== undefined ? { price } : {}),
-      },
-      include: { product: true },
+    // Verificar se já existe esse produto no carrinho
+    const existing = await prisma.cartItem.findFirst({
+      where: { cartId: cart.id, productId, comboId: null },
     });
-    res.status(201).json(item);
+    const totalQuantity = (existing?.quantity || 0) + quantity;
+    if (totalQuantity > product.stock) {
+      throw new AppError(`Estoque insuficiente. Só temos ${product.stock} unidade(s) de ${product.name}.`, 400);
+    }
+    if (existing) {
+      const updated = await prisma.cartItem.update({
+        where: { id: existing.id },
+        data: { quantity: totalQuantity },
+        include: { product: true },
+      });
+      return res.status(201).json(updated);
+    } else {
+      const item = await prisma.cartItem.create({
+        data: {
+          cartId: cart.id,
+          productId,
+          quantity,
+          comboId: null,
+          ...(price !== undefined ? { price } : {}),
+        },
+        include: { product: true },
+      });
+      return res.status(201).json(item);
+    }
   },
 
   // Atualizar quantidade de um item
