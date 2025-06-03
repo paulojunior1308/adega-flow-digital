@@ -118,11 +118,6 @@ const Narguile = () => {
             </div>
           </div>
         </CardContent>
-        <CardFooter className="p-0 mt-auto">
-          <Button className="rounded-none bg-element-blue-dark text-white hover:bg-element-blue-neon hover:text-element-gray-dark h-12 w-full">
-            <Plus className="w-4 h-4 mr-2" /> Detalhes
-          </Button>
-        </CardFooter>
       </Card>
     );
   };
@@ -157,6 +152,20 @@ const Narguile = () => {
   // Após o filtro de produtos
   console.log('Produtos filtrados:', filteredProducts);
   
+  if (loading) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Header />
+        <main className="flex-grow flex items-center justify-center">
+          <div className="text-center py-12">
+            <span>Carregando produtos...</span>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex flex-col">
       <Header />

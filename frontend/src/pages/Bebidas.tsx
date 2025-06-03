@@ -238,12 +238,6 @@ const ProductCard = ({ product }: { product: ProductProps }) => {
           )}
         </div>
       </CardContent>
-      
-      <CardFooter className="p-0 mt-auto">
-        <Button className="rounded-none bg-element-blue-dark text-white hover:bg-element-blue-neon hover:text-element-gray-dark h-12">
-          <Plus className="w-4 h-4 mr-2" /> Detalhes
-        </Button>
-      </CardFooter>
     </Card>
   );
 };
@@ -282,9 +276,16 @@ const Bebidas = () => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           (product.description && product.description.toLowerCase().includes(searchTerm.toLowerCase()));
 
-    // Normaliza categoria para comparação
-    const categoryName = (product.category && product.category.name ? product.category.name : product.category || '').toLowerCase().normalize('NFD').replace(/[ -\u036f]/g, '');
-    const activeCategoryNormalized = activeCategory.toLowerCase().normalize('NFD').replace(/[ -\u036f]/g, '');
+    // Normaliza categoria para comparação (string ou objeto)
+    let categoryName = '';
+    if (typeof product.category === 'object' && product.category !== null) {
+      categoryName = (product.category.name || '').toLowerCase();
+    } else {
+      categoryName = (product.category || '').toLowerCase();
+    }
+    categoryName = categoryName.normalize('NFD').replace(/[ 0-\u036f]/g, '');
+
+    const activeCategoryNormalized = activeCategory.toLowerCase().normalize('NFD').replace(/[ c0-\u036f]/g, '');
 
     const matchesCategory = activeCategory === 'todos' || categoryName.includes(activeCategoryNormalized);
 
@@ -296,6 +297,20 @@ const Bebidas = () => {
 
     return matchesSearch && matchesCategory && matchesPriceRange;
   });
+  
+  if (loading) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Header />
+        <main className="flex-grow flex items-center justify-center">
+          <div className="text-center py-12">
+            <span>Carregando produtos...</span>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
   
   return (
     <div className="min-h-screen flex flex-col">
