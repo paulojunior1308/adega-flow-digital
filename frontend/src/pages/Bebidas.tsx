@@ -272,6 +272,15 @@ const Bebidas = () => {
       });
   }, []);
   
+  // Mapa de equivalência de categorias
+  const categoryMap = {
+    whisky: ['whisky', 'whiskys', 'whiskeys'],
+    gin: ['gin', 'gins'],
+    energetico: ['energetico', 'energético', 'energeticos', 'energéticos'],
+    cerveja: ['cerveja', 'cervejas'],
+    refrigerante: ['refrigerante', 'refrigerantes'],
+  };
+
   const filteredProducts = products.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           (product.description && product.description.toLowerCase().includes(searchTerm.toLowerCase()));
@@ -279,17 +288,18 @@ const Bebidas = () => {
     // Normaliza categoria para comparação (string ou objeto)
     let categoryName = '';
     if (typeof product.category === 'object' && product.category !== null) {
-      categoryName = (product.category.name || '').toLowerCase();
+      categoryName = (product.category.name || '').toLowerCase().normalize('NFD').replace(/[ -\u036f]/g, '');
     } else {
-      categoryName = (product.category || '').toLowerCase();
+      categoryName = (product.category || '').toLowerCase().normalize('NFD').replace(/[ -\u036f]/g, '');
     }
-    categoryName = categoryName.normalize('NFD').replace(/[ 0-\u036f]/g, '');
 
-    const activeCategoryNormalized = activeCategory.toLowerCase().normalize('NFD').replace(/[ c0-\u036f]/g, '');
+    if (activeCategory === 'todos') return matchesSearch;
 
-    const matchesCategory = activeCategory === 'todos' || categoryName.includes(activeCategoryNormalized);
+    // Verifica se a categoria do produto está no grupo do filtro selecionado
+    const equivalentes = categoryMap[activeCategory] || [];
+    const matchesCategory = equivalentes.some(eq => categoryName.includes(eq));
 
-    // Extract numeric price value (remove 'R$ ' and convert ',' to '.')
+    // Filtro de preço
     const numericPrice = typeof product.price === 'string'
       ? parseFloat(product.price.replace('R$ ', '').replace(',', '.'))
       : Number(product.price);
