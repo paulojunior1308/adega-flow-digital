@@ -526,8 +526,8 @@ export default function AdminPromotionsAndCombos() {
                                 className="flex-1"
                               />
                             </div>
-                            <ScrollArea className="h-[200px] border rounded-md p-4">
-                              <div className="space-y-2">
+                            <ScrollArea className="h-[350px] border rounded-md p-4">
+                              <div className="space-y-4">
                                 {filteredProducts.map((product) => (
                                   <div
                                     key={product.id}
@@ -540,6 +540,60 @@ export default function AdminPromotionsAndCombos() {
                                       />
                                       <span>{product.name} - {formatPrice(product.price)}</span>
                                     </div>
+                                    {selectedProducts.includes(product.id) && (
+                                      <div className="flex flex-wrap items-center gap-2 mt-2">
+                                        <Select
+                                          value={productTypes[product.id] || 'fixed'}
+                                          onValueChange={(value) => setProductTypes(prev => ({
+                                            ...prev,
+                                            [product.id]: value as 'fixed' | 'choosable'
+                                          }))}
+                                        >
+                                          <SelectTrigger className="w-[100px]">
+                                            <SelectValue />
+                                          </SelectTrigger>
+                                          <SelectContent>
+                                            <SelectItem value="fixed">Fixo</SelectItem>
+                                            <SelectItem value="choosable">Escolhível</SelectItem>
+                                          </SelectContent>
+                                        </Select>
+                                        {productTypes[product.id] === 'choosable' && (
+                                          <>
+                                            <Select
+                                              value={choosableCategories[product.id] || ''}
+                                              onValueChange={value => setChoosableCategories(prev => ({ ...prev, [product.id]: value }))}
+                                            >
+                                              <SelectTrigger className="w-[140px]">
+                                                <SelectValue placeholder="Categoria" />
+                                              </SelectTrigger>
+                                              <SelectContent>
+                                                {categories.map(category => (
+                                                  <SelectItem key={category.id} value={category.id}>{category.name}</SelectItem>
+                                                ))}
+                                              </SelectContent>
+                                            </Select>
+                                            <Input
+                                              type="number"
+                                              min={1}
+                                              value={choosableQuantities[product.id] || 1}
+                                              onChange={e => setChoosableQuantities(q => ({ ...q, [product.id]: Number(e.target.value) }))}
+                                              className="w-16"
+                                              placeholder="Qtd"
+                                            />
+                                          </>
+                                        )}
+                                        {productTypes[product.id] !== 'choosable' && (
+                                          <Input
+                                            type="number"
+                                            min={1}
+                                            value={productQuantities[product.id] || 1}
+                                            onChange={e => setProductQuantities(q => ({ ...q, [product.id]: Number(e.target.value) }))}
+                                            className="w-16"
+                                            placeholder="Qtd"
+                                          />
+                                        )}
+                                      </div>
+                                    )}
                                   </div>
                                 ))}
                               </div>
@@ -683,8 +737,8 @@ export default function AdminPromotionsAndCombos() {
                       className="flex-1"
                     />
                   </div>
-                  <ScrollArea className="h-[200px] border rounded-md p-4">
-                    <div className="space-y-2">
+                  <ScrollArea className="h-[350px] border rounded-md p-4">
+                    <div className="space-y-4">
                       {filteredProducts.map((product) => (
                         <div
                           key={product.id}
@@ -698,7 +752,7 @@ export default function AdminPromotionsAndCombos() {
                             <span>{product.name} - {formatPrice(product.price)}</span>
                           </div>
                           {selectedProducts.includes(product.id) && (
-                            <div className="flex items-center gap-2">
+                            <div className="flex flex-wrap items-center gap-2 mt-2">
                               <Select
                                 value={productTypes[product.id] || 'fixed'}
                                 onValueChange={(value) => setProductTypes(prev => ({
@@ -819,8 +873,8 @@ export default function AdminPromotionsAndCombos() {
                     className="flex-1"
                   />
                 </div>
-                <ScrollArea className="h-[200px] border rounded-md p-4">
-                  <div className="space-y-2">
+                <ScrollArea className="h-[350px] border rounded-md p-4">
+                  <div className="space-y-4">
                     {filteredProducts.map((product) => (
                       <div
                         key={product.id}
@@ -834,7 +888,7 @@ export default function AdminPromotionsAndCombos() {
                           <span>{product.name} - {formatPrice(product.price)}</span>
                         </div>
                         {selectedProducts.includes(product.id) && (
-                          <div className="flex items-center gap-2">
+                          <div className="flex flex-wrap items-center gap-2 mt-2">
                             <Select
                               value={productTypes[product.id] || 'fixed'}
                               onValueChange={(value) => setProductTypes(prev => ({
@@ -967,18 +1021,20 @@ export default function AdminPromotionsAndCombos() {
                       className="flex-1"
                     />
                   </div>
-                  <ScrollArea className="h-[200px] border rounded-md p-4">
-                    <div className="space-y-2">
+                  <ScrollArea className="h-[350px] border rounded-md p-4">
+                    <div className="space-y-4">
                       {filteredProducts.map((product) => (
                         <div
                           key={product.id}
-                          className="flex items-center gap-2"
+                          className="flex items-center justify-between p-2 hover:bg-gray-100 rounded"
                         >
-                          <Checkbox
-                            checked={selectedProducts.includes(product.id)}
-                            onCheckedChange={() => handleProductSelect(product.id)}
-                          />
-                          <span>{product.name}</span>
+                          <div className="flex items-center gap-2">
+                            <Checkbox
+                              checked={selectedProducts.includes(product.id)}
+                              onCheckedChange={() => handleProductSelect(product.id)}
+                            />
+                            <span>{product.name}</span>
+                          </div>
                         </div>
                       ))}
                     </div>
