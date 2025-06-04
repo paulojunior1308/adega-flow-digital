@@ -39,6 +39,13 @@ interface Combo {
   items: ComboItem[];
 }
 
+const API_URL = 'https://adega-flow-digital.onrender.com';
+const getImageUrl = (image?: string) => {
+  if (!image) return '';
+  if (image.startsWith('http')) return image;
+  return `${API_URL}${image}`;
+};
+
 export function ComboCarousel() {
   const [combos, setCombos] = React.useState<Combo[]>([]);
   const [loading, setLoading] = React.useState(true);
@@ -105,7 +112,7 @@ export function ComboCarousel() {
                     {combo.image && (
                       <div className="relative aspect-video">
                         <img
-                          src={combo.image}
+                          src={getImageUrl(combo.image)}
                           alt={combo.name}
                           className="w-full h-full object-cover rounded-t-lg"
                         />

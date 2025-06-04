@@ -239,7 +239,7 @@ const ClientOrders = () => {
       case 'delivering':
         return { label: 'Saiu para entrega!', icon: <Truck className="h-6 w-6 text-purple-500" /> };
       case 'delivered':
-        return { label: 'Pedido entregue! Bom apetite!', icon: <CheckCircle className="h-6 w-6 text-green-500" /> };
+        return { label: 'Pedido entregue!', icon: <CheckCircle className="h-6 w-6 text-green-500" /> };
       case 'cancelled':
         return { label: 'Pedido cancelado pelo estabelecimento', icon: <XCircle className="h-6 w-6 text-red-500" /> };
       default:

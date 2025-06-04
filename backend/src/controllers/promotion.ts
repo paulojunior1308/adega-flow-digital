@@ -22,16 +22,14 @@ export const promotionController = {
 
   create: async (req: Request, res: Response) => {
     try {
-      const { name, description, price, originalPrice, productIds } = req.body;
-      const imageUrl = req.file ? `/uploads/${req.file.filename}` : null;
-
+      const { name, description, price, originalPrice, productIds, image } = req.body;
       const promotion = await prisma.promotion.create({
         data: {
           name,
           description,
           price: parseFloat(price),
           originalPrice: parseFloat(originalPrice),
-          image: imageUrl,
+          image: image || undefined,
           products: {
             connect: JSON.parse(productIds).map((id: string) => ({ id }))
           }
@@ -44,7 +42,6 @@ export const promotionController = {
           }
         }
       });
-
       res.json(promotion);
     } catch (error) {
       console.error('Erro ao criar promoção:', error);
@@ -55,9 +52,7 @@ export const promotionController = {
   update: async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
-      const { name, description, price, originalPrice, productIds, active } = req.body;
-      const imageUrl = req.file ? `/uploads/${req.file.filename}` : undefined;
-
+      const { name, description, price, originalPrice, productIds, active, image } = req.body;
       const promotion = await prisma.promotion.update({
         where: { id },
         data: {
@@ -66,7 +61,7 @@ export const promotionController = {
           price: parseFloat(price),
           originalPrice: parseFloat(originalPrice),
           active: active === 'true',
-          ...(imageUrl && { image: imageUrl }),
+          image: image || undefined,
           products: {
             set: JSON.parse(productIds).map((id: string) => ({ id }))
           }
@@ -79,7 +74,6 @@ export const promotionController = {
           }
         }
       });
-
       res.json(promotion);
     } catch (error) {
       console.error('Erro ao atualizar promoção:', error);

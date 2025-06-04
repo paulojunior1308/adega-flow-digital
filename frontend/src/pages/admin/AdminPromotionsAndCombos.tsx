@@ -21,6 +21,7 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { uploadToCloudinary } from '@/lib/cloudinary';
 
 interface Product {
   id: string;
@@ -154,30 +155,40 @@ export default function AdminPromotionsAndCombos() {
       toast.error('Selecione pelo menos um produto para o combo');
       return;
     }
-
     setIsSubmitting(true);
-    const formData = new FormData(e.currentTarget);
-    formData.append('items', JSON.stringify(
-      selectedProducts.map(productId => {
-        if (productTypes[productId] === 'choosable') {
+    const form = e.currentTarget;
+    const formData = new FormData(form);
+    let imageUrl = editingCombo.image || '';
+    const imageFile = formData.get('image') as File;
+    if (imageFile && imageFile.size > 0) {
+      imageUrl = await uploadToCloudinary(imageFile);
+    }
+    const comboData = {
+      name: formData.get('name'),
+      description: formData.get('description'),
+      price: formData.get('price'),
+      image: imageUrl,
+      items: JSON.stringify(
+        selectedProducts.map(productId => {
+          if (productTypes[productId] === 'choosable') {
+            return {
+              productId,
+              allowFlavorSelection: true,
+              categoryId: choosableCategories[productId],
+              quantity: choosableQuantities[productId] || 1
+            };
+          }
           return {
             productId,
-            allowFlavorSelection: true,
-            categoryId: choosableCategories[productId],
-            quantity: choosableQuantities[productId] || 1
+            allowFlavorSelection: false,
+            quantity: productQuantities[productId] || 1
           };
-        }
-        return {
-          productId,
-          allowFlavorSelection: false,
-          quantity: productQuantities[productId] || 1
-        };
-      })
-    ));
-    formData.append('active', String(editingCombo.active));
-
+        })
+      ),
+      active: String(editingCombo.active)
+    };
     try {
-      await api.put(`/admin/combos/${editingCombo.id}`, formData);
+      await api.put(`/admin/combos/${editingCombo.id}`, comboData);
       toast.success('Combo atualizado com sucesso');
       fetchData();
       resetForm();
@@ -195,13 +206,25 @@ export default function AdminPromotionsAndCombos() {
       toast.error('Selecione pelo menos um produto para a promoção');
       return;
     }
-
     setIsSubmitting(true);
-    const formData = new FormData(e.currentTarget);
-    formData.append('productIds', JSON.stringify(selectedProducts));
-
+    const form = e.currentTarget;
+    const formData = new FormData(form);
+    let imageUrl = editingPromotion.image || '';
+    const imageFile = formData.get('image') as File;
+    if (imageFile && imageFile.size > 0) {
+      imageUrl = await uploadToCloudinary(imageFile);
+    }
+    const promoData = {
+      name: formData.get('name'),
+      description: formData.get('description'),
+      price: formData.get('price'),
+      originalPrice: formData.get('originalPrice'),
+      image: imageUrl,
+      productIds: JSON.stringify(selectedProducts),
+      active: String(editingPromotion.active)
+    };
     try {
-      await api.put(`/admin/promotions/${editingPromotion.id}`, formData);
+      await api.put(`/admin/promotions/${editingPromotion.id}`, promoData);
       toast.success('Promoção atualizada com sucesso');
       fetchData();
       resetForm();
@@ -249,29 +272,39 @@ export default function AdminPromotionsAndCombos() {
       toast.error('Selecione pelo menos um produto para o combo');
       return;
     }
-
     setIsSubmitting(true);
-    const formData = new FormData(e.currentTarget);
-    formData.append('items', JSON.stringify(
-      selectedProducts.map(productId => {
-        if (productTypes[productId] === 'choosable') {
+    const form = e.currentTarget;
+    const formData = new FormData(form);
+    let imageUrl = '';
+    const imageFile = formData.get('image') as File;
+    if (imageFile && imageFile.size > 0) {
+      imageUrl = await uploadToCloudinary(imageFile);
+    }
+    const comboData = {
+      name: formData.get('name'),
+      description: formData.get('description'),
+      price: formData.get('price'),
+      image: imageUrl,
+      items: JSON.stringify(
+        selectedProducts.map(productId => {
+          if (productTypes[productId] === 'choosable') {
+            return {
+              productId,
+              allowFlavorSelection: true,
+              categoryId: choosableCategories[productId],
+              quantity: choosableQuantities[productId] || 1
+            };
+          }
           return {
             productId,
-            allowFlavorSelection: true,
-            categoryId: choosableCategories[productId],
-            quantity: choosableQuantities[productId] || 1
+            allowFlavorSelection: false,
+            quantity: productQuantities[productId] || 1
           };
-        }
-        return {
-          productId,
-          allowFlavorSelection: false,
-          quantity: productQuantities[productId] || 1
-        };
-      })
-    ));
-
+        })
+      )
+    };
     try {
-      await api.post('/admin/combos', formData);
+      await api.post('/admin/combos', comboData);
       toast.success('Combo criado com sucesso');
       fetchData();
       resetForm();
@@ -289,13 +322,24 @@ export default function AdminPromotionsAndCombos() {
       toast.error('Selecione pelo menos um produto para a promoção');
       return;
     }
-
     setIsSubmitting(true);
-    const formData = new FormData(e.currentTarget);
-    formData.append('productIds', JSON.stringify(selectedProducts));
-
+    const form = e.currentTarget;
+    const formData = new FormData(form);
+    let imageUrl = '';
+    const imageFile = formData.get('image') as File;
+    if (imageFile && imageFile.size > 0) {
+      imageUrl = await uploadToCloudinary(imageFile);
+    }
+    const promoData = {
+      name: formData.get('name'),
+      description: formData.get('description'),
+      price: formData.get('price'),
+      originalPrice: formData.get('originalPrice'),
+      image: imageUrl,
+      productIds: JSON.stringify(selectedProducts)
+    };
     try {
-      await api.post('/admin/promotions', formData);
+      await api.post('/admin/promotions', promoData);
       toast.success('Promoção criada com sucesso');
       fetchData();
       resetForm();

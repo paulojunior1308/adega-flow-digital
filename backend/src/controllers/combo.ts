@@ -26,16 +26,14 @@ export const comboController = {
 
   create: async (req: Request, res: Response) => {
     try {
-      const { name, description, price, items } = req.body;
-      const imageUrl = req.file ? `/uploads/${req.file.filename}` : null;
+      const { name, description, price, items, image } = req.body;
       const parsedItems = JSON.parse(items);
-
       const combo = await prisma.combo.create({
         data: {
           name,
           description,
           price: parseFloat(price),
-          image: imageUrl,
+          image: image || undefined,
           items: {
             create: parsedItems.map((item: any) => ({
               productId: item.productId,
@@ -58,7 +56,6 @@ export const comboController = {
           }
         }
       });
-
       res.json(combo);
     } catch (error) {
       console.error('Erro ao criar combo:', error);
@@ -69,16 +66,11 @@ export const comboController = {
   update: async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
-      const { name, description, price, items, active } = req.body;
-      const imageUrl = req.file ? `/uploads/${req.file.filename}` : undefined;
+      const { name, description, price, items, active, image } = req.body;
       const parsedItems = JSON.parse(items);
-
-      // Primeiro deletamos os items existentes
       await prisma.comboItem.deleteMany({
         where: { comboId: id }
       });
-
-      // Depois atualizamos o combo com os novos items
       const combo = await prisma.combo.update({
         where: { id },
         data: {
@@ -86,7 +78,7 @@ export const comboController = {
           description,
           price: parseFloat(price),
           active: active === 'true',
-          ...(imageUrl && { image: imageUrl }),
+          image: image || undefined,
           items: {
             create: parsedItems.map((item: any) => ({
               productId: item.productId,
@@ -109,7 +101,6 @@ export const comboController = {
           }
         }
       });
-
       res.json(combo);
     } catch (error) {
       console.error('Erro ao atualizar combo:', error);

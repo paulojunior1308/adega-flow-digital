@@ -63,6 +63,12 @@ export function PromotionCarousel() {
     return Math.round(((original - promotional) / original) * 100);
   };
 
+  const getImageUrl = (image?: string) => {
+    if (!image) return '';
+    if (image.startsWith('http')) return image;
+    return `${API_URL}${image}`;
+  };
+
   return (
     <section className="py-8 bg-muted/50">
       <div className="container">
@@ -81,7 +87,7 @@ export function PromotionCarousel() {
                   {promotion.image && (
                     <div className="relative w-full h-64 flex items-center justify-center bg-gray-50">
                       <img
-                        src={`${API_URL}${promotion.image}`}
+                        src={getImageUrl(promotion.image)}
                         alt={promotion.name}
                         className="w-full h-full object-contain p-4 rounded-t-lg"
                       />
