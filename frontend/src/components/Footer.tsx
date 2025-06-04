@@ -42,9 +42,7 @@ const Footer = () => {
               <Link to="/combos" className="hover:text-element-blue-neon transition-colors">Combos</Link>
               <Link to="/narguile" className="hover:text-element-blue-neon transition-colors">Narguilé</Link>
               <Link to="/bebidas" className="hover:text-element-blue-neon transition-colors">Bebidas</Link>
-              <Link to="/login" className="hover:text-element-blue-neon transition-colors">Área do Cliente</Link>
-              <Link to="/login-admin" className="hover:text-element-blue-neon transition-colors">Área Administrativa</Link>
-            </div>
+             </div>
           </div>
         </div>
         
