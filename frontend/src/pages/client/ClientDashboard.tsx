@@ -236,24 +236,23 @@ const ClientDashboard = () => {
             
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
               {getRandomProducts(recentProducts, 4).map((product) => (
-                <Link to={`/cliente-catalogo/produto/${product.id}`} key={product.id} style={{ textDecoration: 'none' }}>
-                  <ProductCard 
-                    id={product.id}
-                    image={getImageUrl(product.image)}
-                    title={product.name}
-                    price={`R$ ${product.price?.toFixed(2)}`}
-                    oldPrice={product.oldPrice ? `R$ ${product.oldPrice?.toFixed(2)}` : undefined}
-                    category={product.category?.name}
-                    onAddToCart={async (id) => {
-                      try {
-                        await api.post('/client/cart', { productId: id, quantity: 1 });
-                        toast({ title: 'Produto adicionado ao carrinho!' });
-                      } catch (err) {
-                        toast({ title: 'Erro ao adicionar ao carrinho', variant: 'destructive' });
-                      }
-                    }}
-                  />
-                </Link>
+                <ProductCard 
+                  key={product.id}
+                  id={product.id}
+                  image={getImageUrl(product.image)}
+                  title={product.name}
+                  price={`R$ ${product.price?.toFixed(2)}`}
+                  oldPrice={product.oldPrice ? `R$ ${product.oldPrice?.toFixed(2)}` : undefined}
+                  category={product.category?.name}
+                  onAddToCart={async (id) => {
+                    try {
+                      await api.post('/cart', { productId: id, quantity: 1 });
+                      toast({ title: 'Produto adicionado ao carrinho!' });
+                    } catch (err) {
+                      toast({ title: 'Erro ao adicionar ao carrinho', variant: 'destructive' });
+                    }
+                  }}
+                />
               ))}
             </div>
           </div>
