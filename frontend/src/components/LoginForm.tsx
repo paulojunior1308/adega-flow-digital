@@ -96,22 +96,7 @@ const LoginForm = () => {
           />
         </div>
         
-        <div className="flex items-center justify-between">
-          <div className="flex items-center">
-            <input
-              id="remember"
-              type="checkbox"
-              className="rounded border-element-gray-light mr-2"
-            />
-            <label htmlFor="remember" className="text-sm text-element-gray-dark">
-              Lembrar-me
-            </label>
-          </div>
-          
-          <a href="#" className="text-sm element-link">
-            Esqueceu a senha?
-          </a>
-        </div>
+        <div />
         
         <Button
           type="submit"
