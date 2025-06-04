@@ -160,8 +160,10 @@ export default function AdminPromotionsAndCombos() {
     const formData = new FormData(form);
     let imageUrl = editingCombo.image || '';
     const imageFile = formData.get('image') as File;
+    console.log('Arquivo de imagem (edição):', imageFile);
     if (imageFile && imageFile.size > 0) {
       imageUrl = await uploadToCloudinary(imageFile);
+      console.log('URL da imagem (Cloudinary, edição):', imageUrl);
     }
     const comboData = {
       name: formData.get('name'),
@@ -187,6 +189,7 @@ export default function AdminPromotionsAndCombos() {
       ),
       active: String(editingCombo.active)
     };
+    console.log('Payload enviado (edição):', comboData);
     try {
       await api.put(`/admin/combos/${editingCombo.id}`, comboData);
       toast.success('Combo atualizado com sucesso');
@@ -211,8 +214,10 @@ export default function AdminPromotionsAndCombos() {
     const formData = new FormData(form);
     let imageUrl = editingPromotion.image || '';
     const imageFile = formData.get('image') as File;
+    console.log('Arquivo de imagem (edição):', imageFile);
     if (imageFile && imageFile.size > 0) {
       imageUrl = await uploadToCloudinary(imageFile);
+      console.log('URL da imagem (Cloudinary, edição):', imageUrl);
     }
     const promoData = {
       name: formData.get('name'),
@@ -223,6 +228,7 @@ export default function AdminPromotionsAndCombos() {
       productIds: JSON.stringify(selectedProducts),
       active: String(editingPromotion.active)
     };
+    console.log('Payload enviado (edição):', promoData);
     try {
       await api.put(`/admin/promotions/${editingPromotion.id}`, promoData);
       toast.success('Promoção atualizada com sucesso');
@@ -277,8 +283,10 @@ export default function AdminPromotionsAndCombos() {
     const formData = new FormData(form);
     let imageUrl = '';
     const imageFile = formData.get('image') as File;
+    console.log('Arquivo de imagem (cadastro):', imageFile);
     if (imageFile && imageFile.size > 0) {
       imageUrl = await uploadToCloudinary(imageFile);
+      console.log('URL da imagem (Cloudinary, cadastro):', imageUrl);
     }
     const comboData = {
       name: formData.get('name'),
@@ -303,6 +311,7 @@ export default function AdminPromotionsAndCombos() {
         })
       )
     };
+    console.log('Payload enviado (cadastro):', comboData);
     try {
       await api.post('/admin/combos', comboData);
       toast.success('Combo criado com sucesso');
@@ -327,8 +336,10 @@ export default function AdminPromotionsAndCombos() {
     const formData = new FormData(form);
     let imageUrl = '';
     const imageFile = formData.get('image') as File;
+    console.log('Arquivo de imagem (cadastro):', imageFile);
     if (imageFile && imageFile.size > 0) {
       imageUrl = await uploadToCloudinary(imageFile);
+      console.log('URL da imagem (Cloudinary, cadastro):', imageUrl);
     }
     const promoData = {
       name: formData.get('name'),
@@ -338,6 +349,7 @@ export default function AdminPromotionsAndCombos() {
       image: imageUrl,
       productIds: JSON.stringify(selectedProducts)
     };
+    console.log('Payload enviado (cadastro):', promoData);
     try {
       await api.post('/admin/promotions', promoData);
       toast.success('Promoção criada com sucesso');
