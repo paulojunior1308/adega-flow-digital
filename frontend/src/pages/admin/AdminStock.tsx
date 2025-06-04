@@ -49,6 +49,7 @@ import {
 import { useToast } from "@/components/ui/use-toast";
 import api from '@/lib/axios';
 import { Switch } from '@/components/ui/switch';
+import { uploadToCloudinary } from '@/lib/cloudinary';
 
 // Product interface
 interface Product {
@@ -209,23 +210,20 @@ const AdminStock = () => {
   // Função para salvar as alterações
   const handleEditSave = async () => {
     try {
-      const formData = new FormData();
-      formData.append('name', editForm.name);
-      formData.append('categoryId', editForm.category);
-      formData.append('price', editForm.price);
-      formData.append('costPrice', editForm.costPrice);
-      formData.append('stock', editForm.stock);
-      formData.append('description', editForm.description);
+      let imageUrl = editingProduct?.image || '';
       if (editForm.image) {
-        formData.append('image', editForm.image);
+        // Função fictícia, substitua pelo seu método real de upload
+        imageUrl = await uploadToCloudinary(editForm.image);
       }
-
-      await api.put(`/admin/products/${editingProduct?.id}`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
+      await api.put(`/admin/products/${editingProduct?.id}`, {
+        name: editForm.name,
+        categoryId: editForm.category,
+        price: parseFloat(editForm.price),
+        costPrice: parseFloat(editForm.costPrice),
+        stock: parseInt(editForm.stock),
+        description: editForm.description,
+        image: imageUrl,
       });
-
       // Atualizar a lista de produtos
       const updatedProducts = products.map(p => 
         p.id === editingProduct?.id 
@@ -237,12 +235,12 @@ const AdminStock = () => {
                 name: categories.find(c => c.id === editForm.category)?.name || '' 
               },
               price: parseFloat(editForm.price),
-              stock: parseInt(editForm.stock)
+              stock: parseInt(editForm.stock),
+              image: imageUrl
             }
           : p
       );
       setProducts(updatedProducts);
-      
       toast({ title: 'Produto atualizado com sucesso!' });
       setIsEditDialogOpen(false);
     } catch (error: any) {
