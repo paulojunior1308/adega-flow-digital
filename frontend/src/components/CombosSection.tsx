@@ -12,13 +12,19 @@ import { api } from '@/lib/api';
 
 const API_URL = 'https://adega-flow-digital.onrender.com'; // URL base do backend
 
+const getImageUrl = (image?: string) => {
+  if (!image) return '';
+  if (image.startsWith('http')) return image;
+  return `${API_URL}${image}`;
+};
+
 const ComboCard = ({ title, items, price, bgColor, image }: any) => {
   return (
     <div className={`rounded-lg overflow-hidden shadow-md element-card-hover h-full ${bgColor}`}>
       {image && (
         <div className="w-full h-64 flex items-center justify-center bg-gray-50">
           <img 
-            src={`${API_URL}${image}`} 
+            src={getImageUrl(image)} 
             alt={title} 
             className="w-full h-full object-contain p-4" 
           />
