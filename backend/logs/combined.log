@@ -28012,3 +28012,108 @@
 {"level":"info","message":"127.0.0.1 - - [25/May/2025:16:02:57 +0000] \"GET /api/admin/combos HTTP/1.1\" 200 - \"http://localhost:8080/\" \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36 Edg/136.0.0.0\"","timestamp":"2025-05-25T16:02:57.741Z"}
 {"level":"info","message":"Cliente desconectado: I3iVMQRrUM_oGj_sAAAD","timestamp":"2025-05-25T16:03:15.075Z"}
 {"level":"info","message":"Cliente conectado: 6PjqMOlnB4_5Y24fAAAF","timestamp":"2025-05-25T16:03:17.049Z"}
+{"level":"info","message":"Servidor rodando na porta 3333","timestamp":"2025-06-03T20:18:43.095Z"}
+{"level":"info","message":"Cliente conectado: VtyVKeZostYCKF8NAAAB","timestamp":"2025-06-03T20:18:55.163Z"}
+{"level":"info","message":"Cliente desconectado: VtyVKeZostYCKF8NAAAB","timestamp":"2025-06-03T20:20:48.839Z"}
+{"level":"info","message":"Cliente conectado: u6bh8HJ0IGx7YFnIAAAD","timestamp":"2025-06-03T20:20:49.421Z"}
+{"level":"info","message":"Servidor rodando na porta 3333","timestamp":"2025-06-03T20:21:38.811Z"}
+{"level":"info","message":"Cliente conectado: w0DDr2IKI1Yfi3R-AAAB","timestamp":"2025-06-03T20:21:39.918Z"}
+{"level":"info","message":"Servidor rodando na porta 3333","timestamp":"2025-06-03T20:22:20.121Z"}
+{"level":"info","message":"Cliente conectado: axKxkW6XeU8vHnRNAAAB","timestamp":"2025-06-03T20:22:21.913Z"}
+{"level":"info","message":"Servidor rodando na porta 3333","timestamp":"2025-06-03T20:22:27.572Z"}
+{"level":"info","message":"Cliente conectado: ZVt0Q0_5OrBbAYzeAAAB","timestamp":"2025-06-03T20:22:27.914Z"}
+{"level":"info","message":"Servidor rodando na porta 3333","timestamp":"2025-06-03T20:22:37.402Z"}
+{"level":"info","message":"Cliente conectado: C3DiuKmkYAahSyQEAAAB","timestamp":"2025-06-03T20:22:37.920Z"}
+{"level":"info","message":"Info do Prisma:","timestamp":"2025-06-03T20:22:48.179Z"}
+{"level":"debug","message":"Query:","timestamp":"2025-06-03T20:22:48.223Z"}
+{"level":"error","message":"Erro não tratado: Credenciais inválidas","stack":"Error: Credenciais inválidas\n    at login (C:\\adega-flow-digital\\backend\\src\\controllers\\client.ts:70:13)","statusCode":401,"timestamp":"2025-06-03T20:22:48.232Z"}
+{"level":"info","message":"127.0.0.1 - - [03/Jun/2025:20:22:55 +0000] \"POST /api/login HTTP/1.1\" - - \"http://localhost:8080/\" \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36\"","timestamp":"2025-06-03T20:22:55.254Z"}
+{"level":"info","message":"Cliente desconectado: C3DiuKmkYAahSyQEAAAB","timestamp":"2025-06-03T20:22:55.259Z"}
+{"level":"info","message":"Cliente conectado: P_ujHbNSylLM4xJ1AAAD","timestamp":"2025-06-03T20:22:55.846Z"}
+{"level":"debug","message":"Query:","timestamp":"2025-06-03T20:23:01.464Z"}
+{"level":"error","message":"Erro não tratado: Credenciais inválidas","stack":"Error: Credenciais inválidas\n    at login (C:\\adega-flow-digital\\backend\\src\\controllers\\client.ts:70:13)","statusCode":401,"timestamp":"2025-06-03T20:23:01.473Z"}
+{"level":"info","message":"Servidor rodando na porta 3333","timestamp":"2025-06-03T20:24:19.836Z"}
+{"level":"info","message":"Cliente conectado: f2Q6qRJSM4FI9OteAAAB","timestamp":"2025-06-03T20:24:19.935Z"}
+{"level":"info","message":"Cliente desconectado: f2Q6qRJSM4FI9OteAAAB","timestamp":"2025-06-03T20:27:26.043Z"}
+{"level":"info","message":"Cliente conectado: SP8JUnJ4NY0ijJz_AAAD","timestamp":"2025-06-03T20:27:26.599Z"}
+{"level":"info","message":"Info do Prisma:","timestamp":"2025-06-03T20:27:30.591Z"}
+{"level":"debug","message":"Query:","timestamp":"2025-06-03T20:27:30.633Z"}
+{"level":"info","message":"127.0.0.1 - - [03/Jun/2025:20:27:30 +0000] \"POST /api/login HTTP/1.1\" 200 381 \"http://localhost:8080/\" \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36\"","timestamp":"2025-06-03T20:27:30.712Z"}
+{"level":"debug","message":"Query:","timestamp":"2025-06-03T20:27:30.840Z"}
+{"level":"debug","message":"Query:","timestamp":"2025-06-03T20:27:30.844Z"}
+{"level":"debug","message":"Query:","timestamp":"2025-06-03T20:27:30.848Z"}
+{"level":"info","message":"127.0.0.1 - - [03/Jun/2025:20:27:30 +0000] \"GET /api/admin-relatorios HTTP/1.1\" 200 61 \"http://localhost:8080/\" \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36\"","timestamp":"2025-06-03T20:27:30.851Z"}
+{"level":"debug","message":"Query:","timestamp":"2025-06-03T20:27:30.861Z"}
+{"level":"info","message":"127.0.0.1 - - [03/Jun/2025:20:27:30 +0000] \"GET /api/admin-estoque HTTP/1.1\" 200 2 \"http://localhost:8080/\" \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36\"","timestamp":"2025-06-03T20:27:30.863Z"}
+{"level":"debug","message":"Query:","timestamp":"2025-06-03T20:27:30.877Z"}
+{"level":"info","message":"127.0.0.1 - - [03/Jun/2025:20:27:30 +0000] \"GET /api/admin/products HTTP/1.1\" 200 2 \"http://localhost:8080/\" \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36\"","timestamp":"2025-06-03T20:27:30.879Z"}
+{"level":"debug","message":"Query:","timestamp":"2025-06-03T20:27:30.883Z"}
+{"level":"info","message":"127.0.0.1 - - [03/Jun/2025:20:27:30 +0000] \"GET /api/admin/orders HTTP/1.1\" 200 2 \"http://localhost:8080/\" \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36\"","timestamp":"2025-06-03T20:27:30.885Z"}
+{"level":"debug","message":"Query:","timestamp":"2025-06-03T20:27:33.320Z"}
+{"level":"info","message":"127.0.0.1 - - [03/Jun/2025:20:27:33 +0000] \"GET /api/admin/products HTTP/1.1\" 304 - \"http://localhost:8080/\" \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36\"","timestamp":"2025-06-03T20:27:33.322Z"}
+{"level":"debug","message":"Query:","timestamp":"2025-06-03T20:27:33.323Z"}
+{"level":"info","message":"127.0.0.1 - - [03/Jun/2025:20:27:33 +0000] \"GET /api/admin/categories HTTP/1.1\" 200 2 \"http://localhost:8080/\" \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36\"","timestamp":"2025-06-03T20:27:33.325Z"}
+{"level":"debug","message":"Query:","timestamp":"2025-06-03T20:27:34.432Z"}
+{"level":"info","message":"127.0.0.1 - - [03/Jun/2025:20:27:34 +0000] \"GET /api/admin/categories HTTP/1.1\" 304 - \"http://localhost:8080/\" \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36\"","timestamp":"2025-06-03T20:27:34.435Z"}
+{"level":"info","message":"Cliente desconectado: SP8JUnJ4NY0ijJz_AAAD","timestamp":"2025-06-03T20:28:53.698Z"}
+{"level":"info","message":"Cliente conectado: 6XvwFETxJEGDBrdkAAAF","timestamp":"2025-06-03T20:28:54.594Z"}
+{"level":"info","message":"127.0.0.1 - - [03/Jun/2025:20:28:54 +0000] \"GET /api/admin/categories HTTP/1.1\" 401 36 \"http://localhost:8080/\" \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36\"","timestamp":"2025-06-03T20:28:54.728Z"}
+{"level":"info","message":"Cliente desconectado: 6XvwFETxJEGDBrdkAAAF","timestamp":"2025-06-03T20:28:54.769Z"}
+{"level":"info","message":"Cliente conectado: tdjP989X57D3JNGFAAAH","timestamp":"2025-06-03T20:28:55.564Z"}
+{"level":"debug","message":"Query:","timestamp":"2025-06-03T20:28:59.349Z"}
+{"level":"debug","message":"Query:","timestamp":"2025-06-03T20:28:59.354Z"}
+{"level":"info","message":"127.0.0.1 - - [03/Jun/2025:20:28:59 +0000] \"POST /api/login HTTP/1.1\" 200 381 \"http://localhost:8080/\" \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36\"","timestamp":"2025-06-03T20:28:59.451Z"}
+{"level":"debug","message":"Query:","timestamp":"2025-06-03T20:28:59.508Z"}
+{"level":"debug","message":"Query:","timestamp":"2025-06-03T20:28:59.509Z"}
+{"level":"info","message":"127.0.0.1 - - [03/Jun/2025:20:28:59 +0000] \"GET /api/admin/orders HTTP/1.1\" 304 - \"http://localhost:8080/\" \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36\"","timestamp":"2025-06-03T20:28:59.510Z"}
+{"level":"debug","message":"Query:","timestamp":"2025-06-03T20:28:59.511Z"}
+{"level":"debug","message":"Query:","timestamp":"2025-06-03T20:28:59.515Z"}
+{"level":"info","message":"127.0.0.1 - - [03/Jun/2025:20:28:59 +0000] \"GET /api/admin-relatorios HTTP/1.1\" 304 - \"http://localhost:8080/\" \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36\"","timestamp":"2025-06-03T20:28:59.517Z"}
+{"level":"debug","message":"Query:","timestamp":"2025-06-03T20:28:59.532Z"}
+{"level":"info","message":"127.0.0.1 - - [03/Jun/2025:20:28:59 +0000] \"GET /api/admin-estoque HTTP/1.1\" 304 - \"http://localhost:8080/\" \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36\"","timestamp":"2025-06-03T20:28:59.536Z"}
+{"level":"debug","message":"Query:","timestamp":"2025-06-03T20:28:59.546Z"}
+{"level":"info","message":"127.0.0.1 - - [03/Jun/2025:20:28:59 +0000] \"GET /api/admin/products HTTP/1.1\" 304 - \"http://localhost:8080/\" \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36\"","timestamp":"2025-06-03T20:28:59.548Z"}
+{"level":"debug","message":"Query:","timestamp":"2025-06-03T20:29:01.584Z"}
+{"level":"info","message":"127.0.0.1 - - [03/Jun/2025:20:29:01 +0000] \"GET /api/admin/products HTTP/1.1\" 304 - \"http://localhost:8080/\" \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36\"","timestamp":"2025-06-03T20:29:01.585Z"}
+{"level":"debug","message":"Query:","timestamp":"2025-06-03T20:29:01.586Z"}
+{"level":"info","message":"127.0.0.1 - - [03/Jun/2025:20:29:01 +0000] \"GET /api/admin/categories HTTP/1.1\" 200 752 \"http://localhost:8080/\" \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36\"","timestamp":"2025-06-03T20:29:01.588Z"}
+{"level":"debug","message":"Query:","timestamp":"2025-06-03T20:29:02.582Z"}
+{"level":"info","message":"127.0.0.1 - - [03/Jun/2025:20:29:02 +0000] \"GET /api/admin/categories HTTP/1.1\" 304 - \"http://localhost:8080/\" \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36\"","timestamp":"2025-06-03T20:29:02.585Z"}
+{"level":"debug","message":"Query:","timestamp":"2025-06-03T20:29:29.784Z"}
+{"level":"debug","message":"Query:","timestamp":"2025-06-03T20:29:29.787Z"}
+{"level":"debug","message":"Query:","timestamp":"2025-06-03T20:29:29.791Z"}
+{"level":"debug","message":"Query:","timestamp":"2025-06-03T20:29:29.793Z"}
+{"level":"debug","message":"Query:","timestamp":"2025-06-03T20:29:29.795Z"}
+{"level":"debug","message":"Query:","timestamp":"2025-06-03T20:29:29.814Z"}
+{"level":"info","message":"127.0.0.1 - - [03/Jun/2025:20:29:29 +0000] \"POST /api/admin/products HTTP/1.1\" 200 707 \"http://localhost:8080/\" \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36\"","timestamp":"2025-06-03T20:29:29.817Z"}
+{"level":"debug","message":"Query:","timestamp":"2025-06-03T20:29:31.861Z"}
+{"level":"debug","message":"Query:","timestamp":"2025-06-03T20:29:31.862Z"}
+{"level":"debug","message":"Query:","timestamp":"2025-06-03T20:29:31.863Z"}
+{"level":"info","message":"127.0.0.1 - - [03/Jun/2025:20:29:31 +0000] \"GET /api/admin/products HTTP/1.1\" 200 598 \"http://localhost:8080/\" \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36\"","timestamp":"2025-06-03T20:29:31.864Z"}
+{"level":"debug","message":"Query:","timestamp":"2025-06-03T20:29:31.864Z"}
+{"level":"info","message":"127.0.0.1 - - [03/Jun/2025:20:29:31 +0000] \"GET /api/admin/categories HTTP/1.1\" 304 - \"http://localhost:8080/\" \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36\"","timestamp":"2025-06-03T20:29:31.865Z"}
+{"level":"info","message":"Servidor rodando na porta 3333","timestamp":"2025-06-03T20:31:55.450Z"}
+{"level":"info","message":"Cliente conectado: k6SGWKvG90cyHkHwAAAB","timestamp":"2025-06-03T20:31:55.913Z"}
+{"level":"info","message":"Servidor rodando na porta 3333","timestamp":"2025-06-03T20:32:10.164Z"}
+{"level":"info","message":"Cliente conectado: hRX4fgH_Lj24euI-AAAB","timestamp":"2025-06-03T20:32:10.921Z"}
+{"level":"info","message":"Servidor rodando na porta 3333","timestamp":"2025-06-03T20:32:18.676Z"}
+{"level":"info","message":"Cliente conectado: XZYDQrymWsuhqzn9AAAB","timestamp":"2025-06-03T20:32:18.921Z"}
+{"level":"info","message":"Info do Prisma:","timestamp":"2025-06-03T20:37:17.885Z"}
+{"level":"debug","message":"Query:","timestamp":"2025-06-03T20:37:17.925Z"}
+{"level":"info","message":"127.0.0.1 - - [03/Jun/2025:20:37:17 +0000] \"GET /api/admin/users?roles=USER HTTP/1.1\" 200 2 \"http://localhost:8080/\" \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36\"","timestamp":"2025-06-03T20:37:17.928Z"}
+{"level":"info","message":"Servidor rodando na porta 3333","timestamp":"2025-06-03T20:38:46.477Z"}
+{"level":"info","message":"Cliente conectado: F5ZxIHC_FA38bO6nAAAB","timestamp":"2025-06-03T20:38:46.917Z"}
+{"level":"info","message":"Servidor rodando na porta 3333","timestamp":"2025-06-03T20:39:00.590Z"}
+{"level":"info","message":"Cliente conectado: c17DK3wLiN-i2o0iAAAB","timestamp":"2025-06-03T20:39:01.912Z"}
+{"level":"info","message":"Servidor rodando na porta 3333","timestamp":"2025-06-03T20:40:50.256Z"}
+{"level":"info","message":"Cliente conectado: _WB8rdhoHDKb2OhfAAAB","timestamp":"2025-06-03T20:40:50.868Z"}
+{"level":"info","message":"Info do Prisma:","timestamp":"2025-06-03T20:40:51.042Z"}
+{"level":"debug","message":"Query:","timestamp":"2025-06-03T20:40:51.117Z"}
+{"level":"info","message":"127.0.0.1 - - [03/Jun/2025:20:40:51 +0000] \"GET /api/admin/users?roles=USER HTTP/1.1\" 304 - \"http://localhost:8080/\" \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36\"","timestamp":"2025-06-03T20:40:51.126Z"}
+{"level":"info","message":"Servidor rodando na porta 3333","timestamp":"2025-06-03T20:41:07.300Z"}
+{"level":"info","message":"Cliente conectado: ltVa6SV8eDioDZ-DAAAB","timestamp":"2025-06-03T20:41:07.913Z"}
+{"level":"info","message":"Servidor rodando na porta 3333","timestamp":"2025-06-03T20:41:17.579Z"}
+{"level":"info","message":"Cliente conectado: gWTXBF8zqrfQf3gNAAAB","timestamp":"2025-06-03T20:41:17.919Z"}
+{"level":"info","message":"Servidor rodando na porta 3333","timestamp":"2025-06-03T20:46:00.669Z"}
+{"level":"info","message":"Servidor rodando na porta 3333","timestamp":"2025-06-03T20:46:03.010Z"}
+{"level":"info","message":"Cliente conectado: cYMG9xzl4gazN65AAAAB","timestamp":"2025-06-03T20:46:03.281Z"}

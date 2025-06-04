@@ -52,8 +52,8 @@ router.patch('/orders/:id/pix-status', orderController.updatePixStatus);
 // Rotas de produtos
 router.get('/products', productController.list);
 router.get('/products/categories', productController.listCategories);
-router.post('/products', upload.single('image'), productController.create);
-router.put('/products/:id', upload.single('image'), productController.update);
+router.post('/products', productController.create);
+router.put('/products/:id', productController.update);
 router.delete('/products/:id', productController.delete);
 router.patch('/products/:id/pinned', productController.updatePinned);
 router.put('/products/:id/stock', productController.updateStock);

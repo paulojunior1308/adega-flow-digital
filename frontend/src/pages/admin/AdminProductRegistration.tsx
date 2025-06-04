@@ -29,7 +29,6 @@ import { useToast } from "@/components/ui/use-toast";
 import { useForm } from "react-hook-form";
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '@/lib/axios';
-import { Product } from '@/types/product';
 
 interface Category {
   id: string;
@@ -46,13 +45,28 @@ interface ProductFormValues {
   image: FileList | null;
 }
 
+const CLOUDINARY_CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
+const CLOUDINARY_UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
+
+async function uploadToCloudinary(file: File): Promise<string> {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+  const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, {
+    method: 'POST',
+    body: formData,
+  });
+  const data = await res.json();
+  return data.secure_url;
+}
+
 const AdminProductRegistration = () => {
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const { toast } = useToast();
   const navigate = useNavigate();
   const { id } = useParams();
-  const [product, setProduct] = useState<Product | null>(null);
+  const [product, setProduct] = useState<any>(null);
   
   const form = useForm<ProductFormValues>({
     defaultValues: {
@@ -99,14 +113,10 @@ const AdminProductRegistration = () => {
     }
   }, [id, form]);
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPreviewImage(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+      setPreviewImage(URL.createObjectURL(file));
       form.setValue("image", e.target.files as FileList);
     }
   };
@@ -129,23 +139,23 @@ const AdminProductRegistration = () => {
       });
       return;
     }
-
-    const formData = new FormData();
-    formData.append('name', data.name);
-    formData.append('categoryId', data.category);
-    formData.append('price', price.toString());
-    formData.append('costPrice', costPrice.toString());
-    formData.append('stock', data.stock);
-    formData.append('description', data.description || '');
+    let imageUrl = '';
     if (data.image?.[0]) {
-      formData.append('image', data.image[0]);
+      imageUrl = await uploadToCloudinary(data.image[0]);
     }
 
     try {
       const token = JSON.parse(localStorage.getItem('auth-storage') || '{}')?.state?.token;
-      await api.post('/admin/products', formData, {
+      await api.post('/admin/products', {
+        name: data.name,
+        categoryId: data.category,
+        price,
+        costPrice,
+        stock: data.stock,
+        description: data.description || '',
+        image: imageUrl,
+      }, {
         headers: {
-          'Content-Type': 'multipart/form-data',
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
       });
