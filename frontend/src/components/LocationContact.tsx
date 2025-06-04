@@ -40,7 +40,7 @@ const LocationContact = () => {
               title="Telefone"
               content={
                 <p className="text-element-gray-dark">
-                  <a href="tel:+5511958668304" className="element-link">(11) 95866-8304</a>
+                  <a href="tel:+5511968681952" className="element-link">(11) 96868-1952</a>
                 </p>
               }
             />

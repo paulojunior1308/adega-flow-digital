@@ -1,4 +1,3 @@
-
 import { Link } from 'react-router-dom';
 import { MapPin, Phone, Mail } from 'lucide-react';
 
@@ -23,11 +22,11 @@ const Footer = () => {
             <div className="flex flex-col space-y-2">
               <p className="flex items-center justify-center md:justify-start">
                 <MapPin className="mr-2 h-5 w-5 text-element-blue-neon" />
-                Av. Principal, 123 - Vila Nova
+                Av. Antônio Carlos Benjamin dos Santos, 1663 - Jardim São Bernardo
               </p>
               <p className="flex items-center justify-center md:justify-start">
                 <Phone className="mr-2 h-5 w-5 text-element-blue-neon" />
-                (11) 98765-4321
+                (11) 96868-1952
               </p>
               <p className="flex items-center justify-center md:justify-start">
                 <Mail className="mr-2 h-5 w-5 text-element-blue-neon" />
@@ -56,6 +55,9 @@ const Footer = () => {
           </p>
         </div>
       </div>
+      <footer className="text-center text-xs text-gray-400 py-4">
+        Desenvolvido por <a href="https://www.jrtechnologysolutions.com.br" target="_blank" rel="noopener noreferrer" className="underline hover:text-blue-600">Jr Technology Solutions</a>
+      </footer>
     </footer>
   );
 };
