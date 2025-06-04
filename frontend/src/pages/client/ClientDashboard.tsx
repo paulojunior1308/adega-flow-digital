@@ -66,6 +66,12 @@ const categoryImages = {
   'Gelo de Coco': '/uploads/gelo-de-coco.png',
 };
 
+const getImageUrl = (image?: string) => {
+  if (!image) return '';
+  if (image.startsWith('http')) return image;
+  return `${API_URL}${image}`;
+};
+
 const ClientDashboard = () => {
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = React.useState('');
@@ -185,7 +191,7 @@ const ClientDashboard = () => {
               <div className="w-full md:w-1/3 lg:w-1/4 flex items-center justify-center">
                 {promotions.length > 0 && promotions[specialPromotionIndex].image && (
                   <img
-                    src={`${API_URL}${promotions[specialPromotionIndex].image}`}
+                    src={getImageUrl(promotions[specialPromotionIndex].image)}
                     alt={promotions[specialPromotionIndex].name}
                     className="w-full h-48 object-contain rounded-md bg-white p-2"
                   />
@@ -208,7 +214,7 @@ const ClientDashboard = () => {
                 <Link to={`/cliente-catalogo/produto/${product.id}`} key={product.id}>
                   <ProductCard 
                     id={product.id}
-                    image={product.image ? `${API_URL}${product.image}` : ''}
+                    image={getImageUrl(product.image)}
                     title={product.name}
                     price={`R$ ${product.price?.toFixed(2)}`}
                     oldPrice={product.oldPrice ? `R$ ${product.oldPrice?.toFixed(2)}` : undefined}
@@ -233,7 +239,7 @@ const ClientDashboard = () => {
                 <Link to={`/cliente-catalogo/produto/${product.id}`} key={product.id} style={{ textDecoration: 'none' }}>
                   <ProductCard 
                     id={product.id}
-                    image={product.image ? `${API_URL}${product.image}` : ''}
+                    image={getImageUrl(product.image)}
                     title={product.name}
                     price={`R$ ${product.price?.toFixed(2)}`}
                     oldPrice={product.oldPrice ? `R$ ${product.oldPrice?.toFixed(2)}` : undefined}
@@ -264,7 +270,7 @@ const ClientDashboard = () => {
                   className="element-card flex flex-col items-center justify-center p-6 text-center element-card-hover"
                 >
                   <img 
-                    src={category.image ? `${API_URL}${category.image}` : (categoryImages[category.name] ? `${API_URL}${categoryImages[category.name]}` : 'https://images.unsplash.com/photo-1618160702438-9b02ab6515c9')} 
+                    src={getImageUrl(category.image) || (categoryImages[category.name] ? `${API_URL}${categoryImages[category.name]}` : 'https://images.unsplash.com/photo-1618160702438-9b02ab6515c9')} 
                     alt={category.name} 
                     className="w-16 h-16 object-cover rounded-full mb-3"
                   />
