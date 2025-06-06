@@ -85,6 +85,53 @@ interface Order {
   deliveryFee?: number;
 }
 
+// Coordenadas da loja (exemplo, ajuste conforme necessário)
+const STORE_LOCATION = { lat: -23.123456, lng: -46.123456 };
+
+function calcularDistanciaKm(lat1: number, lng1: number, lat2: number, lng2: number) {
+  const toRad = (value: number) => (value * Math.PI) / 180;
+  const R = 6371; // Raio da Terra em km
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRad(lat1)) *
+      Math.cos(toRad(lat2)) *
+      Math.sin(dLng / 2) *
+      Math.sin(dLng / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+function openWhatsappEntrega(order: Order) {
+  const numeroWhatsApp = order.contactPhone?.replace(/\D/g, '') || '';
+  let tempoEstimado = '-';
+  if (order.deliveryLat && order.deliveryLng) {
+    const distancia = calcularDistanciaKm(
+      STORE_LOCATION.lat,
+      STORE_LOCATION.lng,
+      order.deliveryLat,
+      order.deliveryLng
+    );
+    const velocidadeMedia = 30; // km/h
+    tempoEstimado = Math.max(5, Math.round((distancia / velocidadeMedia) * 60)); // minutos, mínimo 5
+  }
+  const mensagem =
+    `*Seu pedido saiu para entrega!*\n\n` +
+    `Estimativa de chegada: *${tempoEstimado} minutos*.\n` +
+    `Acompanhe seu pedido pelo site.\n\n` +
+    `*Pedido:* ${order.id}\n` +
+    `*Endereço:* ${order.address}\n` +
+    `*Total:* R$ ${order.total.toFixed(2)}\n` +
+    `------------------------------\n` +
+    `*Element Adega*`;
+
+  if (numeroWhatsApp.length >= 10) {
+    const link = `https://wa.me/55${numeroWhatsApp}?text=${encodeURIComponent(mensagem)}`;
+    window.open(link, '_blank');
+  }
+}
+
 const AdminOrders = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
@@ -299,7 +346,10 @@ const AdminOrders = () => {
                       <Button 
                         size="sm" 
                         className="w-full"
-                        onClick={() => updateOrderStatus(selectedOrder, 'delivering')}
+                        onClick={() => {
+                          openWhatsappEntrega(selectedOrder);
+                          updateOrderStatus(selectedOrder, 'delivering');
+                        }}
                       >
                         <Truck className="h-4 w-4 mr-1" /> Enviar para entrega
                       </Button>
@@ -640,7 +690,10 @@ const AdminOrders = () => {
                           <Button
                             variant="default"
                             size="sm"
-                            onClick={() => updateOrderStatus(order, 'delivering')}
+                            onClick={() => {
+                              openWhatsappEntrega(order);
+                              updateOrderStatus(order, 'delivering');
+                            }}
                           >
                             <Truck className="h-4 w-4" />
                             <span className="sr-only md:not-sr-only md:ml-2">Saiu para entrega</span>
