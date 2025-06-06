@@ -329,6 +329,31 @@ const ClientCart = () => {
       setTimeout(() => {
         navigate('/cliente-pedidos');
       }, 2000);
+
+      const selectedPayment = paymentMethods.find(m => m.id === paymentMethod);
+      if (user && orderId && selectedPayment) {
+        const numeroWhatsApp = '5511968681952'; // Seu número
+        const produtosMsg = cart.map((item: any) => {
+          const nome = item.product?.name || item.productName || '';
+          const quantidade = item.quantity || 1;
+          const preco = (item.price ?? item.product?.price ?? 0).toFixed(2).replace('.', ',');
+          const totalItem = ((item.price ?? item.product?.price ?? 0) * quantidade).toFixed(2).replace('.', ',');
+          return `- *${quantidade}x ${nome}* (R$ ${preco} cada) = R$ ${totalItem}`;
+        }).join('\n');
+        const totalPedido = cart.reduce((sum, item) => sum + ((item.price ?? item.product.price) * item.quantity), 0).toFixed(2).replace('.', ',');
+        const mensagem =
+          `Olá, acabei de finalizar meu pedido pelo site.\n\n` +
+          `Dados do pedido:\n` +
+          `Nome: *${user.name}*\n` +
+          `Telefone: *${user.phone}*\n` +
+          `Pedido: *#${orderId}*\n` +
+          `Forma de pagamento: *${selectedPayment.name}*\n\n` +
+          `Itens:\n${produtosMsg}\n\n` +
+          `Total: *R$ ${totalPedido}*\n\n` +
+          `Por favor, confirme o pagamento e prossiga com o pedido.`;
+        const link = `https://wa.me/${numeroWhatsApp}?text=${encodeURIComponent(mensagem)}`;
+        window.open(link, '_blank');
+      }
       return orderId;
     } catch (error: any) {
         toast({
