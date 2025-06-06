@@ -18,6 +18,7 @@ interface Product {
   name: string;
   price: number;
   pinned?: boolean;
+  stock: number;
 }
 
 interface CartItem {
@@ -54,7 +55,7 @@ const AdminPDV = () => {
   
   // Buscar produtos e combos ao carregar
   useEffect(() => {
-    api.get('/admin/products').then(res => setProducts(res.data));
+    api.get('/admin/products').then(res => setProducts(res.data.filter((p: any) => p.stock > 0)));
     api.get('/admin/combos').then(res => {
       // Corrigir combos: mapear allowFlavorSelection para isChoosable
       const combosCorrigidos = res.data.map((combo: any) => ({
@@ -66,7 +67,7 @@ const AdminPDV = () => {
       }));
       setCombos(combosCorrigidos);
     });
-    api.get('/admin/products', { params: { pinned: true } }).then(res => setPinnedProducts(res.data));
+    api.get('/admin/products', { params: { pinned: true } }).then(res => setPinnedProducts(res.data.filter((p: any) => p.stock > 0)));
   }, []);
 
   // Unificar produtos e combos para exibição (useMemo para evitar loop)
@@ -258,20 +259,28 @@ const AdminPDV = () => {
       });
       return;
     }
-    // Enviar para o backend
-    await api.post('/admin/pdv-sales', {
-      items: cartItems.map(item => ({
-        productId: item.productId,
-        quantity: item.quantity,
-        price: item.price
-      })),
-      paymentMethodId
-    });
-    toast({
-      description: `Venda finalizada!`,
-    });
-    setCartItems([]);
-    setTicketNumber(prev => prev + 1);
+    try {
+      await api.post('/admin/pdv-sales', {
+        items: cartItems.map(item => ({
+          productId: item.productId,
+          quantity: item.quantity,
+          price: item.price
+        })),
+        paymentMethodId
+      });
+      toast({
+        description: `Venda finalizada!`,
+      });
+      setCartItems([]);
+      setTicketNumber(prev => prev + 1);
+    } catch (error: any) {
+      const msg = error?.response?.data?.error || "Erro ao finalizar pedido. Verifique o estoque.";
+      toast({
+        title: "Erro ao finalizar pedido",
+        description: msg,
+        variant: "destructive"
+      });
+    }
   };
 
   // Handle CPF/CNPJ submission
@@ -331,6 +340,7 @@ const AdminPDV = () => {
                     key={product.id}
                     className="min-w-[220px] md:min-w-0 text-left p-3 border rounded-md hover:border-cyan-400 transition-colors bg-white"
                     onClick={() => addToCart(product)}
+                    disabled={product.stock === 0}
                   >
                     <div className="text-sm font-medium truncate">{product.code} - {product.name}</div>
                     <div className="text-sm text-green-600">R$ {product.price.toFixed(2)}</div>
@@ -367,7 +377,7 @@ const AdminPDV = () => {
                   onChange={(e) => setProductQuantity(parseInt(e.target.value) || 1)}
                 />
               </div>
-              <Button onClick={handleAddProductByCode} className="px-3 w-full md:w-auto">
+              <Button onClick={handleAddProductByCode} className="px-3 w-full md:w-auto" disabled={!productCode || !products.find(p => p.code === productCode) || products.find(p => p.code === productCode)?.stock === 0}>
                 <Plus className="h-4 w-4" />
               </Button>
             </div>
@@ -381,6 +391,7 @@ const AdminPDV = () => {
                       key={product.id}
                       className="text-left p-3 border rounded-md hover:border-cyan-400 transition-colors bg-white w-full"
                       onClick={() => addToCart(product)}
+                      disabled={product.stock === 0}
                     >
                       <div className="font-medium">{product.code} - {product.name}</div>
                       <div className="text-green-600 mt-1">R$ {product.price.toFixed(2)}</div>
