@@ -124,6 +124,16 @@ const AdminPDV = () => {
 
   // Add item to cart
   const addToCart = (item: any, quantity: number = 1) => {
+    // Verifica estoque antes de adicionar
+    const estoqueDisponivel = item.stock ?? Infinity;
+    const quantidadeNoCarrinho = cartItems.find(ci => ci.id === item.id)?.quantity || 0;
+    if (quantidadeNoCarrinho + quantity > estoqueDisponivel) {
+      toast({
+        variant: "destructive",
+        description: `Estoque insuficiente para ${item.name}. Disponível: ${estoqueDisponivel}, solicitado: ${quantidadeNoCarrinho + quantity}`
+      });
+      return;
+    }
     if (item.type === 'combo') {
       if (item.items && Array.isArray(item.items) && item.items.some((i: any) => i.isChoosable || i.allowFlavorSelection)) {
         setComboToConfigure(item);
@@ -179,7 +189,16 @@ const AdminPDV = () => {
   // Update cart item quantity
   const updateCartItemQuantity = (itemId: string, newQuantity: number) => {
     if (newQuantity < 1) return; // Prevent quantity less than 1
-    
+    const item = cartItems.find(ci => ci.id === itemId);
+    const produto = products.find(p => p.id === item?.productId);
+    const estoqueDisponivel = produto?.stock ?? Infinity;
+    if (newQuantity > estoqueDisponivel) {
+      toast({
+        variant: "destructive",
+        description: `Estoque insuficiente para ${item?.name}. Disponível: ${estoqueDisponivel}`
+      });
+      return;
+    }
     const updatedItems = cartItems.map(item => {
       if (item.id === itemId) {
         return {
