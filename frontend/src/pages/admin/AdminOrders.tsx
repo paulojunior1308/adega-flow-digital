@@ -262,43 +262,22 @@ const AdminOrders = () => {
 
   // Atualizar status do pedido via API
   const updateOrderStatus = async (order: Order, newStatus: Order['status']) => {
+    // Abrir WhatsApp antes do await!
     if (order && newStatus === 'preparing') {
       const numeroWhatsApp = order.contactPhone?.replace(/\D/g, '') || '';
-      // Separar endereço em partes se possível
-      let endereco = order.address || '';
-      let cep = '';
-      let bairro = '';
-      let complemento = '';
-      // Tentar extrair CEP, bairro e complemento do endereço formatado
-      const cepMatch = endereco.match(/CEP: (\d{5}-?\d{3})/);
-      if (cepMatch) cep = cepMatch[1];
-      const bairroMatch = endereco.match(/, ([^,]+), [^,]+ - [A-Z]{2}, CEP:/);
-      if (bairroMatch) bairro = bairroMatch[1];
-      const complementoMatch = endereco.match(/, (Apto|Ap|Bloco|Complemento|Sala|Loja|Casa|Fundos|Frente|Sobreloja|Térreo|\d+\w*)/i);
-      if (complementoMatch) complemento = complementoMatch[0].replace(',', '').trim();
-      // Itens
       let itensMsg = order.items.map(item => `➡ ${item.quantity}x ${item.name} (R$ ${(item.price * item.quantity).toFixed(2)})`).join('\n');
-      // Valores
       let desconto = order.discount ? `Desconto: R$ ${order.discount.toFixed(2)}\n` : '';
       let entrega = order.deliveryFee ? `Entrega: R$ ${order.deliveryFee.toFixed(2)}\n` : '';
       let obs = order.deliveryNotes ? `\nObs: ${order.deliveryNotes}` : '';
-
-      // Link de acompanhamento fictício
-      const linkAcompanhamento = `https://adega-element.netlify.app/acompanhar-pedido/${order.id}`;
-      // Mensagem final
       const mensagem =
         `Pedido Element Adega aceito!\n\n` +
-        `Link p/ acompanhar status: ${linkAcompanhamento}\n\n` +
+        `Acompanhe seu pedido pelo site.\n\n` +
         `Pedido: ${order.id} (${formatDate(order.timestamp)} ${formatTime(order.timestamp)})\n` +
         `Tipo: Delivery\n` +
-        `Estimativa: 30 - 45 minutos\n` +
         `------------------------------\n` +
         `NOME: ${order.customer}\n` +
         `Fone: ${order.contactPhone || '-'}\n` +
-        `Endereço: ${endereco.split('CEP:')[0]?.trim() || endereco}\n` +
-        `CEP: ${cep}\n` +
-        `Bairro: ${bairro}\n` +
-        `Complemento: ${complemento}\n` +
+        `Endereço: ${order.address}\n` +
         `------------------------------\n` +
         `${itensMsg}\n` +
         `------------------------------\n` +
@@ -306,12 +285,14 @@ const AdminOrders = () => {
         `${desconto}${entrega}` +
         `\nTOTAL: R$ ${order.total.toFixed(2)}\n` +
         `------------------------------\n` +
-        `Pagamento: ${order.paymentMethod}\n`;
+        `Pagamento: ${order.paymentMethod}\n` +
+        `${obs}`;
       if (numeroWhatsApp.length >= 10) {
         const link = `https://wa.me/55${numeroWhatsApp}?text=${encodeURIComponent(mensagem)}`;
         window.open(link, '_blank');
       }
     }
+    // Só depois atualiza o status
     await api.patch(`/admin/orders/${order.id}/status`, { status: newStatus });
     setOrders((prev) => prev.map(o => o.id === order.id ? { ...o, status: newStatus } : o));
     toast({ title: 'Status atualizado!' });
