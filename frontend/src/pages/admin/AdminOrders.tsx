@@ -113,9 +113,9 @@ const AdminOrders = () => {
           price: item.price
         })),
         total: order.total,
-        status: (order.status ?? 'pending').toLowerCase(),
+        status: typeof order.status === 'string' ? order.status.toLowerCase() : 'pending',
         timestamp: order.createdAt ?? order.updatedAt ?? null,
-        paymentMethod: order.paymentMethod,
+        paymentMethod: typeof order.paymentMethod === 'object' && order.paymentMethod !== null ? order.paymentMethod.name : (order.paymentMethod || '-'),
         pixPaymentStatus: order.pixPaymentStatus,
         contactPhone: order.user?.phone ?? '',
         deliveryNotes: order.instructions ?? '',
@@ -487,26 +487,26 @@ const AdminOrders = () => {
   function openWhatsappMsg(order: Order) {
     const numeroWhatsApp = order.contactPhone?.replace(/\D/g, '') || '';
     let itensMsg = order.items.map(item => `➡ ${item.quantity}x ${item.name} (R$ ${(item.price * item.quantity).toFixed(2)})`).join('\n');
-    let desconto = order.discount ? `Desconto: R$ ${order.discount.toFixed(2)}\n` : '';
-    let entrega = order.deliveryFee ? `Entrega: R$ ${order.deliveryFee.toFixed(2)}\n` : '';
-    let obs = order.deliveryNotes ? `\nObs: ${order.deliveryNotes}` : '';
+    let desconto = order.discount ? `*Desconto:* R$ ${order.discount.toFixed(2)}\n` : '';
+    let entrega = order.deliveryFee ? `*Entrega:* R$ ${order.deliveryFee.toFixed(2)}\n` : '';
+    let obs = order.deliveryNotes ? `\n*Obs:* ${order.deliveryNotes}` : '';
     const mensagem =
-      `Pedido Element Adega aceito!\n\n` +
+      `*Pedido Element Adega aceito!*\n\n` +
       `Acompanhe seu pedido pelo site.\n\n` +
-      `Pedido: ${order.id} (${formatDate(order.timestamp)} ${formatTime(order.timestamp)})\n` +
-      `Tipo: Delivery\n` +
+      `*Pedido:* ${order.id} (${formatDate(order.timestamp)} ${formatTime(order.timestamp)})\n` +
+      `*Tipo:* Delivery\n` +
       `------------------------------\n` +
-      `NOME: ${order.customer}\n` +
-      `Fone: ${order.contactPhone || '-'}\n` +
-      `Endereço: ${order.address}\n` +
+      `*NOME:* ${order.customer}\n` +
+      `*Fone:* ${order.contactPhone || '-'}\n` +
+      `*Endereço:* ${order.address}\n` +
       `------------------------------\n` +
       `${itensMsg}\n` +
       `------------------------------\n` +
-      `Itens: R$ ${(order.items.reduce((sum, i) => sum + i.price * i.quantity, 0)).toFixed(2)}\n` +
+      `*Itens:* R$ ${(order.items.reduce((sum, i) => sum + i.price * i.quantity, 0)).toFixed(2)}\n` +
       `${desconto}${entrega}` +
-      `\nTOTAL: R$ ${order.total.toFixed(2)}\n` +
+      `\n*TOTAL:* R$ ${order.total.toFixed(2)}\n` +
       `------------------------------\n` +
-      `Pagamento: ${order.paymentMethod}\n` +
+      `*Pagamento:* ${order.paymentMethod ?? '-'}\n` +
       `${obs}`;
     if (numeroWhatsApp.length >= 10) {
       const link = `https://wa.me/55${numeroWhatsApp}?text=${encodeURIComponent(mensagem)}`;
