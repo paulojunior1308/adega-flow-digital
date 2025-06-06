@@ -85,8 +85,8 @@ interface Order {
   deliveryLng?: number;
 }
 
-// Coordenadas da loja (exemplo, ajuste conforme necessário)
-const STORE_LOCATION = { lat: -23.123456, lng: -46.123456 };
+// Coordenadas da loja (reais, iguais ao backend)
+const STORE_LOCATION = { lat: -23.75516809248333, lng: -46.69815114446251 };
 
 function calcularDistanciaKm(lat1: number, lng1: number, lat2: number, lng2: number) {
   const toRad = (value: number) => (value * Math.PI) / 180;
