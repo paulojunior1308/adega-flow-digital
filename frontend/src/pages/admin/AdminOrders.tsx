@@ -287,7 +287,6 @@ const AdminOrders = () => {
 
     // Enviar WhatsApp ao aprovar (Aceitar) o pedido
     if (newStatus === 'preparing') {
-      // Usar selectedOrder se for o mesmo pedido
       const order = selectedOrder && selectedOrder.id === orderId
         ? selectedOrder
         : orders.find(o => o.id === orderId);
@@ -333,10 +332,6 @@ const AdminOrders = () => {
       if (order && order.contactPhone) {
         const numeroWhatsApp = '55' + order.contactPhone.replace(/\D/g, '');
         let tempoEstimado = '30-45 minutos';
-        try {
-          const estimado = await getEstimatedDeliveryTime(order.address);
-          if (estimado) tempoEstimado = estimado;
-        } catch {}
         const mensagem =
           `Seu pedido saiu para entrega! 🚚\n` +
           `Previsão de chegada: ${tempoEstimado}.\n` +
