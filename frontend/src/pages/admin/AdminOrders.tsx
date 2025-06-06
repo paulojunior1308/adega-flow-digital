@@ -185,6 +185,25 @@ const initialOrders: Order[] = [
   }
 ];
 
+// Coordenadas fixas da loja
+const STORE_LOCATION = {
+  lat: -23.744837, // Latitude da loja
+  lng: -46.579837 // Longitude da loja
+};
+
+// Função para buscar tempo estimado de entrega via Google Maps Directions API
+async function getEstimatedDeliveryTime(destAddress: string): Promise<string | null> {
+  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+  if (!apiKey) return null;
+  const origin = `${STORE_LOCATION.lat},${STORE_LOCATION.lng}`;
+  const response = await fetch(`https://maps.googleapis.com/maps/api/directions/json?origin=${origin}&destination=${encodeURIComponent(destAddress)}&key=${apiKey}&mode=driving`);
+  const data = await response.json();
+  if (data.status === 'OK' && data.routes.length > 0) {
+    return data.routes[0].legs[0].duration.text; // Ex: "25 min"
+  }
+  return null;
+}
+
 const AdminOrders = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
@@ -266,8 +285,12 @@ const AdminOrders = () => {
     setOrders((prev) => prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
     toast({ title: 'Status atualizado!' });
 
+    // Enviar WhatsApp ao aprovar (Aceitar) o pedido
     if (newStatus === 'preparing') {
-      const order = orders.find(o => o.id === orderId);
+      // Usar selectedOrder se for o mesmo pedido
+      const order = selectedOrder && selectedOrder.id === orderId
+        ? selectedOrder
+        : orders.find(o => o.id === orderId);
       if (order && order.contactPhone) {
         const numeroWhatsApp = '55' + order.contactPhone.replace(/\D/g, '');
         const dataPedido = order.timestamp ? new Date(order.timestamp) : new Date();
@@ -298,6 +321,26 @@ const AdminOrders = () => {
         if (order.paymentMethod && order.paymentMethod.toLowerCase().includes('pix')) {
           mensagem += '\n\nPor favor, envie o comprovante do pagamento via PIX para agilizar o processamento do seu pedido.';
         }
+        const link = `https://wa.me/${numeroWhatsApp}?text=${encodeURIComponent(mensagem)}`;
+        window.open(link, '_blank');
+      }
+    }
+    // Enviar WhatsApp ao sair para entrega
+    if (newStatus === 'delivering') {
+      const order = selectedOrder && selectedOrder.id === orderId
+        ? selectedOrder
+        : orders.find(o => o.id === orderId);
+      if (order && order.contactPhone) {
+        const numeroWhatsApp = '55' + order.contactPhone.replace(/\D/g, '');
+        let tempoEstimado = '30-45 minutos';
+        try {
+          const estimado = await getEstimatedDeliveryTime(order.address);
+          if (estimado) tempoEstimado = estimado;
+        } catch {}
+        const mensagem =
+          `Seu pedido saiu para entrega! 🚚\n` +
+          `Previsão de chegada: ${tempoEstimado}.\n` +
+          `Acompanhe seu pedido: https://adega-element.netlify.app/cliente-pedidos`;
         const link = `https://wa.me/${numeroWhatsApp}?text=${encodeURIComponent(mensagem)}`;
         window.open(link, '_blank');
       }
