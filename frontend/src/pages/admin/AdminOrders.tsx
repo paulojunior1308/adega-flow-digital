@@ -262,11 +262,7 @@ const AdminOrders = () => {
 
   // Atualizar status do pedido via API
   const updateOrderStatus = async (order: Order, newStatus: Order['status']) => {
-    await api.patch(`/admin/orders/${order.id}/status`, { status: newStatus });
-    setOrders((prev) => prev.map(o => o.id === order.id ? { ...o, status: newStatus } : o));
-    toast({ title: 'Status atualizado!' });
-
-    // Enviar WhatsApp ao aceitar
+    // Enviar WhatsApp ao aceitar ANTES do await!
     if (order && newStatus === 'preparing') {
       const numeroWhatsApp = order.contactPhone?.replace(/\D/g, '') || '';
       let itensMsg = order.items.map(item => `➡ ${item.quantity}x ${item.name} (R$ ${(item.price * item.quantity).toFixed(2)})`).join('\n');
@@ -296,6 +292,10 @@ const AdminOrders = () => {
         window.open(link, '_blank');
       }
     }
+    // Só depois atualiza o status
+    await api.patch(`/admin/orders/${order.id}/status`, { status: newStatus });
+    setOrders((prev) => prev.map(o => o.id === order.id ? { ...o, status: newStatus } : o));
+    toast({ title: 'Status atualizado!' });
   };
 
   // Atualizar localização do entregador via API
