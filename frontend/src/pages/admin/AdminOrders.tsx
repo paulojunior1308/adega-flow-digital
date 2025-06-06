@@ -81,6 +81,8 @@ interface Order {
   deliveryNotes?: string;
   deliveryLat?: number;
   deliveryLng?: number;
+  discount?: number;
+  deliveryFee?: number;
 }
 
 // Pedidos de exemplo
@@ -215,7 +217,9 @@ const AdminOrders = () => {
         paymentMethod: order.paymentMethod,
         pixPaymentStatus: order.pixPaymentStatus,
         contactPhone: order.user?.phone ?? '',
-        deliveryNotes: order.instructions ?? ''
+        deliveryNotes: order.instructions ?? '',
+        discount: order.discount,
+        deliveryFee: order.deliveryFee
       }));
       setOrders(mapped);
     });
@@ -261,6 +265,36 @@ const AdminOrders = () => {
     await api.patch(`/admin/orders/${orderId}/status`, { status: newStatus });
     setOrders((prev) => prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
     toast({ title: 'Status atualizado!' });
+
+    if (selectedOrder) {
+      const numeroWhatsApp = selectedOrder.contactPhone?.replace(/\D/g, '') || '';
+      let itensMsg = selectedOrder.items.map(item => `➡ ${item.quantity}x ${item.name} (R$ ${(item.price * item.quantity).toFixed(2)})`).join('\n');
+      let desconto = selectedOrder.discount ? `Desconto: R$ ${selectedOrder.discount.toFixed(2)}\n` : '';
+      let entrega = selectedOrder.deliveryFee ? `Entrega: R$ ${selectedOrder.deliveryFee.toFixed(2)}\n` : '';
+      let obs = selectedOrder.deliveryNotes ? `\nObs: ${selectedOrder.deliveryNotes}` : '';
+      const mensagem =
+        `Pedido Element Adega aceito!\n\n` +
+        `Acompanhe seu pedido pelo site.\n\n` +
+        `Pedido: ${selectedOrder.id} (${formatDate(selectedOrder.timestamp)} ${formatTime(selectedOrder.timestamp)})\n` +
+        `Tipo: Delivery\n` +
+        `------------------------------\n` +
+        `NOME: ${selectedOrder.customer}\n` +
+        `Fone: ${selectedOrder.contactPhone || '-'}\n` +
+        `Endereço: ${selectedOrder.address}\n` +
+        `------------------------------\n` +
+        `${itensMsg}\n` +
+        `------------------------------\n` +
+        `Itens: R$ ${(selectedOrder.items.reduce((sum, i) => sum + i.price * i.quantity, 0)).toFixed(2)}\n` +
+        `${desconto}${entrega}` +
+        `\nTOTAL: R$ ${selectedOrder.total.toFixed(2)}\n` +
+        `------------------------------\n` +
+        `Pagamento: ${selectedOrder.paymentMethod}\n` +
+        `${obs}`;
+      if (numeroWhatsApp.length >= 10) {
+        const link = `https://wa.me/55${numeroWhatsApp}?text=${encodeURIComponent(mensagem)}`;
+        window.open(link, '_blank');
+      }
+    }
   };
 
   // Atualizar localização do entregador via API
