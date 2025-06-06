@@ -262,36 +262,6 @@ const AdminOrders = () => {
 
   // Atualizar status do pedido via API
   const updateOrderStatus = async (order: Order, newStatus: Order['status']) => {
-    // Abrir WhatsApp antes do await!
-    if (order && newStatus === 'preparing') {
-      const numeroWhatsApp = order.contactPhone?.replace(/\D/g, '') || '';
-      let itensMsg = order.items.map(item => `➡ ${item.quantity}x ${item.name} (R$ ${(item.price * item.quantity).toFixed(2)})`).join('\n');
-      let desconto = order.discount ? `Desconto: R$ ${order.discount.toFixed(2)}\n` : '';
-      let entrega = order.deliveryFee ? `Entrega: R$ ${order.deliveryFee.toFixed(2)}\n` : '';
-      let obs = order.deliveryNotes ? `\nObs: ${order.deliveryNotes}` : '';
-      const mensagem =
-        `Pedido Element Adega aceito!\n\n` +
-        `Acompanhe seu pedido pelo site.\n\n` +
-        `Pedido: ${order.id} (${formatDate(order.timestamp)} ${formatTime(order.timestamp)})\n` +
-        `Tipo: Delivery\n` +
-        `------------------------------\n` +
-        `NOME: ${order.customer}\n` +
-        `Fone: ${order.contactPhone || '-'}\n` +
-        `Endereço: ${order.address}\n` +
-        `------------------------------\n` +
-        `${itensMsg}\n` +
-        `------------------------------\n` +
-        `Itens: R$ ${(order.items.reduce((sum, i) => sum + i.price * i.quantity, 0)).toFixed(2)}\n` +
-        `${desconto}${entrega}` +
-        `\nTOTAL: R$ ${order.total.toFixed(2)}\n` +
-        `------------------------------\n` +
-        `Pagamento: ${order.paymentMethod}\n` +
-        `${obs}`;
-      if (numeroWhatsApp.length >= 10) {
-        const link = `https://wa.me/55${numeroWhatsApp}?text=${encodeURIComponent(mensagem)}`;
-        window.open(link, '_blank');
-      }
-    }
     // Só depois atualiza o status
     await api.patch(`/admin/orders/${order.id}/status`, { status: newStatus });
     setOrders((prev) => prev.map(o => o.id === order.id ? { ...o, status: newStatus } : o));
@@ -406,7 +376,10 @@ const AdminOrders = () => {
                         <Button 
                           size="sm" 
                           className="flex-1"
-                          onClick={() => updateOrderStatus(selectedOrder, 'preparing')}
+                          onClick={() => {
+                            openWhatsappMsg(selectedOrder);
+                            updateOrderStatus(selectedOrder, 'preparing');
+                          }}
                         >
                           <Check className="h-4 w-4 mr-1" /> Aceitar e preparar
                         </Button>
@@ -610,6 +583,36 @@ const AdminOrders = () => {
     );
   };
 
+  function openWhatsappMsg(order: Order) {
+    const numeroWhatsApp = order.contactPhone?.replace(/\D/g, '') || '';
+    let itensMsg = order.items.map(item => `➡ ${item.quantity}x ${item.name} (R$ ${(item.price * item.quantity).toFixed(2)})`).join('\n');
+    let desconto = order.discount ? `Desconto: R$ ${order.discount.toFixed(2)}\n` : '';
+    let entrega = order.deliveryFee ? `Entrega: R$ ${order.deliveryFee.toFixed(2)}\n` : '';
+    let obs = order.deliveryNotes ? `\nObs: ${order.deliveryNotes}` : '';
+    const mensagem =
+      `Pedido Element Adega aceito!\n\n` +
+      `Acompanhe seu pedido pelo site.\n\n` +
+      `Pedido: ${order.id} (${formatDate(order.timestamp)} ${formatTime(order.timestamp)})\n` +
+      `Tipo: Delivery\n` +
+      `------------------------------\n` +
+      `NOME: ${order.customer}\n` +
+      `Fone: ${order.contactPhone || '-'}\n` +
+      `Endereço: ${order.address}\n` +
+      `------------------------------\n` +
+      `${itensMsg}\n` +
+      `------------------------------\n` +
+      `Itens: R$ ${(order.items.reduce((sum, i) => sum + i.price * i.quantity, 0)).toFixed(2)}\n` +
+      `${desconto}${entrega}` +
+      `\nTOTAL: R$ ${order.total.toFixed(2)}\n` +
+      `------------------------------\n` +
+      `Pagamento: ${order.paymentMethod}\n` +
+      `${obs}`;
+    if (numeroWhatsApp.length >= 10) {
+      const link = `https://wa.me/55${numeroWhatsApp}?text=${encodeURIComponent(mensagem)}`;
+      window.open(link, '_blank');
+    }
+  }
+
   return (
     <div className="min-h-screen bg-element-gray-light">
       <AdminSidebar />
@@ -710,7 +713,10 @@ const AdminOrders = () => {
                             <Button
                               variant="default"
                               size="sm"
-                              onClick={() => updateOrderStatus(order, 'preparing')}
+                              onClick={() => {
+                                openWhatsappMsg(order);
+                                updateOrderStatus(order, 'preparing');
+                              }}
                             >
                               <Check className="h-4 w-4" />
                               <span className="sr-only md:not-sr-only md:ml-2">Aceitar</span>
