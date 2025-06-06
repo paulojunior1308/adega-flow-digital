@@ -81,8 +81,6 @@ interface Order {
   deliveryNotes?: string;
   deliveryLat?: number;
   deliveryLng?: number;
-  deliveryFee?: number;
-  discount?: number;
 }
 
 // Pedidos de exemplo
@@ -185,25 +183,6 @@ const initialOrders: Order[] = [
   }
 ];
 
-// Coordenadas fixas da loja
-const STORE_LOCATION = {
-  lat: -23.744837, // Latitude da loja
-  lng: -46.579837 // Longitude da loja
-};
-
-// Função para buscar tempo estimado de entrega via Google Maps Directions API
-async function getEstimatedDeliveryTime(destAddress: string): Promise<string | null> {
-  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
-  if (!apiKey) return null;
-  const origin = `${STORE_LOCATION.lat},${STORE_LOCATION.lng}`;
-  const response = await fetch(`https://maps.googleapis.com/maps/api/directions/json?origin=${origin}&destination=${encodeURIComponent(destAddress)}&key=${apiKey}&mode=driving`);
-  const data = await response.json();
-  if (data.status === 'OK' && data.routes.length > 0) {
-    return data.routes[0].legs[0].duration.text; // Ex: "25 min"
-  }
-  return null;
-}
-
 const AdminOrders = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
@@ -236,9 +215,7 @@ const AdminOrders = () => {
         paymentMethod: order.paymentMethod,
         pixPaymentStatus: order.pixPaymentStatus,
         contactPhone: order.user?.phone ?? '',
-        deliveryNotes: order.instructions ?? '',
-        deliveryFee: order.deliveryFee,
-        discount: order.discount
+        deliveryNotes: order.instructions ?? ''
       }));
       setOrders(mapped);
     });
@@ -284,62 +261,6 @@ const AdminOrders = () => {
     await api.patch(`/admin/orders/${orderId}/status`, { status: newStatus });
     setOrders((prev) => prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
     toast({ title: 'Status atualizado!' });
-
-    // Enviar WhatsApp ao aprovar (Aceitar) o pedido
-    if (newStatus === 'preparing') {
-      const order = selectedOrder && selectedOrder.id === orderId
-        ? selectedOrder
-        : orders.find(o => o.id === orderId);
-      if (order && order.contactPhone) {
-        const numeroWhatsApp = '55' + order.contactPhone.replace(/\D/g, '');
-        const dataPedido = order.timestamp ? new Date(order.timestamp) : new Date();
-        const dataFormatada = dataPedido.toLocaleDateString('pt-BR');
-        const horaFormatada = dataPedido.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-        const itensMsg = order.items.map(item => `➡ ${item.quantity}x ${item.name} (R$${item.price.toFixed(2)})`).join('\n');
-        const taxaEntrega = order.deliveryFee !== undefined ? order.deliveryFee : 0;
-        const desconto = order.discount !== undefined ? order.discount : 0;
-        let mensagem =
-          `Pedido Element Adega aceito!\n\n` +
-          `Acompanhe seu pedido: https://adega-element.netlify.app/cliente-pedidos\n\n` +
-          `Pedido: ${order.id} (${dataFormatada} ${horaFormatada})\n` +
-          `Tipo: Delivery\n` +
-          `Estimativa: 30 - 50 minutos\n` +
-          `------------------------------\n` +
-          `NOME: ${order.customer}\n` +
-          `Fone: ${order.contactPhone}\n` +
-          `Endereço: ${order.address}\n` +
-          `------------------------------\n` +
-          `${itensMsg}\n` +
-          `------------------------------\n` +
-          `Itens: R$${(order.total - taxaEntrega + desconto).toFixed(2)}\n` +
-          `Desconto: R$${desconto.toFixed(2)}\n` +
-          `Entrega: R$${taxaEntrega.toFixed(2)}\n\n` +
-          `TOTAL: R$${order.total.toFixed(2)}\n` +
-          `------------------------------\n` +
-          `Pagamento: ${order.paymentMethod}`;
-        if (order.paymentMethod && order.paymentMethod.toLowerCase().includes('pix')) {
-          mensagem += '\n\nPor favor, envie o comprovante do pagamento via PIX para agilizar o processamento do seu pedido.';
-        }
-        const link = `https://wa.me/${numeroWhatsApp}?text=${encodeURIComponent(mensagem)}`;
-        window.open(link, '_blank');
-      }
-    }
-    // Enviar WhatsApp ao sair para entrega
-    if (newStatus === 'delivering') {
-      const order = selectedOrder && selectedOrder.id === orderId
-        ? selectedOrder
-        : orders.find(o => o.id === orderId);
-      if (order && order.contactPhone) {
-        const numeroWhatsApp = '55' + order.contactPhone.replace(/\D/g, '');
-        let tempoEstimado = '30-45 minutos';
-        const mensagem =
-          `Seu pedido saiu para entrega! 🚚\n` +
-          `Previsão de chegada: ${tempoEstimado}.\n` +
-          `Acompanhe seu pedido: https://adega-element.netlify.app/cliente-pedidos`;
-        const link = `https://wa.me/${numeroWhatsApp}?text=${encodeURIComponent(mensagem)}`;
-        window.open(link, '_blank');
-      }
-    }
   };
 
   // Atualizar localização do entregador via API
