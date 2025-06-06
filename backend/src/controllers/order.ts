@@ -177,6 +177,7 @@ export const orderController = {
         user: { select: { id: true, name: true, email: true, phone: true } },
         items: { include: { product: true } },
         address: true,
+        paymentMethod: true,
       },
       orderBy: { createdAt: 'desc' },
     });
