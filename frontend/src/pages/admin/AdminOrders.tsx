@@ -85,106 +85,6 @@ interface Order {
   deliveryFee?: number;
 }
 
-// Pedidos de exemplo
-const initialOrders: Order[] = [
-  {
-    id: 'PEDIDO-1234',
-    customer: 'Carlos Silva',
-    address: 'Avenida Paulista, 1000, Apto 101, Bela Vista, São Paulo/SP',
-    items: [
-      { name: 'Skol 350ml - Pack com 12', quantity: 2, price: 39.90 },
-      { name: 'Vodka Smirnoff 998ml', quantity: 1, price: 49.90 }
-    ],
-    total: 129.70,
-    status: 'pending',
-    timestamp: new Date(),
-    paymentMethod: 'Cartão de Crédito',
-    contactPhone: '(11) 98765-4321'
-  },
-  {
-    id: 'PEDIDO-1233',
-    customer: 'Maria Souza',
-    address: 'Rua Augusta, 500, Consolação, São Paulo/SP',
-    items: [
-      { name: 'Red Bull 250ml', quantity: 3, price: 9.90 },
-      { name: 'Vodka Absolut 1L', quantity: 1, price: 89.90 },
-      { name: 'Gelo 5kg', quantity: 1, price: 15.00 }
-    ],
-    total: 145.50,
-    status: 'preparing',
-    timestamp: new Date(Date.now() - 1000 * 60 * 30), // 30 minutos atrás
-    paymentMethod: 'Pix',
-    contactPhone: '(11) 91234-5678',
-    deliveryNotes: 'Entregar na portaria'
-  },
-  {
-    id: 'PEDIDO-1232',
-    customer: 'João Santos',
-    address: 'Rua Oscar Freire, 123, Jardins, São Paulo/SP',
-    items: [
-      { name: 'Heineken Long Neck', quantity: 6, price: 8.50 },
-      { name: 'Doritos 300g', quantity: 1, price: 14.00 }
-    ],
-    total: 65.00,
-    status: 'delivering',
-    timestamp: new Date(Date.now() - 1000 * 60 * 60), // 1 hora atrás
-    paymentMethod: 'Dinheiro'
-  },
-  {
-    id: 'PEDIDO-1231',
-    customer: 'Ana Costa',
-    address: 'Avenida Brasil, 800, Centro, Rio de Janeiro/RJ',
-    items: [
-      { name: 'Jack Daniel\'s 1L', quantity: 1, price: 112.30 }
-    ],
-    total: 112.30,
-    status: 'delivered',
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2), // 2 horas atrás
-    paymentMethod: 'Cartão de Débito'
-  },
-  {
-    id: 'PEDIDO-1230',
-    customer: 'Paulo Oliveira',
-    address: 'Rua das Flores, 45, Botafogo, Rio de Janeiro/RJ',
-    items: [
-      { name: 'Whisky Johnnie Walker Black Label', quantity: 1, price: 189.90 },
-      { name: 'Coca-Cola 2L', quantity: 2, price: 12.00 }
-    ],
-    total: 213.90,
-    status: 'cancelled',
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 3), // 3 horas atrás
-    paymentMethod: 'Pix'
-  },
-  {
-    id: 'PEDIDO-1229',
-    customer: 'Fernanda Lima',
-    address: 'Avenida Atlântica, 2000, Copacabana, Rio de Janeiro/RJ',
-    items: [
-      { name: 'Cerveja Corona 330ml', quantity: 12, price: 8.90 },
-      { name: 'Amendoim 500g', quantity: 1, price: 15.50 }
-    ],
-    total: 122.30,
-    status: 'delivered',
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24), // 1 dia atrás
-    paymentMethod: 'Cartão de Crédito'
-  },
-  {
-    id: 'PEDIDO-1228',
-    customer: 'Roberto Santos',
-    address: 'Rua Alameda Santos, 700, Jardins, São Paulo/SP',
-    items: [
-      { name: 'Vodka Grey Goose 750ml', quantity: 1, price: 249.90 },
-      { name: 'Red Bull 250ml', quantity: 4, price: 9.90 },
-      { name: 'Gelo 2kg', quantity: 1, price: 8.00 }
-    ],
-    total: 297.50,
-    status: 'delivered',
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 25), // 25 horas atrás
-    paymentMethod: 'Pix',
-    deliveryNotes: 'Apartamento 1202, Bloco B'
-  }
-];
-
 const AdminOrders = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
@@ -200,6 +100,7 @@ const AdminOrders = () => {
   // Buscar pedidos reais do backend
   React.useEffect(() => {
     api.get('/admin/orders').then(res => {
+      console.log('Pedidos recebidos do backend:', res.data);
       const mapped = res.data.map(order => ({
         id: order.id,
         customer: order.user?.name ?? '-',
