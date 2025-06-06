@@ -282,8 +282,7 @@ const AdminOrders = () => {
       let desconto = order.discount ? `Desconto: R$ ${order.discount.toFixed(2)}\n` : '';
       let entrega = order.deliveryFee ? `Entrega: R$ ${order.deliveryFee.toFixed(2)}\n` : '';
       let obs = order.deliveryNotes ? `\nObs: ${order.deliveryNotes}` : '';
-      // Chave PIX fictícia
-      let chavePix = order.paymentMethod.toLowerCase().includes('pix') ? '\nChave PIX: 11999999999 (Celular) - Element Adega' : '';
+
       // Link de acompanhamento fictício
       const linkAcompanhamento = `https://adega-element.netlify.app/acompanhar-pedido/${order.id}`;
       // Mensagem final
@@ -307,8 +306,7 @@ const AdminOrders = () => {
         `${desconto}${entrega}` +
         `\nTOTAL: R$ ${order.total.toFixed(2)}\n` +
         `------------------------------\n` +
-        `Pagamento: ${order.paymentMethod}\n` +
-        `${chavePix}${obs}`;
+        `Pagamento: ${order.paymentMethod}\n`;
       if (numeroWhatsApp.length >= 10) {
         const link = `https://wa.me/55${numeroWhatsApp}?text=${encodeURIComponent(mensagem)}`;
         window.open(link, '_blank');
