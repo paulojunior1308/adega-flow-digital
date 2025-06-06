@@ -79,10 +79,10 @@ interface Order {
   pixPaymentStatus?: 'PENDING' | 'APPROVED' | 'REJECTED';
   contactPhone?: string;
   deliveryNotes?: string;
-  deliveryLat?: number;
-  deliveryLng?: number;
   discount?: number;
   deliveryFee?: number;
+  deliveryLat?: number;
+  deliveryLng?: number;
 }
 
 // Coordenadas da loja (exemplo, ajuste conforme necessário)
@@ -171,7 +171,9 @@ const AdminOrders = () => {
         contactPhone: order.user?.phone ?? '',
         deliveryNotes: order.instructions ?? '',
         discount: order.discount,
-        deliveryFee: order.deliveryFee
+        deliveryFee: order.deliveryFee,
+        deliveryLat: order.deliveryLat ?? order.address?.lat,
+        deliveryLng: order.deliveryLng ?? order.address?.lng,
       }));
       setOrders(mapped);
     });
