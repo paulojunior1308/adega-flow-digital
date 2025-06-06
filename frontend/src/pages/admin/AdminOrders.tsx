@@ -609,7 +609,11 @@ const AdminOrders = () => {
       `${obs}`;
     if (numeroWhatsApp.length >= 10) {
       const link = `https://wa.me/55${numeroWhatsApp}?text=${encodeURIComponent(mensagem)}`;
+      console.log('Número WhatsApp:', numeroWhatsApp);
+      console.log('Link WhatsApp:', link);
       window.open(link, '_blank');
+    } else {
+      console.log('Número de WhatsApp inválido:', numeroWhatsApp);
     }
   }
 
