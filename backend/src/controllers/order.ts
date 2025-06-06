@@ -111,6 +111,8 @@ export const orderController = {
         instructions,
         deliveryFee: deliveryFee as any,
         pixPaymentStatus: isPix ? 'PENDING' as any : undefined,
+        deliveryLat: addressLat,
+        deliveryLng: addressLng,
         items: {
           create: cart.items.map((item: any) => ({
             productId: item.productId,
@@ -129,7 +131,8 @@ export const orderController = {
         user: {
           select: {
             name: true,
-            email: true
+            email: true,
+            phone: true
           }
         }
       },
