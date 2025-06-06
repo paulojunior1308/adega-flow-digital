@@ -264,42 +264,39 @@ const AdminOrders = () => {
   const updateOrderStatus = async (order: Order, newStatus: Order['status']) => {
     if (order && newStatus === 'preparing') {
       const numeroWhatsApp = order.contactPhone?.replace(/\D/g, '') || '';
-      // Tentar extrair partes do endereço
+      // Separar endereço em partes se possível
       let endereco = order.address || '';
       let cep = '';
       let bairro = '';
       let complemento = '';
-      // Regex para CEP
-      const cepMatch = endereco.match(/CEP:\s?(\d{5}-?\d{3})/);
+      // Tentar extrair CEP, bairro e complemento do endereço formatado
+      const cepMatch = endereco.match(/CEP: (\d{5}-?\d{3})/);
       if (cepMatch) cep = cepMatch[1];
-      // Regex para bairro
       const bairroMatch = endereco.match(/, ([^,]+), [^,]+ - [A-Z]{2}, CEP:/);
       if (bairroMatch) bairro = bairroMatch[1];
-      // Regex para complemento
-      const compMatch = endereco.match(/, (Apto|Ap|Apartamento|Casa|Bloco|Fundos|Sala|Loja|Térreo|Cobertura|\d+)[^,]*/i);
-      if (compMatch) complemento = compMatch[0].replace(/^, /, '');
-      // Limpar endereço para exibir só rua e número
-      let ruaENumero = endereco.split(',')[0] || endereco;
-      // Link de acompanhamento (ajuste para seu domínio real se desejar)
-      const linkAcompanhamento = `https://adega-element.netlify.app/cliente-pedidos`;
-      // Estimativa fixa (pode ser dinâmica se desejar)
-      const estimativa = '30 - 50 minutos';
+      const complementoMatch = endereco.match(/, (Apto|Ap|Bloco|Complemento|Sala|Loja|Casa|Fundos|Frente|Sobreloja|Térreo|\d+\w*)/i);
+      if (complementoMatch) complemento = complementoMatch[0].replace(',', '').trim();
       // Itens
       let itensMsg = order.items.map(item => `➡ ${item.quantity}x ${item.name} (R$ ${(item.price * item.quantity).toFixed(2)})`).join('\n');
+      // Valores
       let desconto = order.discount ? `Desconto: R$ ${order.discount.toFixed(2)}\n` : '';
       let entrega = order.deliveryFee ? `Entrega: R$ ${order.deliveryFee.toFixed(2)}\n` : '';
       let obs = order.deliveryNotes ? `\nObs: ${order.deliveryNotes}` : '';
+      // Chave PIX fictícia
+      let chavePix = order.paymentMethod.toLowerCase().includes('pix') ? '\nChave PIX: 11999999999 (Celular) - Element Adega' : '';
+      // Link de acompanhamento fictício
+      const linkAcompanhamento = `https://adega-element.netlify.app/acompanhar-pedido/${order.id}`;
       // Mensagem final
       const mensagem =
         `Pedido Element Adega aceito!\n\n` +
         `Link p/ acompanhar status: ${linkAcompanhamento}\n\n` +
         `Pedido: ${order.id} (${formatDate(order.timestamp)} ${formatTime(order.timestamp)})\n` +
         `Tipo: Delivery\n` +
-        `Estimativa: ${estimativa}\n` +
+        `Estimativa: 30 - 45 minutos\n` +
         `------------------------------\n` +
         `NOME: ${order.customer}\n` +
         `Fone: ${order.contactPhone || '-'}\n` +
-        `Endereço: ${ruaENumero}\n` +
+        `Endereço: ${endereco.split('CEP:')[0]?.trim() || endereco}\n` +
         `CEP: ${cep}\n` +
         `Bairro: ${bairro}\n` +
         `Complemento: ${complemento}\n` +
@@ -311,7 +308,7 @@ const AdminOrders = () => {
         `\nTOTAL: R$ ${order.total.toFixed(2)}\n` +
         `------------------------------\n` +
         `Pagamento: ${order.paymentMethod}\n` +
-        `${obs}`;
+        `${chavePix}${obs}`;
       if (numeroWhatsApp.length >= 10) {
         const link = `https://wa.me/55${numeroWhatsApp}?text=${encodeURIComponent(mensagem)}`;
         window.open(link, '_blank');
