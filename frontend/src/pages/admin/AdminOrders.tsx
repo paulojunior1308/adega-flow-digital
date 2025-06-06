@@ -106,7 +106,11 @@ function calcularDistanciaKm(lat1: number, lng1: number, lat2: number, lng2: num
 function openWhatsappEntrega(order: Order) {
   const numeroWhatsApp = order.contactPhone?.replace(/\D/g, '') || '';
   let tempoEstimado = '-';
-  if (order.deliveryLat && order.deliveryLng) {
+  console.log('Lat/Lng cliente:', order.deliveryLat, order.deliveryLng); // Log de depuração
+  if (
+    typeof order.deliveryLat === 'number' &&
+    typeof order.deliveryLng === 'number'
+  ) {
     const distancia = calcularDistanciaKm(
       STORE_LOCATION.lat,
       STORE_LOCATION.lng,
@@ -114,7 +118,7 @@ function openWhatsappEntrega(order: Order) {
       order.deliveryLng
     );
     const velocidadeMedia = 30; // km/h
-    tempoEstimado = Math.max(5, Math.round((distancia / velocidadeMedia) * 60)); // minutos, mínimo 5
+    tempoEstimado = `${Math.max(5, Math.round((distancia / velocidadeMedia) * 60))}`; // minutos, mínimo 5, sempre string
   }
   const mensagem =
     `*Seu pedido saiu para entrega!*\n\n` +
