@@ -261,34 +261,35 @@ const AdminOrders = () => {
   };
 
   // Atualizar status do pedido via API
-  const updateOrderStatus = async (orderId: string, newStatus: Order['status']) => {
-    await api.patch(`/admin/orders/${orderId}/status`, { status: newStatus });
-    setOrders((prev) => prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
+  const updateOrderStatus = async (order: Order, newStatus: Order['status']) => {
+    await api.patch(`/admin/orders/${order.id}/status`, { status: newStatus });
+    setOrders((prev) => prev.map(o => o.id === order.id ? { ...o, status: newStatus } : o));
     toast({ title: 'Status atualizado!' });
 
-    if (selectedOrder) {
-      const numeroWhatsApp = selectedOrder.contactPhone?.replace(/\D/g, '') || '';
-      let itensMsg = selectedOrder.items.map(item => `➡ ${item.quantity}x ${item.name} (R$ ${(item.price * item.quantity).toFixed(2)})`).join('\n');
-      let desconto = selectedOrder.discount ? `Desconto: R$ ${selectedOrder.discount.toFixed(2)}\n` : '';
-      let entrega = selectedOrder.deliveryFee ? `Entrega: R$ ${selectedOrder.deliveryFee.toFixed(2)}\n` : '';
-      let obs = selectedOrder.deliveryNotes ? `\nObs: ${selectedOrder.deliveryNotes}` : '';
+    // Enviar WhatsApp ao aceitar
+    if (order && newStatus === 'preparing') {
+      const numeroWhatsApp = order.contactPhone?.replace(/\D/g, '') || '';
+      let itensMsg = order.items.map(item => `➡ ${item.quantity}x ${item.name} (R$ ${(item.price * item.quantity).toFixed(2)})`).join('\n');
+      let desconto = order.discount ? `Desconto: R$ ${order.discount.toFixed(2)}\n` : '';
+      let entrega = order.deliveryFee ? `Entrega: R$ ${order.deliveryFee.toFixed(2)}\n` : '';
+      let obs = order.deliveryNotes ? `\nObs: ${order.deliveryNotes}` : '';
       const mensagem =
         `Pedido Element Adega aceito!\n\n` +
         `Acompanhe seu pedido pelo site.\n\n` +
-        `Pedido: ${selectedOrder.id} (${formatDate(selectedOrder.timestamp)} ${formatTime(selectedOrder.timestamp)})\n` +
+        `Pedido: ${order.id} (${formatDate(order.timestamp)} ${formatTime(order.timestamp)})\n` +
         `Tipo: Delivery\n` +
         `------------------------------\n` +
-        `NOME: ${selectedOrder.customer}\n` +
-        `Fone: ${selectedOrder.contactPhone || '-'}\n` +
-        `Endereço: ${selectedOrder.address}\n` +
+        `NOME: ${order.customer}\n` +
+        `Fone: ${order.contactPhone || '-'}\n` +
+        `Endereço: ${order.address}\n` +
         `------------------------------\n` +
         `${itensMsg}\n` +
         `------------------------------\n` +
-        `Itens: R$ ${(selectedOrder.items.reduce((sum, i) => sum + i.price * i.quantity, 0)).toFixed(2)}\n` +
+        `Itens: R$ ${(order.items.reduce((sum, i) => sum + i.price * i.quantity, 0)).toFixed(2)}\n` +
         `${desconto}${entrega}` +
-        `\nTOTAL: R$ ${selectedOrder.total.toFixed(2)}\n` +
+        `\nTOTAL: R$ ${order.total.toFixed(2)}\n` +
         `------------------------------\n` +
-        `Pagamento: ${selectedOrder.paymentMethod}\n` +
+        `Pagamento: ${order.paymentMethod}\n` +
         `${obs}`;
       if (numeroWhatsApp.length >= 10) {
         const link = `https://wa.me/55${numeroWhatsApp}?text=${encodeURIComponent(mensagem)}`;
@@ -405,7 +406,7 @@ const AdminOrders = () => {
                         <Button 
                           size="sm" 
                           className="flex-1"
-                          onClick={() => updateOrderStatus(selectedOrder.id, 'preparing')}
+                          onClick={() => updateOrderStatus(selectedOrder, 'preparing')}
                         >
                           <Check className="h-4 w-4 mr-1" /> Aceitar e preparar
                         </Button>
@@ -413,7 +414,7 @@ const AdminOrders = () => {
                           size="sm" 
                           variant="destructive"
                           className="flex-1"
-                          onClick={() => updateOrderStatus(selectedOrder.id, 'cancelled')}
+                          onClick={() => updateOrderStatus(selectedOrder, 'cancelled')}
                         >
                           Recusar
                         </Button>
@@ -424,7 +425,7 @@ const AdminOrders = () => {
                       <Button 
                         size="sm" 
                         className="w-full"
-                        onClick={() => updateOrderStatus(selectedOrder.id, 'delivering')}
+                        onClick={() => updateOrderStatus(selectedOrder, 'delivering')}
                       >
                         <Truck className="h-4 w-4 mr-1" /> Enviar para entrega
                       </Button>
@@ -434,7 +435,7 @@ const AdminOrders = () => {
                       <Button 
                         size="sm" 
                         className="w-full"
-                        onClick={() => updateOrderStatus(selectedOrder.id, 'delivered')}
+                        onClick={() => updateOrderStatus(selectedOrder, 'delivered')}
                       >
                         <MapPin className="h-4 w-4 mr-1" /> Marcar como entregue
                       </Button>
@@ -709,7 +710,7 @@ const AdminOrders = () => {
                             <Button
                               variant="default"
                               size="sm"
-                              onClick={() => updateOrderStatus(order.id, 'preparing')}
+                              onClick={() => updateOrderStatus(order, 'preparing')}
                             >
                               <Check className="h-4 w-4" />
                               <span className="sr-only md:not-sr-only md:ml-2">Aceitar</span>
@@ -717,7 +718,7 @@ const AdminOrders = () => {
                             <Button
                               variant="destructive"
                               size="sm"
-                              onClick={() => updateOrderStatus(order.id, 'cancelled')}
+                              onClick={() => updateOrderStatus(order, 'cancelled')}
                             >
                               <Trash className="h-4 w-4" />
                               <span className="sr-only md:not-sr-only md:ml-2">Recusar</span>
@@ -728,7 +729,7 @@ const AdminOrders = () => {
                           <Button
                             variant="default"
                             size="sm"
-                            onClick={() => updateOrderStatus(order.id, 'delivering')}
+                            onClick={() => updateOrderStatus(order, 'delivering')}
                           >
                             <Truck className="h-4 w-4" />
                             <span className="sr-only md:not-sr-only md:ml-2">Saiu para entrega</span>
@@ -738,7 +739,7 @@ const AdminOrders = () => {
                           <Button
                             variant="default"
                             size="sm"
-                            onClick={() => updateOrderStatus(order.id, 'delivered')}
+                            onClick={() => updateOrderStatus(order, 'delivered')}
                           >
                             <MapPin className="h-4 w-4" />
                             <span className="sr-only md:not-sr-only md:ml-2">Marcar como entregue</span>
