@@ -11,7 +11,7 @@ async function main() {
   console.log('Tabelas existentes no banco:', tables.map(t => t.table_name));
 
   // Apagar todas as tabelas do banco (exceto _prisma_migrations)
-/*await prisma.$executeRawUnsafe(`
+await prisma.$executeRawUnsafe(`
   DO $$ DECLARE
     r RECORD;
   BEGIN
@@ -47,6 +47,10 @@ console.log('Tabelas apagadas com sucesso!');
     'Gelo de Coco',
     'Sucos',
     'Carvão',
+    'Doses',
+    'Drinks',
+    'Churrasco',
+    'Salgadinhos'
   ];
   for (const name of categorias) {
     await prisma.category.create({
@@ -54,7 +58,7 @@ console.log('Tabelas apagadas com sucesso!');
     });
   }
   console.log('Categorias adicionadas com sucesso!'+ prisma.category.findMany());
-*/
+
   }
 
 main()
