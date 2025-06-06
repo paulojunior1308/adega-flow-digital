@@ -174,7 +174,7 @@ export const orderController = {
   adminList: async (req: Request, res: Response) => {
     const orders = await prisma.order.findMany({
       include: {
-        user: { select: { id: true, name: true, email: true } },
+        user: { select: { id: true, name: true, email: true, phone: true } },
         items: { include: { product: true } },
         address: true,
       },
