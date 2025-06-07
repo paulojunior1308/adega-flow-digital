@@ -524,7 +524,19 @@ const AdminPDV = () => {
                         >
                           <Minus className="h-3 w-3" />
                         </Button>
-                        <span className="mx-2 font-medium">{item.quantity}</span>
+                        <span className="mx-2 font-medium">
+                          {(() => {
+                            const produto = products.find(p => p.id === item.productId);
+                            if (produto && produto.unit === 'ml' && produto.quantityPerUnit) {
+                              const ml = Math.round(item.quantity * produto.quantityPerUnit);
+                              return `${ml} ml (${item.quantity.toFixed(2)} un)`;
+                            } else if (produto && produto.unit === 'unidade') {
+                              return `${item.quantity} un`;
+                            } else {
+                              return item.quantity;
+                            }
+                          })()}
+                        </span>
                         <Button 
                           variant="outline" 
                           size="icon" 
@@ -573,7 +585,19 @@ const AdminPDV = () => {
                               >
                                 <Minus className="h-3 w-3" />
                               </Button>
-                              <span className="mx-2">{item.quantity}</span>
+                              <span className="mx-2">
+                                {(() => {
+                                  const produto = products.find(p => p.id === item.productId);
+                                  if (produto && produto.unit === 'ml' && produto.quantityPerUnit) {
+                                    const ml = Math.round(item.quantity * produto.quantityPerUnit);
+                                    return `${ml} ml (${item.quantity.toFixed(2)} un)`;
+                                  } else if (produto && produto.unit === 'unidade') {
+                                    return `${item.quantity} un`;
+                                  } else {
+                                    return item.quantity;
+                                  }
+                                })()}
+                              </span>
                               <Button 
                                 variant="outline" 
                                 size="icon" 
