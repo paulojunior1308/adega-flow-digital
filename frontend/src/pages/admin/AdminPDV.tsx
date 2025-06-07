@@ -843,17 +843,19 @@ const AdminPDV = () => {
                 };
               });
               // 8. Adicionar cada produto ao carrinho já com o preço ajustado
-              setCartItems(prev => ([
+              setCartItems((prev: CartItem[]) => ([
                 ...prev,
-                ...descontos.map(d => ({
-                  id: d.productId + '-' + Math.random().toString(36).substring(2, 8),
-                  productId: d.productId,
-                  code: d.productId.substring(0, 6),
-                  name: d.nome,
-                  quantity: d.quantidade,
-                  price: d.precoAjustado,
-                  total: d.precoAjustado * d.quantidade
-                }))
+                {
+                  id: comboToConfigure.id + '-' + Math.random().toString(36).substring(2, 8),
+                  productId: comboToConfigure.id,
+                  code: comboToConfigure.code,
+                  name: comboToConfigure.name,
+                  quantity: 1,
+                  price: comboToConfigure.price,
+                  total: comboToConfigure.price,
+                  comboId: comboToConfigure.id,
+                  type: 'combo',
+                } as CartItem
               ]));
               toast({ description: `${comboToConfigure.name} (Combo) adicionado ao carrinho.` });
               setComboModalOpen(false);

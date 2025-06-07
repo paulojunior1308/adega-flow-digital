@@ -321,16 +321,16 @@ export const adminController = {
         });
         if (combo) {
           if (combo.type === 'dose') {
-            // Subtrair estoque de cada ingrediente da dose
+            // Subtrair estoque de cada ingrediente da dose usando SEMPRE o campo amount
             for (const comboItem of combo.items) {
               const produto = await prisma.product.findUnique({ where: { id: comboItem.productId } });
-              const quantidadeConsumida = (comboItem.amount || comboItem.quantity || 1) * item.quantity;
+              const quantidadeConsumida = (comboItem.amount || 1) * item.quantity; // Usar apenas amount
               if ((produto?.stock || 0) < quantidadeConsumida) {
                 return res.status(400).json({ error: `Estoque insuficiente para o produto da dose: ${produto?.name}. Disponível: ${produto?.stock}, solicitado: ${quantidadeConsumida}` });
               }
             }
             for (const comboItem of combo.items) {
-              const quantidadeConsumida = (comboItem.amount || comboItem.quantity || 1) * item.quantity;
+              const quantidadeConsumida = (comboItem.amount || 1) * item.quantity;
               await prisma.product.update({
                 where: { id: comboItem.productId },
                 data: { stock: { decrement: quantidadeConsumida } }
