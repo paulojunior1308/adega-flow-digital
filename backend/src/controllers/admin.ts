@@ -366,17 +366,29 @@ export const adminController = {
       }
     }
     // Cria a venda
+    const saleItems = [];
+    for (const item of items) {
+      if (item.type === 'combo' && item.comboId) {
+        saleItems.push({
+          productId: item.comboId,
+          quantity: item.quantity,
+          price: item.price
+        });
+      } else if (item.productId) {
+        saleItems.push({
+          productId: item.productId,
+          quantity: item.quantity,
+          price: item.price
+        });
+      }
+    }
     const sale = await prisma.sale.create({
       data: {
         userId,
-        total: reallyValidItems.reduce((sum: number, item: any) => sum + (item.price || 0) * (item.quantity || 1), 0),
+        total: saleItems.reduce((sum, item) => sum + (item.price || 0) * (item.quantity || 1), 0),
         paymentMethodId,
         items: {
-          create: reallyValidItems.map((item: any) => ({
-            productId: item.productId,
-            quantity: item.quantity,
-            price: item.price
-          }))
+          create: saleItems
         }
       } as any,
       include: {

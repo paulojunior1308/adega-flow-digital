@@ -68,6 +68,9 @@ interface Product {
   description?: string;
   image?: string;
   active: boolean;
+  unit?: string; // 'ml', 'unidade', etc.
+  quantityPerUnit?: number; // Ex: 900 para gin 900ml
+  canSellByDose?: boolean;
 }
 
 // Category interface
@@ -416,6 +419,10 @@ const AdminStock = () => {
                     <TableCell className="font-medium">
                       {product.stock === 0 ? (
                         <span className="text-red-500">0</span>
+                      ) : product.canSellByDose && product.unit === 'ml' && product.quantityPerUnit ? (
+                        <span>{product.stock} ml <span className="text-xs text-gray-500">({(product.stock / product.quantityPerUnit).toFixed(2)} un)</span></span>
+                      ) : product.canSellByDose && product.unit === 'unidade' ? (
+                        <span>{product.stock} un</span>
                       ) : (
                         product.stock
                       )}
