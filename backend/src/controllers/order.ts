@@ -91,7 +91,7 @@ export const orderController = {
       if (!produto) {
         return res.status(400).json({ error: `Produto não encontrado: ${item.productId}` });
       }
-      if ((produto.stock || 0) < item.quantity) {
+      if (Number(produto.stock || 0) < item.quantity) {
         return res.status(400).json({ error: `Estoque insuficiente para o produto '${produto.name}'.` });
       }
     }
