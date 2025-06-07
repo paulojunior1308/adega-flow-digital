@@ -377,6 +377,7 @@ export const adminController = {
           where: { id: item.comboId },
           include: { items: { include: { product: true } } }
         });
+        if (!combo) continue;
         if (combo.type === 'dose') {
           for (const comboItem of combo.items) {
             const produto = comboItem.product;
