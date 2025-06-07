@@ -326,12 +326,14 @@ export const adminController = {
           for (const comboItem of combo.items) {
             const produto = comboItem.product;
             let quantidadeParaSubtrair = comboItem.quantity * item.quantity;
+            let estoqueDisponivel = produto.stock || 0;
             if (produto.unit === 'ml' && produto.quantityPerUnit) {
-              quantidadeParaSubtrair = comboItem.quantity * item.quantity; // quantidade em fração de unidade
-              quantidadeParaSubtrair = quantidadeParaSubtrair * produto.quantityPerUnit; // converte para ml
+              // Converter para ml
+              quantidadeParaSubtrair = quantidadeParaSubtrair * produto.quantityPerUnit;
+              // estoqueDisponivel já está em ml
             }
-            if ((produto.stock || 0) < quantidadeParaSubtrair) {
-              return res.status(400).json({ error: `Estoque insuficiente para o produto do combo: ${produto.name}` });
+            if (estoqueDisponivel < quantidadeParaSubtrair) {
+              return res.status(400).json({ error: `Estoque insuficiente para o produto do combo: ${produto.name}. Disponível: ${estoqueDisponivel}, solicitado: ${quantidadeParaSubtrair}` });
             }
             await prisma.product.update({
               where: { id: produto.id },
