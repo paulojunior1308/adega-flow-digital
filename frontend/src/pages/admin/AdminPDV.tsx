@@ -29,6 +29,8 @@ interface CartItem {
   quantity: number;
   price: number;
   total: number;
+  comboId?: string;
+  type: string;
 }
 
 const AdminPDV = () => {
@@ -140,7 +142,7 @@ const AdminPDV = () => {
         setComboModalOpen(true);
         return;
       }
-      // Produto avulso: id normal
+      // Se for combo do tipo dose, garantir que comboId seja enviado e preço do combo usado
       const existingItemIndex = cartItems.findIndex(ci => ci.id === item.id);
       if (existingItemIndex >= 0) {
         const updatedItems = [...cartItems];
@@ -151,12 +153,14 @@ const AdminPDV = () => {
       } else {
         const newItem: CartItem = {
           id: item.id,
-          productId: item.id,
+          productId: item.id, // para combos, productId = id do combo
           code: item.code,
           name: item.name,
           quantity: quantity,
-          price: item.price,
-          total: item.price * quantity
+          price: item.price, // sempre usar o preço do combo
+          total: item.price * quantity,
+          comboId: item.id, // garantir que comboId seja enviado
+          type: 'combo',
         };
         setCartItems([...cartItems, newItem]);
         toast({ description: `${item.name} adicionado ao carrinho.` });
@@ -178,7 +182,8 @@ const AdminPDV = () => {
           name: item.name,
           quantity: quantity,
           price: item.price,
-          total: item.price * quantity
+          total: item.price * quantity,
+          type: 'product',
         };
         setCartItems([...cartItems, newItem]);
         toast({ description: `${item.name} adicionado ao carrinho.` });
@@ -281,9 +286,11 @@ const AdminPDV = () => {
     try {
       await api.post('/admin/pdv-sales', {
         items: cartItems.map(item => ({
-          productId: item.productId,
+          productId: item.type === 'combo' ? undefined : item.productId,
+          comboId: item.type === 'combo' ? item.comboId || item.id : undefined,
           quantity: item.quantity,
-          price: item.price
+          price: item.price,
+          type: item.type,
         })),
         paymentMethodId
       });
