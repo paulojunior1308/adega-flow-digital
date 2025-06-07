@@ -311,6 +311,8 @@ export const adminController = {
     });
     const validProductIds = new Set(allProducts.map((p: any) => p.id));
     const reallyValidItems = validItems.filter(item => !item.productId || validProductIds.has(item.productId));
+    // LOG: Itens recebidos na venda
+    console.log('PDV - Itens recebidos:', JSON.stringify(items, null, 2));
     // Verificar estoque antes de criar a venda
     for (const item of reallyValidItems) {
       if (item.comboId) {
@@ -321,13 +323,17 @@ export const adminController = {
         if (!combo) {
           return res.status(400).json({ error: 'Combo não encontrado.' });
         }
+        // LOG: Combo recuperado do banco
+        console.log('PDV - Combo recuperado:', JSON.stringify(combo, null, 2));
         if (combo.type === 'dose') {
           // Dose: pode mexer com unidade e ml
           for (const comboItem of combo.items) {
             const produto = comboItem.product;
-            let quantidadeParaSubtrair = comboItem.quantity * item.quantity;
+            // Usar amount se existir, senão quantity
+            let quantidadeParaSubtrair = (comboItem.amount || comboItem.quantity) * item.quantity;
             let estoqueDisponivel = produto.stock || 0;
             // Para ml, já está em ml, não multiplica por quantityPerUnit
+            console.log(`PDV - Subtraindo do estoque: Produto: ${produto.name}, Tipo: ${produto.unit}, Quantidade: ${quantidadeParaSubtrair}, Estoque disponível: ${estoqueDisponivel}`);
             if (estoqueDisponivel < quantidadeParaSubtrair) {
               return res.status(400).json({ error: `Estoque insuficiente para o produto do combo: ${produto.name}. Disponível: ${estoqueDisponivel}, solicitado: ${quantidadeParaSubtrair}` });
             }
@@ -341,7 +347,6 @@ export const adminController = {
           for (const comboItem of combo.items) {
             const produto = comboItem.product;
             let quantidadeParaSubtrair = comboItem.quantity * item.quantity;
-            // Sempre subtrai em unidade, mesmo que o produto seja ml
             if ((produto.stock || 0) < quantidadeParaSubtrair) {
               return res.status(400).json({ error: `Estoque insuficiente para o produto do combo: ${produto.name}` });
             }
@@ -358,6 +363,7 @@ export const adminController = {
           quantidadeFinal = item.quantity * produto.quantityPerUnit; // converte para ml
         }
         const quantidadeEstoque = produto?.stock || 0;
+        console.log(`PDV - Subtraindo do estoque: Produto avulso: ${produto?.name}, Tipo: ${produto?.unit}, Quantidade: ${quantidadeFinal}, Estoque disponível: ${quantidadeEstoque}`);
         if (quantidadeEstoque < quantidadeFinal) {
           return res.status(400).json({ error: `Estoque insuficiente para o produto: ${produto?.name}. Disponível: ${quantidadeEstoque}, solicitado: ${quantidadeFinal}` });
         }
