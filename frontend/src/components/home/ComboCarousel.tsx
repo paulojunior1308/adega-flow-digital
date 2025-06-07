@@ -23,11 +23,16 @@ interface ComboItem {
     id: string;
     name: string;
     price: number;
+    stock?: number;
     category: {
       id: string;
       name: string;
     };
+    unit?: string;
+    quantityPerUnit?: number;
   };
+  unit?: string;
+  amount?: number;
 }
 
 interface Combo {
@@ -37,6 +42,7 @@ interface Combo {
   image?: string;
   price: number;
   items: ComboItem[];
+  type?: string;
 }
 
 const API_URL = 'https://adega-flow-digital.onrender.com';
@@ -129,6 +135,24 @@ export function ComboCarousel() {
                             {item.product.name}
                             {item.isChoosable && (
                               <span className="ml-1 text-primary">(Escolha o sabor)</span>
+                            )}
+                            {combo.type === 'dose' && item.unit && item.amount && (
+                              <span className="ml-2 text-xs text-gray-500">
+                                - Consome {item.amount} {item.unit} por dose
+                                {typeof item.product.stock === 'number' && item.product.quantityPerUnit && (
+                                  <>
+                                    {item.unit === 'ml' && (
+                                      <> | {Math.floor((item.product.stock * (item.product.quantityPerUnit || 1)) / item.amount)} doses restantes</>
+                                    )}
+                                    {item.unit === 'unidade' && (
+                                      <> | {item.product.stock} unidades restantes</>
+                                    )}
+                                    {item.unit === 'ml' && item.product.quantityPerUnit && (
+                                      <> ({Math.floor(item.product.stock)} garrafa(s) de {item.product.quantityPerUnit}ml)</>
+                                    )}
+                                  </>
+                                )}
+                              </span>
                             )}
                           </li>
                         ))}
