@@ -31,6 +31,8 @@ interface CartItem {
   total: number;
   comboId?: string;
   type: string;
+  comboType?: string;
+  items?: any[];
 }
 
 const AdminPDV = () => {
@@ -306,14 +308,34 @@ const AdminPDV = () => {
       return;
     }
     try {
+      // Montar lista de itens para envio
+      let itemsToSend: any[] = [];
+      for (const item of cartItems) {
+        // Se for combo do tipo dose, enviar os ingredientes
+        if (item.type === 'combo' && item.comboType === 'dose' && Array.isArray(item.items)) {
+          const totalAmount = item.items.reduce((sum: number, ci: any) => sum + (ci.amount || 1), 0);
+          for (const comboItem of item.items) {
+            const ingredienteValor = ((comboItem.amount || 1) / totalAmount) * item.price;
+            itemsToSend.push({
+              productId: comboItem.productId,
+              quantity: (comboItem.amount || 1) * item.quantity,
+              price: Number(ingredienteValor.toFixed(2)),
+              type: 'product',
+            });
+          }
+        } else {
+          // Produto avulso ou combo tradicional
+          itemsToSend.push({
+            productId: item.type === 'combo' ? undefined : item.productId,
+            comboId: item.type === 'combo' ? item.comboId || item.id : undefined,
+            quantity: item.quantity,
+            price: item.price,
+            type: item.type,
+          });
+        }
+      }
       await api.post('/admin/pdv-sales', {
-        items: cartItems.map(item => ({
-          productId: item.type === 'combo' ? undefined : item.productId,
-          comboId: item.type === 'combo' ? item.comboId || item.id : undefined,
-          quantity: item.quantity,
-          price: item.price,
-          type: item.type,
-        })),
+        items: itemsToSend,
         paymentMethodId
       });
       toast({
