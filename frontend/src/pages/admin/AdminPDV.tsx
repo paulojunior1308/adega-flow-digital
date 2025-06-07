@@ -889,19 +889,19 @@ const AdminPDV = () => {
               // 8. Adicionar cada produto ao carrinho já com o preço ajustado
               setCartItems((prev: CartItem[]) => ([
                 ...prev,
-                {
-                  id: comboToConfigure.id + '-' + Math.random().toString(36).substring(2, 8),
-                  productId: comboToConfigure.id,
-                  code: comboToConfigure.code,
-                  name: comboToConfigure.name,
-                  quantity: 1,
-                  price: comboToConfigure.price,
-                  total: comboToConfigure.price,
-                  comboId: comboToConfigure.id,
-                  type: 'combo',
-                } as CartItem
+                ...descontos.map((desc, idx) => ({
+                  id: comboToConfigure.id + '-' + desc.productId + '-' + Math.random().toString(36).substring(2, 8),
+                  productId: desc.productId,
+                  code: '',
+                  name: `${desc.nome} (Dose de ${comboToConfigure.name})`,
+                  quantity: desc.quantidade,
+                  price: desc.precoAjustado,
+                  total: desc.precoAjustado * desc.quantidade,
+                  type: 'product',
+                  parentCombo: { id: comboToConfigure.id, name: comboToConfigure.name }
+                }))
               ]));
-              toast({ description: `${comboToConfigure.name} (Combo) adicionado ao carrinho.` });
+              toast({ description: `Produtos da dose ${comboToConfigure.name} adicionados ao carrinho.` });
               setComboModalOpen(false);
               setComboToConfigure(null);
             }}
