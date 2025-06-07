@@ -982,7 +982,8 @@ export default function AdminPromotionsAndCombos() {
                                 </Select>
                                 <Input
                                   type="number"
-                                  min={1}
+                                  min={productUnits[product.id] === 'ml' ? 0.01 : 1}
+                                  step={productUnits[product.id] === 'ml' ? 0.01 : 1}
                                   value={productAmounts[product.id] || ''}
                                   onChange={e => setProductAmounts(amts => ({ ...amts, [product.id]: Number(e.target.value) }))}
                                   className="w-20"
