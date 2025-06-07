@@ -319,14 +319,10 @@ const AdminProductRegistration = () => {
                       <FormItem>
                         <FormLabel>Estoque Inicial*</FormLabel>
                         <FormControl>
-                          <Input 
-                            type="number" 
-                            min="0" 
-                            placeholder="0" 
-                            {...field} 
-                            required
-                          />
+                          <Input type="number" {...field} />
                         </FormControl>
+                        <FormDescription>Informe o número de unidades (ex: garrafas, latas, etc).</FormDescription>
+                        <FormMessage />
                       </FormItem>
                     )}
                   />
@@ -361,8 +357,10 @@ const AdminProductRegistration = () => {
                       <FormItem>
                         <FormLabel>Quantidade por Unidade*</FormLabel>
                         <FormControl>
-                          <Input type="number" min="1" placeholder="Ex: 900 para 900ml" {...field} required />
+                          <Input type="number" {...field} />
                         </FormControl>
+                        <FormDescription>Informe quantos ml tem cada unidade (ex: 900 para 900ml por garrafa).</FormDescription>
+                        <FormMessage />
                       </FormItem>
                     )}
                   />

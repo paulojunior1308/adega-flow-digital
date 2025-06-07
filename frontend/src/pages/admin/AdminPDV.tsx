@@ -142,7 +142,29 @@ const AdminPDV = () => {
         setComboModalOpen(true);
         return;
       }
-      // Se for combo do tipo dose, garantir que comboId seja enviado e preço do combo usado
+      // Se for combo do tipo dose, discriminar os produtos reais no carrinho
+      if (item.type === 'combo' && item.comboType === 'dose' && Array.isArray(item.items)) {
+        // Distribuir o valor proporcionalmente entre os ingredientes
+        const totalAmount = item.items.reduce((sum: number, ci: any) => sum + (ci.amount || 1), 0);
+        const ingredientes = item.items.map((comboItem: any) => {
+          const ingredienteValor = ((comboItem.amount || 1) / totalAmount) * item.price;
+          return {
+            id: `${item.id}-${comboItem.productId}`,
+            productId: comboItem.productId,
+            code: comboItem.product?.code || '',
+            name: `${comboItem.product?.name || ''} (Dose de ${item.name})`,
+            quantity: (comboItem.amount || 1) * quantity,
+            price: Number(ingredienteValor.toFixed(2)),
+            total: Number((Number(ingredienteValor.toFixed(2)) * ((comboItem.amount || 1) * quantity)).toFixed(2)),
+            type: 'product',
+            parentCombo: { id: item.id, name: item.name, price: item.price, quantity },
+          };
+        });
+        setCartItems([...cartItems, ...ingredientes]);
+        toast({ description: `Produtos da dose ${item.name} adicionados ao carrinho.` });
+        return;
+      }
+      // Combo tradicional
       const existingItemIndex = cartItems.findIndex(ci => ci.id === item.id);
       if (existingItemIndex >= 0) {
         const updatedItems = [...cartItems];

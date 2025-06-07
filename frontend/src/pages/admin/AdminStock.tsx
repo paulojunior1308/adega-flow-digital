@@ -417,12 +417,8 @@ const AdminStock = () => {
                     <TableCell>{product.category?.name || '-'}</TableCell>
                     <TableCell>R$ {product.price.toFixed(2)}</TableCell>
                     <TableCell className="font-medium">
-                      {product.stock === 0 ? (
-                        <span className="text-red-500">0</span>
-                      ) : product.canSellByDose && product.unit === 'ml' && product.quantityPerUnit ? (
-                        <span>{product.stock} ml <span className="text-xs text-gray-500">({(product.stock / product.quantityPerUnit).toFixed(2)} un)</span></span>
-                      ) : product.canSellByDose && product.unit === 'unidade' ? (
-                        <span>{product.stock} un</span>
+                      {product.unit === 'ml' && product.quantityPerUnit ? (
+                        <span>{product.stock * product.quantityPerUnit} ml <span className="text-xs text-gray-500">({product.stock} un)</span></span>
                       ) : (
                         product.stock
                       )}
