@@ -52,7 +52,8 @@ console.log('Tabelas apagadas com sucesso!');
     'Churrasco',
     'Essências',
     'Carvão',
-    'Alumínio'
+    'Alumínio',
+    'Cigarros'
     
   ];
   for (const name of categorias) {
