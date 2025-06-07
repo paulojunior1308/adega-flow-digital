@@ -313,12 +313,51 @@ export const adminController = {
     const reallyValidItems = validItems.filter(item => !item.productId || validProductIds.has(item.productId));
     // Verificar estoque antes de criar a venda
     for (const item of reallyValidItems) {
-      if (item.productId) {
+      if (item.comboId) {
+        const combo = await prisma.combo.findUnique({
+          where: { id: item.comboId },
+          include: { items: { include: { product: true } } }
+        });
+        if (!combo) {
+          return res.status(400).json({ error: 'Combo não encontrado.' });
+        }
+        if (combo.type === 'dose') {
+          // Dose: pode mexer com unidade e ml
+          for (const comboItem of combo.items) {
+            const produto = comboItem.product;
+            let quantidadeParaSubtrair = comboItem.quantity * item.quantity;
+            if (produto.unit === 'ml' && produto.quantityPerUnit) {
+              quantidadeParaSubtrair = comboItem.quantity * item.quantity; // quantidade em fração de unidade
+              quantidadeParaSubtrair = quantidadeParaSubtrair * produto.quantityPerUnit; // converte para ml
+            }
+            if ((produto.stock || 0) < quantidadeParaSubtrair) {
+              return res.status(400).json({ error: `Estoque insuficiente para o produto do combo: ${produto.name}` });
+            }
+            await prisma.product.update({
+              where: { id: produto.id },
+              data: { stock: { decrement: quantidadeParaSubtrair } }
+            });
+          }
+        } else if (combo.type === 'combo') {
+          // Combo: sempre mexe com unidade
+          for (const comboItem of combo.items) {
+            const produto = comboItem.product;
+            let quantidadeParaSubtrair = comboItem.quantity * item.quantity;
+            // Sempre subtrai em unidade, mesmo que o produto seja ml
+            if ((produto.stock || 0) < quantidadeParaSubtrair) {
+              return res.status(400).json({ error: `Estoque insuficiente para o produto do combo: ${produto.name}` });
+            }
+            await prisma.product.update({
+              where: { id: produto.id },
+              data: { stock: { decrement: quantidadeParaSubtrair } }
+            });
+          }
+        }
+      } else if (item.productId) {
         const produto = await prisma.product.findUnique({ where: { id: item.productId } });
         let quantidadeFinal = item.quantity;
         if (produto && produto.unit === 'ml' && produto.quantityPerUnit) {
-          // Permitir fração de unidade para produtos em ml
-          quantidadeFinal = Number(item.quantity);
+          quantidadeFinal = item.quantity * produto.quantityPerUnit; // converte para ml
         }
         const quantidadeEstoque = produto?.stock || 0;
         if (quantidadeEstoque < quantidadeFinal) {
@@ -333,7 +372,37 @@ export const adminController = {
     // Cria a venda
     const saleItems = [];
     for (const item of items) {
-      if (item.productId) {
+      if (item.comboId) {
+        const combo = await prisma.combo.findUnique({
+          where: { id: item.comboId },
+          include: { items: { include: { product: true } } }
+        });
+        if (combo.type === 'dose') {
+          for (const comboItem of combo.items) {
+            const produto = comboItem.product;
+            let quantidade = comboItem.quantity * item.quantity;
+            let price = 0;
+            if (produto.unit === 'ml' && produto.quantityPerUnit) {
+              quantidade = quantidade * produto.quantityPerUnit; // ml
+            }
+            saleItems.push({
+              productId: produto.id,
+              quantity: quantidade,
+              price: price // pode ajustar se quiser dividir o valor
+            });
+          }
+        } else if (combo.type === 'combo') {
+          for (const comboItem of combo.items) {
+            const produto = comboItem.product;
+            let quantidade = comboItem.quantity * item.quantity;
+            saleItems.push({
+              productId: produto.id,
+              quantity: quantidade,
+              price: 0 // pode ajustar se quiser dividir o valor
+            });
+          }
+        }
+      } else if (item.productId) {
         saleItems.push({
           productId: item.productId,
           quantity: item.quantity,
