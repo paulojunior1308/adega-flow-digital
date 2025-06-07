@@ -58,7 +58,7 @@ export const productController = {
         costPrice: parseFloat(costPrice),
         categoryId,
         supplierId: supplierId || null,
-        stock: stockValue,
+        stock: String(stockValue),
         minStock: minStock ? parseInt(minStock) : 0,
         barcode: barcode || null,
         image: image || null,
@@ -86,29 +86,32 @@ export const productController = {
     try {
       const { id } = req.params;
       const { name, description, price, categoryId, supplierId, stock, minStock, barcode, costPrice, active, image, unit, quantityPerUnit, canSellByUnit, canSellByDose } = req.body;
+      const stockValue = stock !== undefined && stock !== null && stock !== '' ? parseFloat(stock) : 0;
+      const dataToUpdate = {
+        name,
+        description,
+        price: parseFloat(price),
+        costPrice: costPrice ? parseFloat(costPrice) : undefined,
+        stock: String(stockValue),
+        minStock: minStock ? parseInt(minStock) : undefined,
+        barcode,
+        active: typeof active === 'boolean' ? active : active === 'true' || active === '1',
+        image: image || undefined,
+        unit: unit || null,
+        quantityPerUnit: quantityPerUnit ? parseInt(quantityPerUnit) : null,
+        canSellByUnit: typeof canSellByUnit === 'boolean' ? canSellByUnit : canSellByUnit === 'true',
+        canSellByDose: typeof canSellByDose === 'boolean' ? canSellByDose : canSellByDose === 'true',
+        category: {
+          connect: { id: categoryId }
+        },
+        supplier: supplierId ? {
+          connect: { id: supplierId }
+        } : undefined
+      };
+      console.log('[ATUALIZA PRODUTO] Dados enviados para update:', dataToUpdate);
       const product = await prisma.product.update({
         where: { id },
-        data: {
-          name,
-          description,
-          price: parseFloat(price),
-          costPrice: costPrice ? parseFloat(costPrice) : undefined,
-          stock: parseFloat(stock),
-          minStock: minStock ? parseInt(minStock) : undefined,
-          barcode,
-          active: typeof active === 'boolean' ? active : active === 'true' || active === '1',
-          image: image || undefined,
-          unit: unit || null,
-          quantityPerUnit: quantityPerUnit ? parseInt(quantityPerUnit) : null,
-          canSellByUnit: typeof canSellByUnit === 'boolean' ? canSellByUnit : canSellByUnit === 'true',
-          canSellByDose: typeof canSellByDose === 'boolean' ? canSellByDose : canSellByDose === 'true',
-          category: {
-            connect: { id: categoryId }
-          },
-          supplier: supplierId ? {
-            connect: { id: supplierId }
-          } : undefined
-        },
+        data: dataToUpdate,
         include: {
           category: true,
           supplier: true

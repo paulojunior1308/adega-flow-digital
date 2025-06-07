@@ -19,7 +19,7 @@ async function subtrairEstoqueProduto(produto: any, quantidade: number, tipoVend
       console.log(`[ESTOQUE] Subtraindo ${quantidade} ml. Novo estoque: ${novoEstoqueDecimal} un (${novoEstoqueMl} ml)`);
       await prisma.product.update({
         where: { id: produto.id },
-        data: { stock: novoEstoqueDecimal }
+        data: { stock: String(novoEstoqueDecimal) }
       });
     } else {
       // Venda por unidade
