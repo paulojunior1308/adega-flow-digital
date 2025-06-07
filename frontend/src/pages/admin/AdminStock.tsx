@@ -420,7 +420,7 @@ const AdminStock = () => {
                       {product.unit === 'ml' && product.quantityPerUnit ? (
                         <span>{product.stock * product.quantityPerUnit} ml <span className="text-xs text-gray-500">({product.stock} un)</span></span>
                       ) : (
-                        product.stock
+                        <span>{product.stock}</span>
                       )}
                     </TableCell>
                     <TableCell>{product.updatedAt ? new Date(product.updatedAt).toLocaleDateString('pt-BR') : '-'}</TableCell>
