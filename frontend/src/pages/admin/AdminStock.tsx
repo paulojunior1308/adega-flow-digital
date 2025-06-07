@@ -71,6 +71,7 @@ interface Product {
   unit?: string; // 'ml', 'unidade', etc.
   quantityPerUnit?: number; // Ex: 900 para gin 900ml
   canSellByDose?: boolean;
+  canSellByUnit?: boolean;
 }
 
 // Category interface
@@ -98,7 +99,11 @@ const AdminStock = () => {
     costPrice: '',
     stock: '',
     description: '',
-    image: null as File | null
+    image: null as File | null,
+    unit: '',
+    quantityPerUnit: '',
+    canSellByUnit: false,
+    canSellByDose: false
   });
   const [categories, setCategories] = useState<Category[]>([]);
   
@@ -205,7 +210,11 @@ const AdminStock = () => {
       costPrice: product.costPrice?.toString() || '',
       stock: product.stock.toString(),
       description: product.description || '',
-      image: null
+      image: null,
+      unit: product.unit || '',
+      quantityPerUnit: product.quantityPerUnit?.toString() || '',
+      canSellByUnit: typeof product.canSellByUnit === 'boolean' ? product.canSellByUnit : false,
+      canSellByDose: typeof product.canSellByDose === 'boolean' ? product.canSellByDose : false
     });
     setIsEditDialogOpen(true);
   };
@@ -226,6 +235,10 @@ const AdminStock = () => {
         stock: parseInt(editForm.stock),
         description: editForm.description,
         image: imageUrl,
+        unit: editForm.unit,
+        quantityPerUnit: parseInt(editForm.quantityPerUnit),
+        canSellByUnit: editForm.canSellByUnit,
+        canSellByDose: editForm.canSellByDose
       });
       // Atualizar a lista de produtos
       const updatedProducts = products.map(p => 
@@ -239,7 +252,11 @@ const AdminStock = () => {
               },
               price: parseFloat(editForm.price),
               stock: parseInt(editForm.stock),
-              image: imageUrl
+              image: imageUrl,
+              unit: editForm.unit,
+              quantityPerUnit: parseInt(editForm.quantityPerUnit),
+              canSellByUnit: editForm.canSellByUnit,
+              canSellByDose: editForm.canSellByDose
             }
           : p
       );
@@ -610,6 +627,31 @@ const AdminStock = () => {
                     value={editForm.stock}
                     onChange={(e) => setEditForm({ ...editForm, stock: e.target.value })}
                   />
+                  <span className="text-xs text-gray-500">Informe o número de unidades (ex: garrafas, latas, etc).</span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Unidade do Produto</label>
+                  <Select value={editForm.unit || ''} onValueChange={(value) => setEditForm({ ...editForm, unit: value })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione a unidade" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ml">ml</SelectItem>
+                      <SelectItem value="unidade">Unidade</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Quantidade por Unidade</label>
+                  <Input
+                    type="number"
+                    value={editForm.quantityPerUnit || ''}
+                    onChange={(e) => setEditForm({ ...editForm, quantityPerUnit: e.target.value })}
+                  />
+                  <span className="text-xs text-gray-500">Informe quantos ml tem cada unidade (ex: 900 para 900ml por garrafa).</span>
                 </div>
               </div>
 
@@ -634,6 +676,25 @@ const AdminStock = () => {
                     }
                   }}
                 />
+              </div>
+
+              <div className="flex gap-4 items-center">
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={!!editForm.canSellByUnit}
+                    onChange={e => setEditForm({ ...editForm, canSellByUnit: e.target.checked })}
+                  />
+                  Permitir venda por unidade
+                </label>
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={!!editForm.canSellByDose}
+                    onChange={e => setEditForm({ ...editForm, canSellByDose: e.target.checked })}
+                  />
+                  Permitir venda por dose
+                </label>
               </div>
             </div>
             
