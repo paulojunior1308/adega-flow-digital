@@ -19,6 +19,8 @@ interface Product {
   price: number;
   pinned?: boolean;
   stock: number;
+  unit?: string;
+  quantityPerUnit?: number;
 }
 
 interface CartItem {
@@ -877,17 +879,24 @@ const AdminPDV = () => {
               }
               setCartItems((prev: CartItem[]) => ([
                 ...prev,
-                ...produtosCombo.map((p, idx) => ({
-                  id: comboToConfigure.id + '-' + p.productId + '-' + Math.random().toString(36).substring(2, 8),
-                  productId: p.productId,
-                  code: '',
-                  name: `${p.nome} (Dose de ${comboToConfigure.name})`,
-                  quantity: p.quantidade, // quantidade consumida (ml ou unidade)
-                  price: totaisArredondados[idx],
-                  total: totaisArredondados[idx],
-                  type: 'product',
-                  parentCombo: { id: comboToConfigure.id, name: comboToConfigure.name }
-                }))
+                ...produtosCombo.map((p, idx) => {
+                  const produto = products.find(prod => prod.id === p.productId);
+                  let quantidadeFinal = p.quantidade;
+                  if (produto && produto.unit === 'ml' && produto.quantityPerUnit) {
+                    quantidadeFinal = p.quantidade / produto.quantityPerUnit;
+                  }
+                  return {
+                    id: comboToConfigure.id + '-' + p.productId + '-' + Math.random().toString(36).substring(2, 8),
+                    productId: p.productId,
+                    code: '',
+                    name: `${p.nome} (Dose de ${comboToConfigure.name})`,
+                    quantity: quantidadeFinal,
+                    price: totaisArredondados[idx],
+                    total: totaisArredondados[idx],
+                    type: 'product',
+                    parentCombo: { id: comboToConfigure.id, name: comboToConfigure.name }
+                  };
+                })
               ]));
               toast({ description: `Produtos da dose ${comboToConfigure.name} adicionados ao carrinho.` });
               setComboModalOpen(false);
