@@ -38,19 +38,22 @@ console.log('Tabelas apagadas com sucesso!');
 
   // Adicionar categorias
   const categorias = [
-    'Whisky',
-    'Essências',
-    'GIN',
-    'Energéticos',
-    'Cervejas',
     'Refrigerantes',
-    'Gelo de Coco',
-    'Sucos',
-    'Carvão',
-    'Doses',
+    'Energéticos',
+    'GIN',
+    'Vinhos',
     'Drinks',
+    'Gelos',
+    'Cervejas',
+    'Whiskys',
+    'Descartáveis',
+    'Doses',
+    'Salgadinhos',
     'Churrasco',
-    'Salgadinhos'
+    'Essências',
+    'Carvão',
+    'Alumínio'
+    
   ];
   for (const name of categorias) {
     await prisma.category.create({
