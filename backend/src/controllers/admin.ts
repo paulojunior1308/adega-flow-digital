@@ -4,6 +4,45 @@ import { generateToken } from '../config/jwt';
 import { comparePassword, hashPassword } from '../config/bcrypt';
 import { AppError } from '../config/errorHandler';
 
+// Função utilitária para subtrair estoque corretamente
+async function subtrairEstoqueProduto(produto: any, quantidade: number, tipoVenda: 'ml' | 'unidade' = 'unidade') {
+  if (produto.unit === 'ml' && produto.quantityPerUnit) {
+    // Estoque em unidade, mas controle em ml
+    const estoqueTotalMl = produto.stock * produto.quantityPerUnit;
+    console.log(`[ESTOQUE] Produto: ${produto.name} | Estoque atual: ${produto.stock} un (${estoqueTotalMl} ml)`);
+    if (tipoVenda === 'ml') {
+      if (estoqueTotalMl < quantidade) {
+        throw new Error(`Estoque insuficiente para o produto: ${produto.name}. Disponível: ${estoqueTotalMl} ml, solicitado: ${quantidade} ml`);
+      }
+      const novoEstoqueMl = estoqueTotalMl - quantidade;
+      const novoEstoqueUn = Math.floor(novoEstoqueMl / produto.quantityPerUnit);
+      console.log(`[ESTOQUE] Subtraindo ${quantidade} ml. Novo estoque: ${novoEstoqueUn} un (${novoEstoqueMl} ml)`);
+      await prisma.product.update({
+        where: { id: produto.id },
+        data: { stock: novoEstoqueUn }
+      });
+    } else {
+      // Venda por unidade
+      if (produto.stock < quantidade) {
+        throw new Error(`Estoque insuficiente para o produto: ${produto.name}. Disponível: ${produto.stock} un, solicitado: ${quantidade} un`);
+      }
+      await prisma.product.update({
+        where: { id: produto.id },
+        data: { stock: { decrement: quantidade } }
+      });
+    }
+  } else {
+    // Produto normal (unidade)
+    if (produto.stock < quantidade) {
+      throw new Error(`Estoque insuficiente para o produto: ${produto.name}. Disponível: ${produto.stock}, solicitado: ${quantidade}`);
+    }
+    await prisma.product.update({
+      where: { id: produto.id },
+      data: { stock: { decrement: quantidade } }
+    });
+  }
+}
+
 export const adminController = {
   login: async (req: Request, res: Response) => {
     const { email, password } = req.body;
@@ -329,48 +368,37 @@ export const adminController = {
           // Dose: pode mexer com unidade e ml
           for (const comboItem of combo.items) {
             const produto = comboItem.product;
-            // Usar amount se existir, senão quantity
-            let quantidadeParaSubtrair = (comboItem.amount || comboItem.quantity) * item.quantity;
-            let estoqueDisponivel = produto.stock || 0;
-            // Para ml, já está em ml, não multiplica por quantityPerUnit
-            console.log(`PDV - Subtraindo do estoque: Produto: ${produto.name}, Tipo: ${produto.unit}, Quantidade: ${quantidadeParaSubtrair}, Estoque disponível: ${estoqueDisponivel}`);
-            if (estoqueDisponivel < quantidadeParaSubtrair) {
-              return res.status(400).json({ error: `Estoque insuficiente para o produto do combo: ${produto.name}. Disponível: ${estoqueDisponivel}, solicitado: ${quantidadeParaSubtrair}` });
+            const quantidadeParaSubtrair = (comboItem.amount || comboItem.quantity) * item.quantity;
+            const tipoVenda = produto.unit === 'ml' ? 'ml' : 'unidade';
+            try {
+              await subtrairEstoqueProduto(produto, quantidadeParaSubtrair, tipoVenda);
+            } catch (err) {
+              return res.status(400).json({ error: (err as Error).message });
             }
-            await prisma.product.update({
-              where: { id: produto.id },
-              data: { stock: { decrement: quantidadeParaSubtrair } }
-            });
           }
         } else if (combo.type === 'combo') {
           // Combo: sempre mexe com unidade
           for (const comboItem of combo.items) {
             const produto = comboItem.product;
-            let quantidadeParaSubtrair = comboItem.quantity * item.quantity;
-            if ((produto.stock || 0) < quantidadeParaSubtrair) {
-              return res.status(400).json({ error: `Estoque insuficiente para o produto do combo: ${produto.name}` });
+            try {
+              await subtrairEstoqueProduto(produto, comboItem.quantity * item.quantity, 'unidade');
+            } catch (err) {
+              return res.status(400).json({ error: (err as Error).message });
             }
-            await prisma.product.update({
-              where: { id: produto.id },
-              data: { stock: { decrement: quantidadeParaSubtrair } }
-            });
           }
         }
       } else if (item.productId) {
         const produto = await prisma.product.findUnique({ where: { id: item.productId } });
+        const tipoVenda = produto && produto.unit === 'ml' ? 'ml' : 'unidade';
         let quantidadeFinal = item.quantity;
-        if (produto && produto.unit === 'ml' && produto.quantityPerUnit) {
-          quantidadeFinal = item.quantity * produto.quantityPerUnit; // converte para ml
+        if (tipoVenda === 'ml' && produto && produto.quantityPerUnit) {
+          quantidadeFinal = item.quantity * produto.quantityPerUnit;
         }
-        const quantidadeEstoque = produto?.stock || 0;
-        console.log(`PDV - Subtraindo do estoque: Produto avulso: ${produto?.name}, Tipo: ${produto?.unit}, Quantidade: ${quantidadeFinal}, Estoque disponível: ${quantidadeEstoque}`);
-        if (quantidadeEstoque < quantidadeFinal) {
-          return res.status(400).json({ error: `Estoque insuficiente para o produto: ${produto?.name}. Disponível: ${quantidadeEstoque}, solicitado: ${quantidadeFinal}` });
+        try {
+          await subtrairEstoqueProduto(produto, quantidadeFinal, tipoVenda);
+        } catch (err) {
+          return res.status(400).json({ error: (err as Error).message });
         }
-        await prisma.product.update({
-          where: { id: item.productId },
-          data: { stock: { decrement: quantidadeFinal } }
-        });
       }
     }
     // Cria a venda
