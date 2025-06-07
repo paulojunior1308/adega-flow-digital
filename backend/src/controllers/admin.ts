@@ -303,15 +303,14 @@ export const adminController = {
     // Pega o id do admin logado
     // @ts-ignore
     const userId = req.user.id;
-    const validItems = items.filter(item => !!item.productId);
+    const validItems = items.filter(item => !!item.productId || !!item.comboId);
     // Buscar todos os produtos válidos do banco
     const allProducts = await prisma.product.findMany({
-      where: { id: { in: validItems.map(i => i.productId) } },
+      where: { id: { in: validItems.filter(i => i.productId).map(i => i.productId) } },
       select: { id: true }
     });
     const validProductIds = new Set(allProducts.map((p: any) => p.id));
-    const reallyValidItems = validItems.filter(item => validProductIds.has(item.productId));
-    console.log('Itens realmente válidos para venda:', reallyValidItems);
+    const reallyValidItems = validItems.filter(item => !item.productId || validProductIds.has(item.productId));
     // Verificar estoque antes de criar a venda
     for (const item of reallyValidItems) {
       if (item.comboId) {
@@ -369,11 +368,31 @@ export const adminController = {
     const saleItems = [];
     for (const item of items) {
       if (item.type === 'combo' && item.comboId) {
-        saleItems.push({
-          productId: item.comboId,
-          quantity: item.quantity,
-          price: item.price
+        const combo = await prisma.combo.findUnique({
+          where: { id: item.comboId },
+          include: { items: true }
         });
+        if (combo && combo.type === 'dose') {
+          // Distribuir o valor da dose proporcionalmente entre os ingredientes
+          const totalAmount = combo.items.reduce((sum: number, ci: any) => sum + (ci.amount || 1), 0);
+          for (const comboItem of combo.items) {
+            const ingredienteValor = ((comboItem.amount || 1) / totalAmount) * item.price;
+            saleItems.push({
+              productId: comboItem.productId,
+              quantity: (comboItem.amount || 1) * item.quantity,
+              price: Number(ingredienteValor.toFixed(2))
+            });
+          }
+        } else if (combo) {
+          // Combo tradicional: registrar os produtos reais
+          for (const comboItem of combo.items) {
+            saleItems.push({
+              productId: comboItem.productId,
+              quantity: comboItem.quantity * item.quantity,
+              price: 0 // ou dividir o valor do combo, se desejar
+            });
+          }
+        }
       } else if (item.productId) {
         saleItems.push({
           productId: item.productId,
@@ -382,10 +401,11 @@ export const adminController = {
         });
       }
     }
+    const totalVenda = saleItems.reduce((sum: number, item: any) => sum + (item.price || 0) * (item.quantity || 1), 0);
     const sale = await prisma.sale.create({
       data: {
         userId,
-        total: saleItems.reduce((sum, item) => sum + (item.price || 0) * (item.quantity || 1), 0),
+        total: totalVenda,
         paymentMethodId,
         items: {
           create: saleItems
