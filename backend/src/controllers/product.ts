@@ -202,7 +202,7 @@ export const productController = {
 
       const product = await prisma.product.update({
         where: { id },
-        data: { stock: parseFloat(stock) },
+        data: { stock: stock !== undefined ? stock.toString() : undefined },
         include: {
           category: true,
           supplier: true

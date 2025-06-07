@@ -627,7 +627,7 @@ const AdminStock = () => {
                     value={editForm.stock}
                     onChange={(e) => setEditForm({ ...editForm, stock: e.target.value })}
                   />
-                  <span className="text-xs text-gray-500">Informe o número de unidades (ex: garrafas, latas, etc).</span>
+                  <span className="text-xs text-gray-500">Digite o estoque usando ponto para decimais. Exemplo: 50.5 para 50 unidades e meia.</span>
                 </div>
               </div>
 
