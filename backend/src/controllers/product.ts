@@ -58,7 +58,7 @@ export const productController = {
           costPrice: parseFloat(costPrice),
           categoryId,
           supplierId: supplierId || null,
-          stock: parseInt(stock),
+          stock: parseFloat(stock),
           minStock: minStock ? parseInt(minStock) : 0,
           barcode: barcode || null,
           image: image || null,
@@ -90,7 +90,7 @@ export const productController = {
           description,
           price: parseFloat(price),
           costPrice: costPrice ? parseFloat(costPrice) : undefined,
-          stock: parseInt(stock),
+          stock: parseFloat(stock),
           minStock: minStock ? parseInt(minStock) : undefined,
           barcode,
           active: typeof active === 'boolean' ? active : active === 'true' || active === '1',
@@ -202,7 +202,7 @@ export const productController = {
 
       const product = await prisma.product.update({
         where: { id },
-        data: { stock: parseInt(stock) },
+        data: { stock: parseFloat(stock) },
         include: {
           category: true,
           supplier: true

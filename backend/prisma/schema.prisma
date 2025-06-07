@@ -32,7 +32,7 @@ model Product {
   description String?
   price       Float
   costPrice   Float
-  stock       Int         @default(0)
+  stock       Decimal   @default(0)
   minStock    Int         @default(0)
   barcode     String?     @unique
   sku         String?     @unique

@@ -8,22 +8,22 @@ import { AppError } from '../config/errorHandler';
 async function subtrairEstoqueProduto(produto: any, quantidade: number, tipoVenda: 'ml' | 'unidade' = 'unidade') {
   if (produto.unit === 'ml' && produto.quantityPerUnit) {
     // Estoque em unidade, mas controle em ml
-    const estoqueTotalMl = produto.stock * produto.quantityPerUnit;
+    const estoqueTotalMl = Number(produto.stock) * produto.quantityPerUnit;
     console.log(`[ESTOQUE] Produto: ${produto.name} | Estoque atual: ${produto.stock} un (${estoqueTotalMl} ml)`);
     if (tipoVenda === 'ml') {
       if (estoqueTotalMl < quantidade) {
         throw new Error(`Estoque insuficiente para o produto: ${produto.name}. Disponível: ${estoqueTotalMl} ml, solicitado: ${quantidade} ml`);
       }
       const novoEstoqueMl = estoqueTotalMl - quantidade;
-      const novoEstoqueUn = Math.floor(novoEstoqueMl / produto.quantityPerUnit);
-      console.log(`[ESTOQUE] Subtraindo ${quantidade} ml. Novo estoque: ${novoEstoqueUn} un (${novoEstoqueMl} ml)`);
+      const novoEstoqueDecimal = novoEstoqueMl / produto.quantityPerUnit;
+      console.log(`[ESTOQUE] Subtraindo ${quantidade} ml. Novo estoque: ${novoEstoqueDecimal} un (${novoEstoqueMl} ml)`);
       await prisma.product.update({
         where: { id: produto.id },
-        data: { stock: novoEstoqueUn }
+        data: { stock: novoEstoqueDecimal }
       });
     } else {
       // Venda por unidade
-      if (produto.stock < quantidade) {
+      if (Number(produto.stock) < quantidade) {
         throw new Error(`Estoque insuficiente para o produto: ${produto.name}. Disponível: ${produto.stock} un, solicitado: ${quantidade} un`);
       }
       await prisma.product.update({
@@ -33,7 +33,7 @@ async function subtrairEstoqueProduto(produto: any, quantidade: number, tipoVend
     }
   } else {
     // Produto normal (unidade)
-    if (produto.stock < quantidade) {
+    if (Number(produto.stock) < quantidade) {
       throw new Error(`Estoque insuficiente para o produto: ${produto.name}. Disponível: ${produto.stock}, solicitado: ${quantidade}`);
     }
     await prisma.product.update({
