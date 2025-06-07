@@ -50,23 +50,26 @@ export const productController = {
   create: async (req: Request, res: Response) => {
     try {
       const { name, description, price, categoryId, supplierId, stock, minStock, barcode, costPrice, image, unit, quantityPerUnit, canSellByUnit, canSellByDose } = req.body;
+      const stockValue = stock !== undefined && stock !== null && stock !== '' ? parseFloat(stock) : 0;
+      const dataToCreate = {
+        name,
+        description,
+        price: parseFloat(price),
+        costPrice: parseFloat(costPrice),
+        categoryId,
+        supplierId: supplierId || null,
+        stock: stockValue,
+        minStock: minStock ? parseInt(minStock) : 0,
+        barcode: barcode || null,
+        image: image || null,
+        unit: unit || null,
+        quantityPerUnit: quantityPerUnit ? parseInt(quantityPerUnit) : null,
+        canSellByUnit: typeof canSellByUnit === 'boolean' ? canSellByUnit : canSellByUnit === 'true',
+        canSellByDose: typeof canSellByDose === 'boolean' ? canSellByDose : canSellByDose === 'true',
+      };
+      console.log('[CADASTRO PRODUTO] Dados enviados para criação:', dataToCreate);
       const product = await prisma.product.create({
-        data: {
-          name,
-          description,
-          price: parseFloat(price),
-          costPrice: parseFloat(costPrice),
-          categoryId,
-          supplierId: supplierId || null,
-          stock: parseFloat(stock),
-          minStock: minStock ? parseInt(minStock) : 0,
-          barcode: barcode || null,
-          image: image || null,
-          unit: unit || null,
-          quantityPerUnit: quantityPerUnit ? parseInt(quantityPerUnit) : null,
-          canSellByUnit: typeof canSellByUnit === 'boolean' ? canSellByUnit : canSellByUnit === 'true',
-          canSellByDose: typeof canSellByDose === 'boolean' ? canSellByDose : canSellByDose === 'true',
-        },
+        data: dataToCreate,
         include: {
           category: true,
           supplier: true
