@@ -982,12 +982,12 @@ export default function AdminPromotionsAndCombos() {
                                 </Select>
                                 <Input
                                   type="number"
-                                  min={productUnits[product.id] === 'ml' ? 0.01 : 1}
-                                  step={productUnits[product.id] === 'ml' ? 0.01 : 1}
+                                  min={1}
+                                  step={1}
                                   value={productAmounts[product.id] || ''}
                                   onChange={e => setProductAmounts(amts => ({ ...amts, [product.id]: Number(e.target.value) }))}
                                   className="w-20"
-                                  placeholder="Qtd consumida"
+                                  placeholder={productUnits[product.id] === 'ml' ? 'ml consumidos' : 'Qtd consumida'}
                                 />
                               </>
                             )}

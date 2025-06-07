@@ -327,11 +327,7 @@ export const adminController = {
             const produto = comboItem.product;
             let quantidadeParaSubtrair = comboItem.quantity * item.quantity;
             let estoqueDisponivel = produto.stock || 0;
-            if (produto.unit === 'ml' && produto.quantityPerUnit) {
-              // Converter para ml
-              quantidadeParaSubtrair = quantidadeParaSubtrair * produto.quantityPerUnit;
-              // estoqueDisponivel já está em ml
-            }
+            // Para ml, já está em ml, não multiplica por quantityPerUnit
             if (estoqueDisponivel < quantidadeParaSubtrair) {
               return res.status(400).json({ error: `Estoque insuficiente para o produto do combo: ${produto.name}. Disponível: ${estoqueDisponivel}, solicitado: ${quantidadeParaSubtrair}` });
             }
