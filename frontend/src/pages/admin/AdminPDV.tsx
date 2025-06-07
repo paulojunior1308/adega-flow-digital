@@ -850,19 +850,20 @@ const AdminPDV = () => {
                 }
               }
               // 2. Calcular valor total original
-              const totalOriginal = produtosCombo.reduce((sum, p) => sum + p.precoOriginal * p.quantidade, 0);
+              // (Removido: cálculo antigo de totaisNaoArredondados e totaisArredondados)
               // 3. Distribuir valor do combo proporcionalmente (sem arredondar no loop)
-              const totaisNaoArredondados = produtosCombo.map(p =>
-                totalOriginal > 0
-                  ? ((p.precoOriginal * p.quantidade) / totalOriginal) * comboToConfigure.price
-                  : p.precoOriginal * p.quantidade
-              );
               // 4. Arredonde cada total
-              let totaisArredondados = totaisNaoArredondados.map(v => Math.round(v * 100) / 100);
               // 5. Calcule a diferença
+              // 6. Distribua o ajuste entre todos os itens do combo de forma cíclica
+              const totalAmount = produtosCombo.reduce((sum, p) => sum + (p.quantidade), 0);
+              let totaisNaoArredondados = produtosCombo.map(p =>
+                totalAmount > 0
+                  ? ((p.quantidade) / totalAmount) * comboToConfigure.price
+                  : 0
+              );
+              let totaisArredondados = totaisNaoArredondados.map(v => Math.round(v * 100) / 100);
               let soma = totaisArredondados.reduce((a, b) => a + b, 0);
               let diff = Math.round((comboToConfigure.price - soma) * 100); // em centavos
-              // 6. Distribua o ajuste entre todos os itens do combo de forma cíclica
               if (diff !== 0) {
                 const indicesOrdenados = Array.from({ length: totaisArredondados.length }, (_, i) => i);
                 let i = 0;
@@ -874,29 +875,16 @@ const AdminPDV = () => {
                   i++;
                 }
               }
-              // 7. Calcula preço unitário ajustado e desconto
-              const descontos = produtosCombo.map((p, idx) => {
-                const precoAjustado = Math.round((totaisArredondados[idx] / p.quantidade) * 100) / 100;
-                return {
-                  productId: p.productId,
-                  precoOriginal: p.precoOriginal,
-                  quantidade: p.quantidade,
-                  precoAjustado,
-                  nome: p.nome,
-                  desconto: p.precoOriginal - precoAjustado
-                };
-              });
-              // 8. Adicionar cada produto ao carrinho já com o preço ajustado
               setCartItems((prev: CartItem[]) => ([
                 ...prev,
-                ...descontos.map((desc, idx) => ({
-                  id: comboToConfigure.id + '-' + desc.productId + '-' + Math.random().toString(36).substring(2, 8),
-                  productId: desc.productId,
+                ...produtosCombo.map((p, idx) => ({
+                  id: comboToConfigure.id + '-' + p.productId + '-' + Math.random().toString(36).substring(2, 8),
+                  productId: p.productId,
                   code: '',
-                  name: `${desc.nome} (Dose de ${comboToConfigure.name})`,
-                  quantity: desc.quantidade,
-                  price: desc.precoAjustado,
-                  total: desc.precoAjustado * desc.quantidade,
+                  name: `${p.nome} (Dose de ${comboToConfigure.name})`,
+                  quantity: p.quantidade, // quantidade consumida (ml ou unidade)
+                  price: totaisArredondados[idx],
+                  total: totaisArredondados[idx],
                   type: 'product',
                   parentCombo: { id: comboToConfigure.id, name: comboToConfigure.name }
                 }))
