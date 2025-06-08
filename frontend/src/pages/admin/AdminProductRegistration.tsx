@@ -29,7 +29,6 @@ import { useToast } from "@/components/ui/use-toast";
 import { useForm } from "react-hook-form";
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '@/lib/axios';
-import { Checkbox } from "@/components/ui/checkbox";
 
 interface Category {
   id: string;
@@ -112,9 +111,9 @@ const AdminProductRegistration = () => {
           stock: product.stock.toString(),
           description: product.description || '',
           image: null,
-          isFractioned: product.isFractioned,
-          totalVolume: product.totalVolume ? product.totalVolume.toString() : '',
-          unitVolume: product.unitVolume ? product.unitVolume.toString() : ''
+          isFractioned: product.isFractioned || false,
+          totalVolume: product.totalVolume?.toString() || '',
+          unitVolume: product.unitVolume?.toString() || ''
         });
         if (product.image) {
           setPreviewImage(product.image);
@@ -140,11 +139,22 @@ const AdminProductRegistration = () => {
     // Formata o preço para garantir que seja um número válido
     const price = parseFloat(data.price.replace(',', '.'));
     const costPrice = parseFloat(data.costPrice.replace(',', '.'));
+    const totalVolume = data.isFractioned ? parseFloat(data.totalVolume.replace(',', '.')) : null;
+    const unitVolume = data.isFractioned ? parseFloat(data.unitVolume.replace(',', '.')) : null;
     
     if (isNaN(price) || isNaN(costPrice)) {
       toast({
         title: "Erro no preço",
         description: "Por favor, insira preços válidos",
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (data.isFractioned && (isNaN(totalVolume!) || isNaN(unitVolume!))) {
+      toast({
+        title: "Erro no volume",
+        description: "Por favor, insira volumes válidos",
         variant: 'destructive',
       });
       return;
@@ -166,8 +176,8 @@ const AdminProductRegistration = () => {
         description: data.description || '',
         image: imageUrl,
         isFractioned: data.isFractioned,
-        totalVolume: data.totalVolume ? parseFloat(data.totalVolume) : null,
-        unitVolume: data.unitVolume ? parseFloat(data.unitVolume) : null
+        totalVolume,
+        unitVolume
       }, {
         headers: {
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -315,77 +325,6 @@ const AdminProductRegistration = () => {
                       </FormItem>
                     )}
                   />
-
-                  <FormField
-                    control={form.control}
-                    name="isFractioned"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
-                        <FormControl>
-                          <Checkbox
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                          />
-                        </FormControl>
-                        <div className="space-y-1 leading-none">
-                          <FormLabel>
-                            Produto Fracionado
-                          </FormLabel>
-                          <FormDescription>
-                            Marque se este produto pode ser vendido por volume (ml, L, etc)
-                          </FormDescription>
-                        </div>
-                      </FormItem>
-                    )}
-                  />
-
-                  {form.watch('isFractioned') && (
-                    <>
-                      <FormField
-                        control={form.control}
-                        name="totalVolume"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Volume Total (ml)*</FormLabel>
-                            <FormControl>
-                              <Input 
-                                type="number"
-                                step="0.01"
-                                placeholder="Ex: 1000"
-                                {...field}
-                                required
-                              />
-                            </FormControl>
-                            <FormDescription>
-                              Volume total do produto em mililitros
-                            </FormDescription>
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="unitVolume"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Volume da Unidade (ml)*</FormLabel>
-                            <FormControl>
-                              <Input 
-                                type="number"
-                                step="0.01"
-                                placeholder="Ex: 100"
-                                {...field}
-                                required
-                              />
-                            </FormControl>
-                            <FormDescription>
-                              Volume de uma unidade do produto em mililitros
-                            </FormDescription>
-                          </FormItem>
-                        )}
-                      />
-                    </>
-                  )}
                 </div>
                 
                 <div className="space-y-4">
@@ -448,6 +387,85 @@ const AdminProductRegistration = () => {
                       </div>
                     )}
                   </div>
+
+                  <FormField
+                    control={form.control}
+                    name="isFractioned"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                        <FormControl>
+                          <input
+                            type="checkbox"
+                            checked={field.value}
+                            onChange={field.onChange}
+                            className="h-4 w-4 rounded border-gray-300 text-element-blue-dark focus:ring-element-blue-dark"
+                          />
+                        </FormControl>
+                        <div className="space-y-1 leading-none">
+                          <FormLabel>
+                            Produto Fracionado
+                          </FormLabel>
+                          <FormDescription>
+                            Marque se o produto pode ser vendido por volume (ml)
+                          </FormDescription>
+                        </div>
+                      </FormItem>
+                    )}
+                  />
+
+                  {form.watch("isFractioned") && (
+                    <>
+                      <FormField
+                        control={form.control}
+                        name="totalVolume"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Volume Total (ml)*</FormLabel>
+                            <FormControl>
+                              <Input 
+                                type="text"
+                                placeholder="Ex: 1000"
+                                {...field}
+                                required
+                                onChange={(e) => {
+                                  const value = e.target.value.replace(/[^\d.,]/g, '');
+                                  field.onChange(value);
+                                }}
+                              />
+                            </FormControl>
+                            <FormDescription>
+                              Volume total do produto em mililitros
+                            </FormDescription>
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="unitVolume"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Volume da Unidade (ml)*</FormLabel>
+                            <FormControl>
+                              <Input 
+                                type="text"
+                                placeholder="Ex: 100"
+                                {...field}
+                                required
+                                onChange={(e) => {
+                                  const value = e.target.value.replace(/[^\d.,]/g, '');
+                                  field.onChange(value);
+                                }}
+                              />
+                            </FormControl>
+                            <FormDescription>
+                              Volume de uma unidade do produto em mililitros
+                            </FormDescription>
+                          </FormItem>
+                        )}
+                      />
+                    </>
+                  )}
                 </div>
               </div>
               

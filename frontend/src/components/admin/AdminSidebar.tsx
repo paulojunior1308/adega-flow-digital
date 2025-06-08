@@ -14,11 +14,7 @@ import {
   Store,
   Truck,
   Tag,
-  LogOut as LogOutIcon,
-  ShoppingCart,
-  BarChart2,
-  Settings,
-  PlusCircle
+  LogOut as LogOutIcon
 } from 'lucide-react';
 
 const AdminSidebar = () => {
@@ -80,11 +76,6 @@ const AdminSidebar = () => {
       icon: <Store className="h-5 w-5" />, 
       label: 'Caixa', 
       path: '/admin-pdv' 
-    },
-    {
-      title: 'Doses',
-      href: '/admin-doses',
-      icon: PlusCircle
     }
   ];
   

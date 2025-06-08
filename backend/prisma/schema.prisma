@@ -120,10 +120,8 @@ model SaleItem {
   discount  Float    @default(0)
   createdAt DateTime @default(now())
   saleId    String
-  productId String?
-  doseId    String?
-  product   Product? @relation(fields: [productId], references: [id])
-  dose      Dose?    @relation(fields: [doseId], references: [id])
+  productId String
+  product   Product  @relation(fields: [productId], references: [id])
   sale      Sale     @relation(fields: [saleId], references: [id])
 }
 
@@ -192,10 +190,12 @@ model CartItem {
   quantity  Int      @default(1)
   price     Float?
   comboId   String?
+  doseId    String?  // Novo campo para referenciar doses
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   cart      Cart     @relation(fields: [cartId], references: [id])
   product   Product  @relation(fields: [productId], references: [id])
+  dose      Dose?    @relation(fields: [doseId], references: [id])
   
   @@map("cart_items")
 }
@@ -304,14 +304,14 @@ model Notification {
 model Dose {
   id          String      @id @default(uuid())
   name        String
-  description String
+  description String?
   price       Float
   image       String?
   active      Boolean     @default(true)
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
   items       DoseItem[]
-  saleItems   SaleItem[]
+  cartItems   CartItem[]
 }
 
 model DoseItem {
@@ -319,9 +319,8 @@ model DoseItem {
   doseId    String
   productId String
   quantity  Float    // Quantidade em ml ou unidades
-  isChoosable Boolean @default(false) // Se o produto pode ser escolhido (ex: tipo de energético)
-  maxChoices Int     @default(1)      // Número máximo de escolhas permitidas
-  categoryId String? // Categoria para produtos escolhíveis
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
   dose      Dose     @relation(fields: [doseId], references: [id])
   product   Product  @relation(fields: [productId], references: [id])
 }

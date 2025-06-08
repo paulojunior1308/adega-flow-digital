@@ -31,6 +31,9 @@ interface Product {
     id: string;
     name: string;
   };
+  isFractioned?: boolean;
+  totalVolume?: number;
+  unitVolume?: number;
 }
 
 interface ComboItem {
@@ -63,9 +66,27 @@ interface Promotion {
   products: Product[];
 }
 
+interface DoseItem {
+  id: string;
+  productId: string;
+  product: Product;
+  quantity: number;
+}
+
+interface Dose {
+  id: string;
+  name: string;
+  description?: string;
+  image?: string;
+  price: number;
+  active: boolean;
+  items: DoseItem[];
+}
+
 export default function AdminPromotionsAndCombos() {
   const [combos, setCombos] = React.useState<Combo[]>([]);
   const [promotions, setPromotions] = React.useState<Promotion[]>([]);
+  const [doses, setDoses] = React.useState<Dose[]>([]);
   const [products, setProducts] = React.useState<Product[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [selectedProducts, setSelectedProducts] = React.useState<string[]>([]);
@@ -74,8 +95,10 @@ export default function AdminPromotionsAndCombos() {
   const [productTypes, setProductTypes] = React.useState<Record<string, 'fixed' | 'choosable'>>({});
   const [editingCombo, setEditingCombo] = React.useState<Combo | null>(null);
   const [editingPromotion, setEditingPromotion] = React.useState<Promotion | null>(null);
+  const [editingDose, setEditingDose] = React.useState<Dose | null>(null);
   const [isComboDialogOpen, setIsComboDialogOpen] = React.useState(false);
   const [isPromotionDialogOpen, setIsPromotionDialogOpen] = React.useState(false);
+  const [isDoseDialogOpen, setIsDoseDialogOpen] = React.useState(false);
   const [productQuantities, setProductQuantities] = React.useState<Record<string, number>>({});
   const [categories, setCategories] = React.useState<{id: string, name: string}[]>([]);
   const [choosableCategories, setChoosableCategories] = React.useState<Record<string, string>>({});
@@ -83,14 +106,16 @@ export default function AdminPromotionsAndCombos() {
 
   const fetchData = React.useCallback(async () => {
     try {
-      const [combosRes, promotionsRes, productsRes] = await Promise.all([
+      const [combosRes, promotionsRes, productsRes, dosesRes] = await Promise.all([
         api.get('/admin/combos'),
         api.get('/admin/promotions'),
-        api.get('/admin/products')
+        api.get('/admin/products'),
+        api.get('/admin/doses')
       ]);
       setCombos(combosRes.data);
       setPromotions(promotionsRes.data);
       setProducts(productsRes.data);
+      setDoses(dosesRes.data);
     } catch (error) {
       toast.error('Erro ao carregar dados');
     } finally {
@@ -124,6 +149,7 @@ export default function AdminPromotionsAndCombos() {
     setProductTypes({});
     setEditingCombo(null);
     setEditingPromotion(null);
+    setEditingDose(null);
   };
 
   const handleEditCombo = (combo: Combo) => {
@@ -146,6 +172,17 @@ export default function AdminPromotionsAndCombos() {
   const handleEditPromotion = (promotion: Promotion) => {
     setEditingPromotion(promotion);
     setSelectedProducts(promotion.products.map(product => product.id));
+  };
+
+  const handleEditDose = (dose: Dose) => {
+    setEditingDose(dose);
+    setSelectedProducts(dose.items.map(item => item.productId));
+    setProductQuantities(
+      dose.items.reduce((acc, item) => ({
+        ...acc,
+        [item.productId]: item.quantity
+      }), {})
+    );
   };
 
   const handleUpdateCombo = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -241,6 +278,46 @@ export default function AdminPromotionsAndCombos() {
     }
   };
 
+  const handleUpdateDose = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!editingDose) return;
+    if (selectedProducts.length === 0) {
+      toast.error('Selecione pelo menos um produto para a dose');
+      return;
+    }
+    setIsSubmitting(true);
+    const form = e.currentTarget;
+    const formData = new FormData(form);
+    let imageUrl = editingDose.image || '';
+    const imageFile = formData.get('image') as File;
+    if (imageFile && imageFile.size > 0) {
+      imageUrl = await uploadToCloudinary(imageFile);
+    }
+    const doseData = {
+      name: formData.get('name'),
+      description: formData.get('description'),
+      price: formData.get('price'),
+      image: imageUrl,
+      items: JSON.stringify(
+        selectedProducts.map(productId => ({
+          productId,
+          quantity: productQuantities[productId] || 1
+        }))
+      ),
+      active: String(editingDose.active)
+    };
+    try {
+      await api.put(`/admin/doses/${editingDose.id}`, doseData);
+      toast.success('Dose atualizada com sucesso');
+      fetchData();
+      resetForm();
+    } catch (error) {
+      toast.error('Erro ao atualizar dose');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handleDeleteCombo = async (id: string) => {
     if (!confirm('Tem certeza que deseja excluir este combo?')) return;
 
@@ -262,6 +339,18 @@ export default function AdminPromotionsAndCombos() {
       fetchData();
     } catch (error) {
       toast.error('Erro ao excluir promoção');
+    }
+  };
+
+  const handleDeleteDose = async (id: string) => {
+    if (!confirm('Tem certeza que deseja excluir esta dose?')) return;
+
+    try {
+      await api.delete(`/admin/doses/${id}`);
+      toast.success('Dose excluída com sucesso');
+      fetchData();
+    } catch (error) {
+      toast.error('Erro ao excluir dose');
     }
   };
 

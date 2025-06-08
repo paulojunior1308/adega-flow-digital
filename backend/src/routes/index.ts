@@ -15,6 +15,7 @@ import { promotionController } from '../controllers/promotion';
 import { motoboyMiddleware } from '../middlewares/motoboy';
 import prisma from '../config/prisma';
 import publicRoutes from './public';
+import doseRoutes from './dose.routes';
 
 const router = express.Router();
 
@@ -53,5 +54,8 @@ router.get('/admin-configuracoes', authorizeRoles('ADMIN'), adminController.getC
 router.get('/admin-pdv', authorizeRoles('ADMIN'), adminController.getPDV);
 
 router.use('/', clientRoutes);
+
+// Rotas de doses
+router.use('/admin/doses', authMiddleware, authorizeRoles('ADMIN'), doseRoutes);
 
 export default router; 
