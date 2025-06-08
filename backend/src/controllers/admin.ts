@@ -303,7 +303,8 @@ export const adminController = {
     // Pega o id do admin logado
     // @ts-ignore
     const userId = req.user.id;
-    const validItems = items.filter(item => !!item.productId);
+    console.log('Itens recebidos na venda:', items);
+    const validItems = items.filter(item => !!item.productId || !!item.doseId);
     // Buscar todos os produtos válidos do banco
     const allProducts = await prisma.product.findMany({
       where: { id: { in: validItems.map(i => i.productId) } },

@@ -310,11 +310,23 @@ const AdminPDV = () => {
     }
     try {
       await api.post('/admin/pdv-sales', {
-        items: cartItems.map(item => ({
-          productId: item.productId,
-          quantity: item.quantity,
-          price: item.price
-        })),
+        items: cartItems.map(item => {
+          if (item.doseItems) {
+            // É uma dose
+            return {
+              doseId: item.productId,
+              quantity: item.quantity,
+              price: item.price,
+              ...(item.choosableSelections ? { choosableSelections: item.choosableSelections } : {})
+            };
+          }
+          // Produto normal
+          return {
+            productId: item.productId,
+            quantity: item.quantity,
+            price: item.price
+          };
+        }),
         paymentMethodId
       });
       toast({
