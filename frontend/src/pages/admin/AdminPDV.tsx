@@ -164,14 +164,16 @@ const AdminPDV = () => {
     } else if (item.type === 'dose') {
       // Explodir a dose em itens separados no carrinho, um para cada produto da composição
       const totalQtd = item.items.reduce((sum: number, di: any) => sum + di.quantity * quantity, 0);
+      let acumulado = 0;
       const newDoseItems = item.items.map((doseItem: any, idx: number) => {
-        // Distribuir o preço proporcionalmente à quantidade
+        const isLast = idx === item.items.length - 1;
         let itemPrice = 0;
-        if (idx === item.items.length - 1) {
-          // O último item recebe o restante para evitar problemas de arredondamento
-          itemPrice = item.price - newDoseItems?.slice(0, idx).reduce((sum: number, ni: any) => sum + (ni.price * ni.quantity), 0) || 0;
-        } else {
+        if (!isLast) {
           itemPrice = parseFloat(((doseItem.quantity * quantity) / totalQtd * item.price).toFixed(2));
+          acumulado += itemPrice * (doseItem.quantity * quantity);
+        } else {
+          // O último item recebe o restante para fechar o valor total
+          itemPrice = parseFloat((((item.price * 1) - acumulado) / (doseItem.quantity * quantity)).toFixed(2));
         }
         return {
           id: `${doseItem.productId}-dose-${item.id}-${Math.random().toString(36).substring(2, 8)}`,
