@@ -162,25 +162,19 @@ const AdminPDV = () => {
         return;
       }
     } else if (item.type === 'dose') {
-      if (item.items?.some((i: any) => i.allowFlavorSelection)) {
-        setDoseToConfigure(item);
-        setDoseOptionsModalOpen(true);
-        return;
-      } else {
-        // Dose só com itens fixos
-        setCartItems([...cartItems, {
-          id: item.id + '-' + Math.random().toString(36).substring(2, 8),
-          productId: item.id,
-          code: item.id.substring(0, 6),
-          name: item.name,
-          quantity: 1,
-          price: item.price,
-          total: item.price,
-          doseItems: item.items
-        }]);
-        toast({ description: `${item.name} (Dose) adicionada ao carrinho.` });
-        return;
-      }
+      // Explodir a dose em itens separados no carrinho, um para cada produto da composição
+      const newDoseItems = item.items.map((doseItem: any) => ({
+        id: `${doseItem.productId}-dose-${item.id}-${Math.random().toString(36).substring(2, 8)}`,
+        productId: doseItem.productId,
+        code: doseItem.product?.code || '',
+        name: `Dose de ${item.name} - ${doseItem.product?.name || ''}`,
+        quantity: doseItem.quantity * quantity, // quantidade proporcional
+        price: 0, // O preço total da dose será somado no final
+        total: 0
+      }));
+      setCartItems([...cartItems, ...newDoseItems]);
+      toast({ description: `${item.name} (Dose) adicionada ao carrinho.` });
+      return;
     }
 
     const estoqueDisponivel = item.stock ?? Infinity;
