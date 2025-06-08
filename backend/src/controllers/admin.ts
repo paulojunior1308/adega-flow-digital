@@ -409,15 +409,14 @@ export const adminController = {
         if (combo.type === 'dose') {
           for (const comboItem of combo.items) {
             const produto = comboItem.product;
-            let quantidade = comboItem.quantity * item.quantity;
-            let price = 0;
-            if (produto.unit === 'ml' && produto.quantityPerUnit) {
-              quantidade = quantidade * produto.quantityPerUnit; // ml
-            }
+            // Para produtos vendidos por ml, a quantidade é a quantidade em ml (ex: 100)
+            // Para produtos vendidos por unidade, a quantidade é em unidades
+            let quantidade = comboItem.amount || comboItem.quantity;
+            quantidade = quantidade * item.quantity;
             saleItems.push({
               productId: produto.id,
               quantity: quantidade,
-              price: price // pode ajustar se quiser dividir o valor
+              price: 0 // pode ajustar se quiser dividir o valor
             });
           }
         } else if (combo.type === 'combo') {
