@@ -390,71 +390,82 @@ export const adminController = {
     }
     for (const item of reallyValidItems) {
       if (item.doseId) {
+        console.log('Processando desconto de estoque para dose:', item.doseId);
         // Buscar a composição da dose
         const dose = await prisma.dose.findUnique({
           where: { id: item.doseId },
           include: { items: true }
         });
         if (!dose) {
+          console.error('Dose não encontrada:', item.doseId);
           return res.status(400).json({ error: 'Dose não encontrada.' });
         }
+        console.log('Composição da dose:', dose.items);
         // Se houver seleções de escolhíveis, elas vêm em item.choosableSelections
         const choosableSelections = item.choosableSelections || {};
         for (const doseItem of dose.items) {
           if (doseItem.allowFlavorSelection && doseItem.categoryId) {
-            // O usuário deve ter escolhido o produto para esta categoria
             const selections = choosableSelections[doseItem.categoryId] || {};
             for (const [productId, qty] of Object.entries(selections)) {
               const quantidadeFinal = Number(qty) * item.quantity;
               const produto = await prisma.product.findUnique({ where: { id: productId } });
               if (!produto) {
+                console.error('Produto escolhido não encontrado:', productId);
                 return res.status(400).json({ error: `Produto escolhido não encontrado: ${productId}` });
               }
-              // Se for fracionado, descontar do volume
+              console.log(`Descontando produto escolhido (${produto.name}): antes=${produto.isFractioned ? produto.totalVolume : produto.stock}`);
               if (produto.isFractioned) {
                 const novoVolume = (produto.totalVolume || 0) - (doseItem.quantity * quantidadeFinal);
                 if (novoVolume < 0) {
+                  console.error('Estoque insuficiente (volume) para o produto:', produto.name);
                   return res.status(400).json({ error: `Estoque insuficiente (volume) para o produto: ${produto.name}` });
                 }
                 await prisma.product.update({
                   where: { id: productId },
                   data: { totalVolume: novoVolume }
                 });
+                console.log(`Novo volume de ${produto.name}: ${novoVolume}`);
               } else {
                 const novoEstoque = (produto.stock || 0) - quantidadeFinal;
                 if (novoEstoque < 0) {
+                  console.error('Estoque insuficiente para o produto:', produto.name);
                   return res.status(400).json({ error: `Estoque insuficiente para o produto: ${produto.name}` });
                 }
                 await prisma.product.update({
                   where: { id: productId },
                   data: { stock: novoEstoque }
                 });
+                console.log(`Novo estoque de ${produto.name}: ${novoEstoque}`);
               }
             }
           } else {
             const produto = await prisma.product.findUnique({ where: { id: doseItem.productId } });
             if (!produto) {
+              console.error('Produto da dose não encontrado:', doseItem.productId);
               return res.status(400).json({ error: `Produto da dose não encontrado: ${doseItem.productId}` });
             }
-            // Usar discountBy para decidir como descontar
             if (doseItem.discountBy === 'volume') {
               const novoVolume = (produto.totalVolume || 0) - (doseItem.quantity * item.quantity);
               if (novoVolume < 0) {
+                console.error('Estoque insuficiente (volume) para o produto:', produto.name);
                 return res.status(400).json({ error: `Estoque insuficiente (volume) para o produto: ${produto.name}` });
               }
               await prisma.product.update({
                 where: { id: doseItem.productId },
                 data: { totalVolume: novoVolume }
               });
+              console.log(`Novo volume de ${produto.name}: ${novoVolume}`);
             } else {
               const novoEstoque = (produto.stock || 0) - (doseItem.quantity * item.quantity);
               if (novoEstoque < 0) {
+                console.error('Estoque insuficiente para o produto:', produto.name);
                 return res.status(400).json({ error: `Estoque insuficiente para o produto: ${produto.name}` });
               }
               await prisma.product.update({
                 where: { id: doseItem.productId },
                 data: { stock: novoEstoque }
               });
+              console.log(`Novo estoque de ${produto.name}: ${novoEstoque}`);
             }
           }
         }
