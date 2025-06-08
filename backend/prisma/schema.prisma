@@ -311,6 +311,7 @@ model Dose {
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
   items       DoseItem[]
+  saleItems   SaleItem[]
 }
 
 model DoseItem {
