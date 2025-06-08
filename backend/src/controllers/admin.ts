@@ -391,6 +391,9 @@ export const adminController = {
         const produto = await prisma.product.findUnique({ where: { id: item.productId } });
         const tipoVenda = produto && produto.unit === 'ml' ? 'ml' : 'unidade';
         let quantidadeFinal = item.quantity;
+        if (tipoVenda === 'ml' && produto && produto.quantityPerUnit) {
+          quantidadeFinal = item.quantity / produto.quantityPerUnit;
+        }
         try {
           await subtrairEstoqueProduto(produto, quantidadeFinal, tipoVenda);
         } catch (err) {
