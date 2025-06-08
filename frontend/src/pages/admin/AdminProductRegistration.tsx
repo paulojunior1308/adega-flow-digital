@@ -44,7 +44,6 @@ interface ProductFormValues {
   description: string;
   image: FileList | null;
   isFractioned: boolean;
-  totalVolume: string;
   unitVolume: string;
 }
 
@@ -81,7 +80,6 @@ const AdminProductRegistration = () => {
       description: "",
       image: null,
       isFractioned: false,
-      totalVolume: "",
       unitVolume: ""
     }
   });
@@ -112,7 +110,6 @@ const AdminProductRegistration = () => {
           description: product.description || '',
           image: null,
           isFractioned: product.isFractioned || false,
-          totalVolume: product.totalVolume?.toString() || '',
           unitVolume: product.unitVolume?.toString() || ''
         });
         if (product.image) {
@@ -139,9 +136,8 @@ const AdminProductRegistration = () => {
     // Formata o preço para garantir que seja um número válido
     const price = parseFloat(data.price.replace(',', '.'));
     const costPrice = parseFloat(data.costPrice.replace(',', '.'));
-    const totalVolume = data.isFractioned ? parseFloat(data.totalVolume.replace(',', '.')) : null;
     const unitVolume = data.isFractioned ? parseFloat(data.unitVolume.replace(',', '.')) : null;
-    
+
     if (isNaN(price) || isNaN(costPrice)) {
       toast({
         title: "Erro no preço",
@@ -151,10 +147,10 @@ const AdminProductRegistration = () => {
       return;
     }
 
-    if (data.isFractioned && (isNaN(totalVolume!) || isNaN(unitVolume!))) {
+    if (data.isFractioned && (isNaN(unitVolume!) || unitVolume! <= 0)) {
       toast({
         title: "Erro no volume",
-        description: "Por favor, insira volumes válidos",
+        description: "Por favor, insira um volume válido para a unidade",
         variant: 'destructive',
       });
       return;
@@ -176,7 +172,6 @@ const AdminProductRegistration = () => {
         description: data.description || '',
         image: imageUrl,
         isFractioned: data.isFractioned,
-        totalVolume,
         unitVolume
       }, {
         headers: {
