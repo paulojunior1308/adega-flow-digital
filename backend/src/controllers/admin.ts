@@ -7,19 +7,18 @@ import { AppError } from '../config/errorHandler';
 // Função utilitária para subtrair estoque corretamente
 async function subtrairEstoqueProduto(produto: any, quantidade: number, tipoVenda: 'ml' | 'unidade' = 'unidade') {
   if (produto.unit === 'ml' && produto.quantityPerUnit) {
-    // Estoque em unidade, mas controle em ml
-    const estoqueTotalMl = Number(produto.stock) * produto.quantityPerUnit;
-    console.log(`[ESTOQUE] Produto: ${produto.name} | Estoque atual: ${produto.stock} un (${estoqueTotalMl} ml)`);
     if (tipoVenda === 'ml') {
+      // Venda por dose (ml)
+      const estoqueTotalMl = Number(produto.stock) * produto.quantityPerUnit;
       if (estoqueTotalMl < quantidade) {
         throw new Error(`Estoque insuficiente para o produto: ${produto.name}. Disponível: ${estoqueTotalMl} ml, solicitado: ${quantidade} ml`);
       }
-      const novoEstoqueMl = estoqueTotalMl - quantidade;
-      const novoEstoqueDecimal = novoEstoqueMl / produto.quantityPerUnit;
-      console.log(`[ESTOQUE] Subtraindo ${quantidade} ml. Novo estoque: ${novoEstoqueDecimal} un (${novoEstoqueMl} ml)`);
+      // Subtrai a fração correta
+      let novoEstoqueUn = Number(produto.stock) - (quantidade / produto.quantityPerUnit);
+      novoEstoqueUn = Math.round(novoEstoqueUn * 10000) / 10000; // Arredonda para 4 casas decimais
       await prisma.product.update({
         where: { id: produto.id },
-        data: { stock: novoEstoqueDecimal }
+        data: { stock: novoEstoqueUn }
       });
     } else {
       // Venda por unidade
