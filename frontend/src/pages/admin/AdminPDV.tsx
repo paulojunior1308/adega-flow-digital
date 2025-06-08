@@ -894,10 +894,13 @@ const AdminPDV = () => {
               setCartItems((prev: CartItem[]) => ([
                 ...prev,
                 ...produtosCombo.map((p, idx) => {
-                  const produto = products.find(prod => prod.id === p.productId);
+                  let produto = products.find(prod => prod.id === p.productId);
+                  // Se não encontrar, tenta pegar do próprio p (caso venha do combo)
+                  if (!produto && (p as any).unit && (p as any).quantityPerUnit) {
+                    produto = p as any;
+                  }
                   let quantidadeFinal = p.quantidade;
                   if (produto && produto.unit === 'ml' && produto.quantityPerUnit) {
-                    // Se vier amount, use amount; se não, use quantidade
                     const quantidadeMl = (p as any).amount || p.quantidade;
                     quantidadeFinal = quantidadeMl / produto.quantityPerUnit;
                     console.log(`[FRONTEND][CARRINHO][CONVERSAO] Produto: ${produto.name}, Amount: ${quantidadeMl}ml, Unidade: ${produto.quantityPerUnit}ml, Fração: ${quantidadeFinal}`);
