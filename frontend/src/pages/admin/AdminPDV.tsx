@@ -32,6 +32,8 @@ interface CartItem {
   quantity: number;
   price: number;
   total: number;
+  doseItems?: any[];
+  choosableSelections?: Record<string, Record<string, number>>;
 }
 
 interface Dose {
@@ -69,6 +71,7 @@ const AdminPDV = () => {
   const [doses, setDoses] = useState<Dose[]>([]);
   const [doseModalOpen, setDoseModalOpen] = useState(false);
   const [doseToConfigure, setDoseToConfigure] = useState<Dose | null>(null);
+  const [doseOptionsModalOpen, setDoseOptionsModalOpen] = useState(false);
   
   // Buscar produtos e combos ao carregar
   useEffect(() => {
@@ -159,9 +162,25 @@ const AdminPDV = () => {
         return;
       }
     } else if (item.type === 'dose') {
-      setDoseToConfigure(item);
-      setDoseModalOpen(true);
-      return;
+      if (item.items?.some((i: any) => i.allowFlavorSelection)) {
+        setDoseToConfigure(item);
+        setDoseOptionsModalOpen(true);
+        return;
+      } else {
+        // Dose só com itens fixos
+        setCartItems([...cartItems, {
+          id: item.id + '-' + Math.random().toString(36).substring(2, 8),
+          productId: item.id,
+          code: item.id.substring(0, 6),
+          name: item.name,
+          quantity: 1,
+          price: item.price,
+          total: item.price,
+          doseItems: item.items
+        }]);
+        toast({ description: `${item.name} (Dose) adicionada ao carrinho.` });
+        return;
+      }
     }
 
     const estoqueDisponivel = item.stock ?? Infinity;
@@ -768,7 +787,7 @@ const AdminPDV = () => {
             open={comboModalOpen}
             onOpenChange={setComboModalOpen}
             combo={comboToConfigure}
-            onConfirm={async (choosableSelections) => {
+            onConfirm={(choosableSelections) => {
               // 1. Montar lista de todos os produtos do combo (fixos + escolhidos)
               const produtosCombo: { productId: string, nome: string, precoOriginal: number, quantidade: number }[] = [];
               // Fixos
@@ -919,6 +938,37 @@ const AdminPDV = () => {
             )}
           </DialogContent>
         </Dialog>
+
+        {doseToConfigure && (
+          <ComboOptionsModal
+            open={doseOptionsModalOpen}
+            onOpenChange={setDoseOptionsModalOpen}
+            combo={{
+              id: doseToConfigure.id,
+              name: doseToConfigure.name,
+              items: doseToConfigure.items.map((item: any) => ({
+                ...item,
+                isChoosable: item.allowFlavorSelection
+              }))
+            }}
+            onConfirm={(choosableSelections) => {
+              setCartItems([...cartItems, {
+                id: doseToConfigure.id + '-' + Math.random().toString(36).substring(2, 8),
+                productId: doseToConfigure.id,
+                code: doseToConfigure.id.substring(0, 6),
+                name: doseToConfigure.name,
+                quantity: 1,
+                price: doseToConfigure.price,
+                total: doseToConfigure.price,
+                doseItems: doseToConfigure.items,
+                choosableSelections
+              }]);
+              toast({ description: `${doseToConfigure.name} (Dose) adicionada ao carrinho.` });
+              setDoseOptionsModalOpen(false);
+              setDoseToConfigure(null);
+            }}
+          />
+        )}
       </div>
     </div>
   );

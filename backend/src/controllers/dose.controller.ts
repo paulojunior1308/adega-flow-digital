@@ -111,9 +111,9 @@ export const doseController = {
         return res.status(404).json({ error: 'Dose não encontrada' });
       }
 
-      await prisma.dose.delete({
-        where: { id }
-      });
+      // Deletar todos os DoseItem relacionados
+      await prisma.doseItem.deleteMany({ where: { doseId: id } });
+      await prisma.dose.delete({ where: { id } });
 
       return res.status(204).send();
     } catch (error) {
