@@ -7,26 +7,27 @@ import { AppError } from '../config/errorHandler';
 // Função utilitária para subtrair estoque corretamente
 async function subtrairEstoqueProduto(produto: any, quantidade: number, tipoVenda: 'ml' | 'unidade' = 'unidade') {
   if (produto.unit === 'ml' && produto.quantityPerUnit) {
-    const estoqueTotalMl = Number(produto.stock) * produto.quantityPerUnit;
     if (tipoVenda === 'ml') {
+      // Venda por dose: quantidade em ml
+      const estoqueTotalMl = Number(produto.stock) * produto.quantityPerUnit;
       if (estoqueTotalMl < quantidade) {
         throw new Error(`Estoque insuficiente para o produto: ${produto.name}. Disponível: ${estoqueTotalMl} ml, solicitado: ${quantidade} ml`);
       }
-      const novoEstoqueMl = estoqueTotalMl - quantidade;
-      // Arredonda para 4 casas decimais
-      const novoEstoqueDecimal = Math.round((novoEstoqueMl / produto.quantityPerUnit) * 10000) / 10000;
+      const fracao = quantidade / produto.quantityPerUnit;
+      const novoEstoque = Math.round((Number(produto.stock) - fracao) * 10000) / 10000;
       await prisma.product.update({
         where: { id: produto.id },
-        data: { stock: novoEstoqueDecimal }
+        data: { stock: novoEstoque }
       });
     } else {
-      // Venda por unidade: subtrai 1 inteiro do estoque
+      // Venda por unidade: quantidade em unidades inteiras
       if (Number(produto.stock) < quantidade) {
         throw new Error(`Estoque insuficiente para o produto: ${produto.name}. Disponível: ${produto.stock} un, solicitado: ${quantidade} un`);
       }
+      const novoEstoque = Number(produto.stock) - quantidade;
       await prisma.product.update({
         where: { id: produto.id },
-        data: { stock: { decrement: quantidade } }
+        data: { stock: novoEstoque }
       });
     }
   } else {
@@ -34,9 +35,10 @@ async function subtrairEstoqueProduto(produto: any, quantidade: number, tipoVend
     if (Number(produto.stock) < quantidade) {
       throw new Error(`Estoque insuficiente para o produto: ${produto.name}. Disponível: ${produto.stock}, solicitado: ${quantidade}`);
     }
+    const novoEstoque = Number(produto.stock) - quantidade;
     await prisma.product.update({
       where: { id: produto.id },
-      data: { stock: { decrement: quantidade } }
+      data: { stock: novoEstoque }
     });
   }
 }
