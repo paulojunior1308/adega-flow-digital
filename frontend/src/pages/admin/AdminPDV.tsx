@@ -824,7 +824,7 @@ const AdminPDV = () => {
             combo={comboToConfigure}
             onConfirm={async (choosableSelections) => {
               // 1. Montar lista de todos os produtos do combo (fixos + escolhidos)
-              const produtosCombo: { productId: string, nome: string, precoOriginal: number, quantidade: number }[] = [];
+              const produtosCombo: { productId: string, nome: string, precoOriginal: number, quantidade: number, amount: number }[] = [];
               // Fixos
               for (const item of comboToConfigure.items) {
                 if (!item.isChoosable) {
@@ -832,7 +832,8 @@ const AdminPDV = () => {
                     productId: item.productId,
                     nome: item.product?.name || '',
                     precoOriginal: item.product?.price || 0,
-                    quantidade: Math.max(1, item.quantity)
+                    quantidade: Math.max(1, item.quantity),
+                    amount: item.amount || item.quantity // Salva o valor em ml para conversão depois
                   });
                 }
               }
@@ -858,7 +859,8 @@ const AdminPDV = () => {
                       productId,
                       nome,
                       precoOriginal: preco,
-                      quantidade: Number(quantidade)
+                      quantidade: Number(quantidade),
+                      amount: quantidade // Salva o valor em ml para conversão depois
                     });
                   }
                 }
