@@ -141,9 +141,35 @@ const AdminPDV = () => {
       return;
     }
     if (item.type === 'combo') {
-      if (item.items && Array.isArray(item.items) && item.items.some((i: any) => i.isChoosable || i.allowFlavorSelection)) {
-        setComboToConfigure(item);
-        setComboModalOpen(true);
+      if (item.items && Array.isArray(item.items) && item.comboType === 'dose') {
+        // Adicionar ingredientes do combo dose ao carrinho
+        const ingredientes = item.items.map((comboItem: any) => {
+          // Buscar produto completo para pegar unit e quantityPerUnit
+          let produto = products.find(p => p.id === comboItem.productId);
+          if (!produto && comboItem.unit && comboItem.quantityPerUnit) {
+            produto = comboItem;
+          }
+          let quantidadeFinal = comboItem.amount || comboItem.quantity;
+          if (produto && produto.unit === 'ml' && produto.quantityPerUnit) {
+            quantidadeFinal = (comboItem.amount || comboItem.quantity) / produto.quantityPerUnit;
+            console.log(`[FRONTEND][CARRINHO][CONVERSAO] Produto: ${produto.name}, Amount: ${(comboItem.amount || comboItem.quantity)}ml, Unidade: ${produto.quantityPerUnit}ml, Fração: ${quantidadeFinal}`);
+          } else {
+            console.log(`[FRONTEND][CARRINHO][CONVERSAO] Produto: ${produto?.name}, Quantidade: ${quantidadeFinal} un`);
+          }
+          return {
+            id: `${item.id}-${comboItem.productId}-${Math.random().toString(36).substring(2, 8)}`,
+            productId: comboItem.productId,
+            code: produto?.code || '',
+            name: `${produto?.name || ''} (Dose de ${item.name})`,
+            quantity: quantidadeFinal,
+            price: comboItem.product?.price || 0, // ou calcule proporcionalmente se necessário
+            total: (comboItem.product?.price || 0) * quantidadeFinal,
+            type: 'product',
+            parentCombo: { id: item.id, name: item.name, price: item.price, quantity },
+          };
+        });
+        setCartItems([...cartItems, ...ingredientes]);
+        toast({ description: `Produtos da dose ${item.name} adicionados ao carrinho.` });
         return;
       }
       // Se for combo do tipo dose, discriminar os produtos reais no carrinho
