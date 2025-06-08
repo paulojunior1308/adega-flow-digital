@@ -8,12 +8,17 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
+interface CloudinaryParams {
+  folder: string;
+  allowed_formats?: string[];
+}
+
 const storage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: {
     folder: 'element-adega',
     allowed_formats: ['jpg', 'jpeg', 'png', 'gif']
-  }
+  } as CloudinaryParams
 });
 
 export const upload = multer({ storage: storage });
@@ -22,7 +27,7 @@ export const uploadToCloudinary = async (file: Express.Multer.File): Promise<str
   return new Promise((resolve, reject) => {
     cloudinary.uploader.upload(file.path, {
       folder: 'element-adega'
-    }, (error, result) => {
+    } as CloudinaryParams, (error, result) => {
       if (error) {
         reject(error);
       } else {
