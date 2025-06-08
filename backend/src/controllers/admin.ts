@@ -7,21 +7,20 @@ import { AppError } from '../config/errorHandler';
 // Função utilitária para subtrair estoque corretamente
 async function subtrairEstoqueProduto(produto: any, quantidade: number, tipoVenda: 'ml' | 'unidade' = 'unidade') {
   if (produto.unit === 'ml' && produto.quantityPerUnit) {
+    const estoqueTotalMl = Number(produto.stock) * produto.quantityPerUnit;
     if (tipoVenda === 'ml') {
-      // Venda por dose (ml)
-      const estoqueTotalMl = Number(produto.stock) * produto.quantityPerUnit;
       if (estoqueTotalMl < quantidade) {
         throw new Error(`Estoque insuficiente para o produto: ${produto.name}. Disponível: ${estoqueTotalMl} ml, solicitado: ${quantidade} ml`);
       }
-      // Subtrai a fração correta
-      let novoEstoqueUn = Number(produto.stock) - (quantidade / produto.quantityPerUnit);
-      novoEstoqueUn = Math.round(novoEstoqueUn * 10000) / 10000; // Arredonda para 4 casas decimais
+      const novoEstoqueMl = estoqueTotalMl - quantidade;
+      // Arredonda para 4 casas decimais
+      const novoEstoqueDecimal = Math.round((novoEstoqueMl / produto.quantityPerUnit) * 10000) / 10000;
       await prisma.product.update({
         where: { id: produto.id },
-        data: { stock: novoEstoqueUn }
+        data: { stock: novoEstoqueDecimal }
       });
     } else {
-      // Venda por unidade
+      // Venda por unidade: subtrai 1 inteiro do estoque
       if (Number(produto.stock) < quantidade) {
         throw new Error(`Estoque insuficiente para o produto: ${produto.name}. Disponível: ${produto.stock} un, solicitado: ${quantidade} un`);
       }
@@ -409,14 +408,15 @@ export const adminController = {
         if (combo.type === 'dose') {
           for (const comboItem of combo.items) {
             const produto = comboItem.product;
-            // Para produtos vendidos por ml, a quantidade é a quantidade em ml (ex: 100)
-            // Para produtos vendidos por unidade, a quantidade é em unidades
-            let quantidade = comboItem.amount || comboItem.quantity;
-            quantidade = quantidade * item.quantity;
+            let quantidade = comboItem.quantity * item.quantity;
+            let price = 0;
+            if (produto.unit === 'ml' && produto.quantityPerUnit) {
+              quantidade = quantidade * produto.quantityPerUnit; // ml
+            }
             saleItems.push({
               productId: produto.id,
               quantity: quantidade,
-              price: 0 // pode ajustar se quiser dividir o valor
+              price: price // pode ajustar se quiser dividir o valor
             });
           }
         } else if (combo.type === 'combo') {
