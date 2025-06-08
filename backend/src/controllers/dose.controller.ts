@@ -1,8 +1,6 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import prisma from '../config/prisma';
 import { uploadToCloudinary } from '../utils/cloudinary';
-
-const prisma = new PrismaClient();
 
 export const doseController = {
   async create(req: Request, res: Response) {
