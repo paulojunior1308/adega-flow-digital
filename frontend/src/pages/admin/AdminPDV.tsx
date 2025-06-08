@@ -315,36 +315,14 @@ const AdminPDV = () => {
       return;
     }
     try {
-      // Montar lista de itens para envio
-      let itemsToSend: any[] = [];
-      for (const item of cartItems) {
-        // Se for combo do tipo dose, enviar os ingredientes
-        if (item.type === 'combo' && item.comboType === 'dose' && Array.isArray(item.items)) {
-          const totalAmount = item.items.reduce((sum: number, ci: any) => sum + (ci.amount || 1), 0);
-          for (const comboItem of item.items) {
-            const ingredienteValor = ((comboItem.amount || 1) / totalAmount) * item.price;
-            console.log(`[FRONTEND][ENVIO][COMBO-DOSE] Produto: ${comboItem.product?.name}, Qtd: ${(comboItem.amount || 1) * item.quantity}, Unidade: ml, Valor: ${ingredienteValor}`);
-            itemsToSend.push({
-              productId: comboItem.productId,
-              quantity: (comboItem.amount || 1) * item.quantity,
-              price: Number(ingredienteValor.toFixed(2)),
-              type: 'product',
-            });
-          }
-        } else {
-          // Produto avulso ou combo tradicional
-          const produtoLog = products.find(p => p.id === item.productId);
-          const unidadeLog = produtoLog?.unit || 'unidade';
-          console.log(`[FRONTEND][ENVIO] Produto: ${item.name}, Qtd: ${item.quantity}, Unidade: ${unidadeLog}`);
-          itemsToSend.push({
-            productId: item.type === 'combo' ? undefined : item.productId,
-            comboId: item.type === 'combo' ? item.comboId || item.id : undefined,
-            quantity: item.quantity,
-            price: item.price,
-            type: item.type,
-          });
-        }
-      }
+      // Envie exatamente o que está no carrinho
+      const itemsToSend = cartItems.map(item => ({
+        productId: item.productId,
+        comboId: item.comboId,
+        quantity: item.quantity,
+        price: item.price,
+        type: item.type,
+      }));
       console.log('[FRONTEND][ENVIO][FINAL] Itens enviados para o backend:', JSON.stringify(itemsToSend, null, 2));
       await api.post('/admin/pdv-sales', {
         items: itemsToSend,
