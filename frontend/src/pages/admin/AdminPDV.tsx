@@ -141,59 +141,9 @@ const AdminPDV = () => {
       return;
     }
     if (item.type === 'combo') {
-      if (item.items && Array.isArray(item.items) && item.comboType === 'dose') {
-        // Adicionar ingredientes do combo dose ao carrinho
-        const ingredientes = item.items.map((comboItem: any) => {
-          // Buscar produto completo para pegar unit e quantityPerUnit
-          let produto = products.find(p => p.id === comboItem.productId);
-          if (!produto && comboItem.unit && comboItem.quantityPerUnit) {
-            produto = comboItem;
-          }
-          let quantidadeFinal = comboItem.amount || comboItem.quantity;
-          if (produto && produto.unit === 'ml' && produto.quantityPerUnit) {
-            quantidadeFinal = (comboItem.amount || comboItem.quantity) / produto.quantityPerUnit;
-            console.log(`[FRONTEND][CARRINHO][CONVERSAO] Produto: ${produto.name}, Amount: ${(comboItem.amount || comboItem.quantity)}ml, Unidade: ${produto.quantityPerUnit}ml, Fração: ${quantidadeFinal}`);
-          } else {
-            console.log(`[FRONTEND][CARRINHO][CONVERSAO] Produto: ${produto?.name}, Quantidade: ${quantidadeFinal} un`);
-          }
-          return {
-            id: `${item.id}-${comboItem.productId}-${Math.random().toString(36).substring(2, 8)}`,
-            productId: comboItem.productId,
-            code: produto?.code || '',
-            name: `${produto?.name || ''} (Dose de ${item.name})`,
-            quantity: quantidadeFinal,
-            price: comboItem.product?.price || 0, // ou calcule proporcionalmente se necessário
-            total: (comboItem.product?.price || 0) * quantidadeFinal,
-            type: 'product',
-            parentCombo: { id: item.id, name: item.name, price: item.price, quantity },
-          };
-        });
-        setCartItems([...cartItems, ...ingredientes]);
-        toast({ description: `Produtos da dose ${item.name} adicionados ao carrinho.` });
-        return;
-      }
-      // Se for combo do tipo dose, discriminar os produtos reais no carrinho
-      if (item.type === 'combo' && item.comboType === 'dose' && Array.isArray(item.items)) {
-        // Distribuir o valor proporcionalmente entre os ingredientes
-        const totalAmount = item.items.reduce((sum: number, ci: any) => sum + (ci.amount || 1), 0);
-        const ingredientes = item.items.map((comboItem: any) => {
-          const ingredienteValor = ((comboItem.amount || 1) / totalAmount) * item.price;
-          const logMsg = `[FRONTEND][CARRINHO][COMBO-DOSE] Produto: ${comboItem.product?.name}, Qtd: ${(comboItem.amount || 1) * quantity}, Unidade: ml, Valor: ${ingredienteValor}`;
-          console.log(logMsg);
-          return {
-            id: `${item.id}-${comboItem.productId}`,
-            productId: comboItem.productId,
-            code: comboItem.product?.code || '',
-            name: `${comboItem.product?.name || ''} (Dose de ${item.name})`,
-            quantity: (comboItem.amount || 1) * quantity,
-            price: Number(ingredienteValor.toFixed(2)),
-            total: Number((Number(ingredienteValor.toFixed(2)) * ((comboItem.amount || 1) * quantity)).toFixed(2)),
-            type: 'product',
-            parentCombo: { id: item.id, name: item.name, price: item.price, quantity },
-          };
-        });
-        setCartItems([...cartItems, ...ingredientes]);
-        toast({ description: `Produtos da dose ${item.name} adicionados ao carrinho.` });
+      if (item.comboType === 'dose') {
+        setComboToConfigure(item);
+        setComboModalOpen(true);
         return;
       }
       // Combo tradicional
