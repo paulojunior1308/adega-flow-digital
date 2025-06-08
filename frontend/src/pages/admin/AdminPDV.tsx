@@ -514,15 +514,20 @@ const AdminPDV = () => {
                         </Button>
                         <span className="mx-2 font-medium">
                           {(() => {
-                            const produto = products.find(p => p.id === item.productId);
-                            if (produto && produto.unit === 'ml' && produto.quantityPerUnit) {
-                              const ml = Math.round(item.quantity * produto.quantityPerUnit);
-                              return `${ml} ml (${item.quantity.toFixed(2)} un)`;
-                            } else if (produto && produto.unit === 'unidade') {
-                              return `${item.quantity} un`;
-                            } else {
-                              return item.quantity;
+                            let produto = products.find(prod => prod.id === item.productId);
+                            // Se não encontrar, tenta pegar do próprio p (caso venha do combo)
+                            if (!produto && (item as any).unit && (item as any).quantityPerUnit) {
+                              produto = item as any;
                             }
+                            let quantidadeFinal = item.quantity;
+                            if (produto && produto.unit === 'ml' && produto.quantityPerUnit) {
+                              const quantidadeMl = (item as any).amount || item.quantity;
+                              quantidadeFinal = quantidadeMl / produto.quantityPerUnit;
+                              console.log(`[FRONTEND][CARRINHO][CONVERSAO] Produto: ${produto.name}, Amount: ${quantidadeMl}ml, Unidade: ${produto.quantityPerUnit}ml, Fração: ${quantidadeFinal}`);
+                            } else {
+                              console.log(`[FRONTEND][CARRINHO][CONVERSAO] Produto: ${produto?.name}, Quantidade: ${quantidadeFinal} un`);
+                            }
+                            return quantidadeFinal;
                           })()}
                         </span>
                         <Button 
@@ -575,15 +580,20 @@ const AdminPDV = () => {
                               </Button>
                               <span className="mx-2">
                                 {(() => {
-                                  const produto = products.find(p => p.id === item.productId);
-                                  if (produto && produto.unit === 'ml' && produto.quantityPerUnit) {
-                                    const ml = Math.round(item.quantity * produto.quantityPerUnit);
-                                    return `${ml} ml (${item.quantity.toFixed(2)} un)`;
-                                  } else if (produto && produto.unit === 'unidade') {
-                                    return `${item.quantity} un`;
-                                  } else {
-                                    return item.quantity;
+                                  let produto = products.find(prod => prod.id === item.productId);
+                                  // Se não encontrar, tenta pegar do próprio p (caso venha do combo)
+                                  if (!produto && (item as any).unit && (item as any).quantityPerUnit) {
+                                    produto = item as any;
                                   }
+                                  let quantidadeFinal = item.quantity;
+                                  if (produto && produto.unit === 'ml' && produto.quantityPerUnit) {
+                                    const quantidadeMl = (item as any).amount || item.quantity;
+                                    quantidadeFinal = quantidadeMl / produto.quantityPerUnit;
+                                    console.log(`[FRONTEND][CARRINHO][CONVERSAO] Produto: ${produto.name}, Amount: ${quantidadeMl}ml, Unidade: ${produto.quantityPerUnit}ml, Fração: ${quantidadeFinal}`);
+                                  } else {
+                                    console.log(`[FRONTEND][CARRINHO][CONVERSAO] Produto: ${produto?.name}, Quantidade: ${quantidadeFinal} un`);
+                                  }
+                                  return quantidadeFinal;
                                 })()}
                               </span>
                               <Button 
