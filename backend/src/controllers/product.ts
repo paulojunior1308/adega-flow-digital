@@ -49,7 +49,22 @@ export const productController = {
 
   create: async (req: Request, res: Response) => {
     try {
-      const { name, description, price, categoryId, supplierId, stock, minStock, barcode, costPrice, image } = req.body;
+      const { 
+        name, 
+        description, 
+        price, 
+        categoryId, 
+        supplierId, 
+        stock, 
+        minStock, 
+        barcode, 
+        costPrice, 
+        image,
+        isFractioned,
+        totalVolume,
+        unitVolume
+      } = req.body;
+
       const product = await prisma.product.create({
         data: {
           name,
@@ -61,7 +76,10 @@ export const productController = {
           stock: parseInt(stock),
           minStock: minStock ? parseInt(minStock) : 0,
           barcode: barcode || null,
-          image: image || null
+          image: image || null,
+          isFractioned: isFractioned === 'true' || isFractioned === true,
+          totalVolume: totalVolume ? parseFloat(totalVolume) : null,
+          unitVolume: unitVolume ? parseFloat(unitVolume) : null
         },
         include: {
           category: true,
@@ -78,7 +96,23 @@ export const productController = {
   update: async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
-      const { name, description, price, categoryId, supplierId, stock, minStock, barcode, costPrice, active, image } = req.body;
+      const { 
+        name, 
+        description, 
+        price, 
+        categoryId, 
+        supplierId, 
+        stock, 
+        minStock, 
+        barcode, 
+        costPrice, 
+        active, 
+        image,
+        isFractioned,
+        totalVolume,
+        unitVolume
+      } = req.body;
+
       const product = await prisma.product.update({
         where: { id },
         data: {
@@ -91,6 +125,9 @@ export const productController = {
           barcode,
           active: typeof active === 'boolean' ? active : active === 'true' || active === '1',
           image: image || undefined,
+          isFractioned: isFractioned === 'true' || isFractioned === true,
+          totalVolume: totalVolume ? parseFloat(totalVolume) : null,
+          unitVolume: unitVolume ? parseFloat(unitVolume) : null,
           category: {
             connect: { id: categoryId }
           },

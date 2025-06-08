@@ -29,6 +29,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { useForm } from "react-hook-form";
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '@/lib/axios';
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface Category {
   id: string;
@@ -43,6 +44,9 @@ interface ProductFormValues {
   stock: string;
   description: string;
   image: FileList | null;
+  isFractioned: boolean;
+  totalVolume: string;
+  unitVolume: string;
 }
 
 const CLOUDINARY_CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
@@ -76,7 +80,10 @@ const AdminProductRegistration = () => {
       costPrice: "",
       stock: "",
       description: "",
-      image: null
+      image: null,
+      isFractioned: false,
+      totalVolume: "",
+      unitVolume: ""
     }
   });
 
@@ -104,7 +111,10 @@ const AdminProductRegistration = () => {
           costPrice: product.costPrice.toString(),
           stock: product.stock.toString(),
           description: product.description || '',
-          image: null
+          image: null,
+          isFractioned: product.isFractioned,
+          totalVolume: product.totalVolume ? product.totalVolume.toString() : '',
+          unitVolume: product.unitVolume ? product.unitVolume.toString() : ''
         });
         if (product.image) {
           setPreviewImage(product.image);
@@ -139,6 +149,7 @@ const AdminProductRegistration = () => {
       });
       return;
     }
+
     let imageUrl = '';
     if (data.image?.[0]) {
       imageUrl = await uploadToCloudinary(data.image[0]);
@@ -154,6 +165,9 @@ const AdminProductRegistration = () => {
         stock: data.stock,
         description: data.description || '',
         image: imageUrl,
+        isFractioned: data.isFractioned,
+        totalVolume: data.totalVolume ? parseFloat(data.totalVolume) : null,
+        unitVolume: data.unitVolume ? parseFloat(data.unitVolume) : null
       }, {
         headers: {
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -301,6 +315,77 @@ const AdminProductRegistration = () => {
                       </FormItem>
                     )}
                   />
+
+                  <FormField
+                    control={form.control}
+                    name="isFractioned"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                        <div className="space-y-1 leading-none">
+                          <FormLabel>
+                            Produto Fracionado
+                          </FormLabel>
+                          <FormDescription>
+                            Marque se este produto pode ser vendido por volume (ml, L, etc)
+                          </FormDescription>
+                        </div>
+                      </FormItem>
+                    )}
+                  />
+
+                  {form.watch('isFractioned') && (
+                    <>
+                      <FormField
+                        control={form.control}
+                        name="totalVolume"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Volume Total (ml)*</FormLabel>
+                            <FormControl>
+                              <Input 
+                                type="number"
+                                step="0.01"
+                                placeholder="Ex: 1000"
+                                {...field}
+                                required
+                              />
+                            </FormControl>
+                            <FormDescription>
+                              Volume total do produto em mililitros
+                            </FormDescription>
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="unitVolume"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Volume da Unidade (ml)*</FormLabel>
+                            <FormControl>
+                              <Input 
+                                type="number"
+                                step="0.01"
+                                placeholder="Ex: 100"
+                                {...field}
+                                required
+                              />
+                            </FormControl>
+                            <FormDescription>
+                              Volume de uma unidade do produto em mililitros
+                            </FormDescription>
+                          </FormItem>
+                        )}
+                      />
+                    </>
+                  )}
                 </div>
                 
                 <div className="space-y-4">

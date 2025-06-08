@@ -2,14 +2,16 @@ import React, { useState, useEffect } from 'react';
 import AdminSidebar from '@/components/admin/AdminSidebar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, ShoppingCart, X, RefreshCcw, DollarSign, QrCode, CreditCard, IdCard, Plus, Minus, ChevronUp, ChevronDown } from 'lucide-react';
+import { Search, ShoppingCart, X, RefreshCcw, DollarSign, QrCode, CreditCard, IdCard, Plus, Minus, ChevronUp, ChevronDown, Package, Trash2 } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
 import api from '@/lib/axios';
 import { ComboOptionsModal } from '@/components/home/ComboOptionsModal';
 import { Drawer, DrawerContent } from '@/components/ui/drawer';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
 
 // Types definition
 interface Product {
@@ -19,16 +21,26 @@ interface Product {
   price: number;
   pinned?: boolean;
   stock: number;
+  image?: string;
+  categoryId?: string;
 }
 
 interface CartItem {
   id: string;
-  productId: string;
-  code: string;
+  productId?: string;
+  doseId?: string;
+  code?: string;
   name: string;
-  quantity: number;
   price: number;
+  quantity: number;
   total: number;
+  image?: string;
+  isDose?: boolean;
+  choosableItems?: {
+    productId: string;
+    name: string;
+    quantity: number;
+  }[];
 }
 
 const AdminPDV = () => {
@@ -52,6 +64,10 @@ const AdminPDV = () => {
   const [cartOpen, setCartOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [showActions, setShowActions] = useState(false);
+  const [doses, setDoses] = useState<any[]>([]);
+  const [selectedDose, setSelectedDose] = useState<any>(null);
+  const [showDoseModal, setShowDoseModal] = useState(false);
+  const [selectedChoosableItems, setSelectedChoosableItems] = useState<{[key: string]: string[]}>({});
   
   // Buscar produtos e combos ao carregar
   useEffect(() => {
@@ -271,33 +287,41 @@ const AdminPDV = () => {
 
   // Finish ticket with payment method
   const finishTicket = async (paymentMethodId: string) => {
-    if (cartItems.length === 0) {
-      toast({
-        variant: "destructive",
-        description: "Adicione itens ao carrinho para finalizar.",
-      });
-      return;
-    }
     try {
-      await api.post('/admin/pdv-sales', {
-        items: cartItems.map(item => ({
-          productId: item.productId,
-          quantity: item.quantity,
-          price: item.price
-        })),
-        paymentMethodId
+      // Preparar itens para envio
+      const items = cartItems.map(item => ({
+        productId: item.productId,
+        doseId: item.doseId,
+        quantity: item.quantity,
+        price: item.price,
+        choosableItems: item.choosableItems
+      }));
+
+      // Enviar venda para o backend
+      const response = await api.post('/admin/sales', {
+        items,
+        paymentMethodId,
+        cpfCnpj: cpfCnpjValue
       });
-      toast({
-        description: `Venda finalizada!`,
-      });
+
+      // Limpar carrinho e estado
       setCartItems([]);
+      setCpfCnpjValue('');
       setTicketNumber(prev => prev + 1);
-    } catch (error: any) {
-      const msg = error?.response?.data?.error || "Erro ao finalizar pedido. Verifique o estoque.";
+
       toast({
-        title: "Erro ao finalizar pedido",
-        description: msg,
-        variant: "destructive"
+        description: 'Venda realizada com sucesso!'
+      });
+
+      // Imprimir comprovante
+      if (response.data) {
+        printReceipt(response.data);
+      }
+    } catch (error) {
+      console.error('Erro ao finalizar venda:', error);
+      toast({
+        variant: 'destructive',
+        description: 'Erro ao finalizar venda. Tente novamente.'
       });
     }
   };
@@ -328,47 +352,136 @@ const AdminPDV = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  return (
-    <div className="flex h-screen bg-gray-100">
-      <AdminSidebar />
-      <div className="flex-1 flex flex-col overflow-hidden p-0 ml-0 lg:ml-64">
-        {/* Header */}
-        <div className="bg-white shadow-sm p-4 flex flex-col md:flex-row md:justify-between md:items-center gap-2">
-          <div className="flex items-center gap-2">
-            <ShoppingCart className="h-6 w-6 text-element-blue-dark" />
-            <h1 className="text-xl font-medium text-element-blue-dark">PDV - Venda Local</h1>
+  const fetchDoses = async () => {
+    try {
+      const response = await api.get('/admin/doses');
+      setDoses(response.data);
+    } catch (error) {
+      console.error('Erro ao buscar doses:', error);
+    }
+  };
+
+  const handleAddDose = (dose: any) => {
+    setSelectedDose(dose);
+    setShowDoseModal(true);
+  };
+
+  const handleConfirmDose = () => {
+    if (!selectedDose) return;
+
+    const choosableItems = selectedDose.items
+      .filter((item: any) => item.isChoosable)
+      .map((item: any) => ({
+        productId: selectedChoosableItems[item.id]?.[0] || '',
+        name: products.find(p => p.id === selectedChoosableItems[item.id]?.[0])?.name || '',
+        quantity: item.quantity
+      }));
+
+    const cartItem: CartItem = {
+      id: Math.random().toString(),
+      doseId: selectedDose.id,
+      name: selectedDose.name,
+      price: selectedDose.price,
+      quantity: 1,
+      total: selectedDose.price,
+      image: selectedDose.image,
+      isDose: true,
+      choosableItems
+    };
+
+    setCartItems(prev => [...prev, cartItem]);
+    setShowDoseModal(false);
+    setSelectedDose(null);
+    setSelectedChoosableItems({});
+  };
+
+  const printReceipt = (sale: any) => {
+    const receiptWindow = window.open('', '_blank');
+    if (!receiptWindow) return;
+
+    const content = `
+      <html>
+        <head>
+          <title>Comprovante de Venda</title>
+          <style>
+            body {
+              font-family: monospace;
+              padding: 20px;
+              max-width: 300px;
+              margin: 0 auto;
+            }
+            .header {
+              text-align: center;
+              margin-bottom: 20px;
+            }
+            .items {
+              margin: 20px 0;
+            }
+            .item {
+              margin-bottom: 10px;
+            }
+            .total {
+              margin-top: 20px;
+              text-align: right;
+              font-weight: bold;
+            }
+            .footer {
+              margin-top: 20px;
+              text-align: center;
+              font-size: 12px;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h2>Adega Flow</h2>
+            <p>Comprovante de Venda</p>
+            <p>Ticket #${sale.id}</p>
+            <p>${new Date(sale.createdAt).toLocaleString()}</p>
           </div>
-          <Button 
-            onClick={() => setQuickProductsOpen(true)} 
-            variant="outline" 
-            className="flex items-center gap-2 w-full md:w-auto"
-          >
-            <span>Produtos Rápidos</span>
-          </Button>
-        </div>
 
-        {/* Main content */}
-        <div className="flex flex-col md:flex-row flex-1 overflow-hidden">
-          {/* Left side - Product search and display */}
-          <div className="flex-1 flex flex-col p-4 overflow-y-auto">
-            {/* Pinned Products - Quick access buttons */}
-            <div className="mb-4">
-              <div className="flex gap-2 overflow-x-auto pb-2 md:grid md:grid-cols-3 xl:grid-cols-4 md:gap-2 md:overflow-x-visible">
-                {pinnedProducts.map(product => (
-                  <button
-                    key={product.id}
-                    className="min-w-[220px] md:min-w-0 text-left p-3 border rounded-md hover:border-cyan-400 transition-colors bg-white"
-                    onClick={() => addToCart(product)}
-                    disabled={product.stock === 0}
-                  >
-                    <div className="text-sm font-medium truncate">{product.code} - {product.name}</div>
-                    <div className="text-sm text-green-600">R$ {product.price.toFixed(2)}</div>
-                  </button>
-                ))}
+          <div class="items">
+            ${sale.items.map((item: any) => `
+              <div class="item">
+                <div>${item.name}</div>
+                <div>${item.quantity}x R$ ${item.price.toFixed(2)}</div>
+                <div>Total: R$ ${item.total.toFixed(2)}</div>
+                ${item.choosableItems ? `
+                  <div style="font-size: 12px; margin-left: 10px;">
+                    ${item.choosableItems.map((choosable: any) => `
+                      <div>${choosable.name} (${choosable.quantity}ml)</div>
+                    `).join('')}
+                  </div>
+                ` : ''}
               </div>
-            </div>
+            `).join('')}
+          </div>
 
-            {/* Search bar */}
+          <div class="total">
+            Total: R$ ${sale.total.toFixed(2)}
+          </div>
+
+          <div class="footer">
+            <p>Obrigado pela preferência!</p>
+            <p>Volte sempre!</p>
+          </div>
+        </body>
+      </html>
+    `;
+
+    receiptWindow.document.write(content);
+    receiptWindow.document.close();
+    receiptWindow.print();
+  };
+
+  return (
+    <div className="min-h-screen bg-element-gray-light flex">
+      <AdminSidebar />
+      
+      <div className="flex-1 p-8 ml-0 lg:ml-64">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Coluna da esquerda - Lista de produtos */}
+          <div className="lg:col-span-2 space-y-4">
             <div className="flex flex-col md:flex-row gap-2 mb-4">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
@@ -401,161 +514,119 @@ const AdminPDV = () => {
               </Button>
             </div>
 
-            {/* Search results */}
-            <div className={`${isMobile ? '' : 'flex-1 overflow-y-auto'}`}>
-              {searchQuery.trim() !== '' && (
-                <div className="grid grid-cols-1 gap-2">
-                  {filteredProducts.map(product => (
-                    <button
-                      key={product.id}
-                      className="text-left p-3 border rounded-md hover:border-cyan-400 transition-colors bg-white w-full"
-                      onClick={() => addToCart(product)}
-                      disabled={product.stock === 0}
-                    >
-                      <div className="font-medium">{product.code} - {product.name}</div>
-                      <div className="text-green-600 mt-1">R$ {product.price.toFixed(2)}</div>
-                    </button>
-                  ))}
-                  {filteredProducts.length === 0 && (
-                    <div className="text-center py-4 text-gray-500">
-                      Nenhum produto encontrado para "{searchQuery}"
+            {/* Lista de produtos */}
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {filteredProducts.map((product) => (
+                <div
+                  key={product.id}
+                  className="bg-white p-4 rounded-lg shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+                  onClick={() => addToCart(product)}
+                >
+                  {product.image ? (
+                    <img
+                      src={product.image}
+                      alt={product.name}
+                      className="w-full h-32 object-cover rounded mb-2"
+                    />
+                  ) : (
+                    <div className="w-full h-32 bg-gray-100 rounded mb-2 flex items-center justify-center">
+                      <Package className="h-8 w-8 text-gray-400" />
                     </div>
                   )}
+                  <h3 className="font-medium text-sm">{product.name}</h3>
+                  <p className="text-element-blue-dark font-medium">
+                    R$ {product.price.toFixed(2)}
+                  </p>
                 </div>
-              )}
-              {searchQuery.trim() === '' && pinnedProducts.length === 0 && (
-                <div className="text-center py-8 text-gray-500">
-                  Selecione produtos na opção "Produtos Rápidos" para aparecerem aqui
-                </div>
-              )}
+              ))}
+            </div>
+
+            {/* Lista de doses */}
+            <div className="mt-8">
+              <h2 className="text-lg font-medium mb-4">Doses</h2>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {doses.map((dose) => (
+                  <div
+                    key={dose.id}
+                    className="bg-white p-4 rounded-lg shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+                    onClick={() => handleAddDose(dose)}
+                  >
+                    {dose.image ? (
+                      <img
+                        src={dose.image}
+                        alt={dose.name}
+                        className="w-full h-32 object-cover rounded mb-2"
+                      />
+                    ) : (
+                      <div className="w-full h-32 bg-gray-100 rounded mb-2 flex items-center justify-center">
+                        <Package className="h-8 w-8 text-gray-400" />
+                      </div>
+                    )}
+                    <h3 className="font-medium text-sm">{dose.name}</h3>
+                    <p className="text-element-blue-dark font-medium">
+                      R$ {dose.price.toFixed(2)}
+                    </p>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
 
-          {/* Carrinho - responsivo: cards no mobile, tabela no desktop */}
-          <div className={`w-full md:w-96 bg-white shadow-md flex flex-col overflow-hidden ${isMobile ? 'px-2 pb-32 mt-0' : 'mt-4'} md:mt-0`}>
-            {/* Ticket header */}
-            <div className="p-4 bg-gray-100 flex justify-between items-center">
-              <div className="font-medium">Tíquete: {ticketNumber}</div>
-              <div className="text-green-600 font-medium">ABERTO</div>
-            </div>
-
-            {/* Cart items */}
-            {isMobile ? (
-              <div className="flex flex-col gap-2 p-2">
-                {cartItems.length > 0 ? (
-                  cartItems.map((item, index) => (
-                    <div key={item.id} className="rounded-lg border p-3 flex flex-col gap-2 bg-gray-50">
-                      <div className="flex justify-between items-center">
-                        <span className="font-semibold text-sm">{item.name}</span>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="h-6 w-6 p-0 text-red-500"
-                          onClick={() => removeItem(item.id)}
-                          aria-label="Remover item"
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                      <div className="flex justify-between items-center text-xs text-gray-500">
-                        <span>Cód: {item.code}</span>
-                        <span>Preço: R$ {item.price.toFixed(2)}</span>
-                      </div>
-                      <div className="flex items-center gap-2 mt-1">
-                        <Button 
-                          variant="outline" 
-                          size="icon" 
-                          className="h-6 w-6 rounded-full p-0"
-                          onClick={() => updateCartItemQuantity(item.id, item.quantity - 1)}
-                          aria-label="Diminuir quantidade"
-                        >
-                          <Minus className="h-3 w-3" />
-                        </Button>
-                        <span className="mx-2 font-medium">{item.quantity}</span>
-                        <Button 
-                          variant="outline" 
-                          size="icon" 
-                          className="h-6 w-6 rounded-full p-0"
-                          onClick={() => updateCartItemQuantity(item.id, item.quantity + 1)}
-                          aria-label="Aumentar quantidade"
-                        >
-                          <Plus className="h-3 w-3" />
-                        </Button>
-                        <span className="ml-auto font-semibold text-sm">Total: R$ {item.total.toFixed(2)}</span>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-center py-8 text-gray-500">Nenhum item adicionado</div>
-                )}
-              </div>
-            ) : (
-              <div className="flex-1 overflow-x-auto">
-                <Table className="min-w-[600px]">
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-12">Item</TableHead>
-                      <TableHead className="w-16">Cód.</TableHead>
-                      <TableHead>Produto</TableHead>
-                      <TableHead className="w-24 text-center">Qtd</TableHead>
-                      <TableHead className="w-20 text-right">Preço</TableHead>
-                      <TableHead className="w-20 text-right">Total</TableHead>
-                      <TableHead className="w-8"></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {cartItems.length > 0 ? (
-                      cartItems.map((item, index) => (
-                        <TableRow key={item.id} className="hover:bg-gray-50">
-                          <TableCell>{index + 1}</TableCell>
-                          <TableCell>{item.code}</TableCell>
-                          <TableCell className="font-medium">{item.name}</TableCell>
-                          <TableCell>
-                            <div className="flex items-center justify-center">
-                              <Button 
-                                variant="outline" 
-                                size="icon" 
-                                className="h-6 w-6 rounded-full p-0"
-                                onClick={() => updateCartItemQuantity(item.id, item.quantity - 1)}
-                              >
-                                <Minus className="h-3 w-3" />
-                              </Button>
-                              <span className="mx-2">{item.quantity}</span>
-                              <Button 
-                                variant="outline" 
-                                size="icon" 
-                                className="h-6 w-6 rounded-full p-0"
-                                onClick={() => updateCartItemQuantity(item.id, item.quantity + 1)}
-                              >
-                                <Plus className="h-3 w-3" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-right">R$ {item.price.toFixed(2)}</TableCell>
-                          <TableCell className="text-right">R$ {item.total.toFixed(2)}</TableCell>
-                          <TableCell>
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="h-6 w-6 p-0 text-red-500"
-                              onClick={() => removeItem(item.id)}
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    ) : (
-                      <TableRow>
-                        <TableCell colSpan={7} className="text-center py-8 text-gray-500">
-                          Nenhum item adicionado
-                        </TableCell>
-                      </TableRow>
+          {/* Coluna da direita - Carrinho */}
+          <div className="bg-white rounded-lg shadow-sm p-4">
+            <h2 className="text-lg font-medium mb-4">Carrinho</h2>
+            <div className="space-y-4">
+              {cartItems.map((item) => (
+                <div key={item.id} className="flex items-center justify-between p-2 border rounded">
+                  <div className="flex items-center gap-2">
+                    {item.image && (
+                      <img
+                        src={item.image}
+                        alt={item.name}
+                        className="w-12 h-12 object-cover rounded"
+                      />
                     )}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
+                    <div>
+                      <h3 className="font-medium text-sm">{item.name}</h3>
+                      {item.isDose && item.choosableItems && (
+                        <div className="text-xs text-gray-500">
+                          {item.choosableItems.map((choosable, index) => (
+                            <div key={index}>
+                              {choosable.name} ({choosable.quantity}ml)
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => updateCartItemQuantity(item.id, item.quantity - 1)}
+                    >
+                      <Minus className="h-4 w-4" />
+                    </Button>
+                    <span className="w-8 text-center">{item.quantity}</span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => updateCartItemQuantity(item.id, item.quantity + 1)}
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-red-500"
+                      onClick={() => removeItem(item.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
 
             {/* Totals */}
             <div className="p-4 border-t">
@@ -574,287 +645,67 @@ const AdminPDV = () => {
             </div>
           </div>
         </div>
+      </div>
 
-        {/* Painel retrátil de botões no rodapé (mobile) */}
-        {isMobile ? (
-          <div className="fixed bottom-0 left-0 w-full z-20 flex flex-col items-center">
-            <button
-              className="bg-element-blue-neon text-white rounded-t-lg shadow-lg flex items-center justify-center w-12 h-7 mb-1 animate-bounce-short"
-              style={{ marginBottom: showActions ? 0 : 8, transition: 'margin-bottom 0.2s' }}
-              onClick={() => setShowActions((v) => !v)}
-              aria-label={showActions ? 'Ocultar ações' : 'Mostrar ações'}
-            >
-              {showActions ? <ChevronDown className="h-6 w-6" /> : <ChevronUp className="h-6 w-6" />}
-            </button>
-            <div
-              className={`w-full bg-gray-200 transition-all duration-300 overflow-hidden ${showActions ? 'max-h-[500px] py-2' : 'max-h-0 py-0'}`}
-              style={{ boxShadow: showActions ? '0 -2px 16px rgba(0,0,0,0.08)' : 'none' }}
-            >
-              <div className="grid grid-cols-2 gap-1 px-2">
-                <Button 
-                  variant="outline" 
-                  className="bg-cyan-400 hover:bg-cyan-500 text-white flex flex-col items-center justify-center py-4 h-auto"
-                  onClick={() => cartItems.length > 0 && removeItem(cartItems[cartItems.length - 1].id)}
-                >
-                  <X className="h-5 w-5 mb-1" />
-                  <span className="text-xs">Cancelar Item</span>
-                </Button>
-                
-                <Button 
-                  variant="outline" 
-                  className="bg-cyan-400 hover:bg-cyan-500 text-white flex flex-col items-center justify-center py-4 h-auto"
-                  onClick={cancelTicket}
-                >
-                  <X className="h-5 w-5 mb-1" />
-                  <span className="text-xs">Cancelar Tíquete</span>
-                </Button>
-                
-                <Button 
-                  variant="outline" 
-                  className="bg-cyan-400 hover:bg-cyan-500 text-white flex flex-col items-center justify-center py-4 h-auto"
-                  onClick={cancelOperation}
-                >
-                  <RefreshCcw className="h-5 w-5 mb-1" />
-                  <span className="text-xs">Extornar</span>
-                </Button>
-                
-                {paymentMethods.map((method) => (
-                  <Button
-                    key={method.id}
-                    variant="outline"
-                    className="bg-cyan-400 hover:bg-cyan-500 text-white flex flex-col items-center justify-center py-4 h-auto"
-                    onClick={() => finishTicket(method.id)}
+      {/* Modal de seleção de produtos escolhíveis */}
+      <Dialog open={showDoseModal} onOpenChange={setShowDoseModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Selecionar Produtos</DialogTitle>
+            <DialogDescription>
+              Selecione os produtos para a dose {selectedDose?.name}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {selectedDose?.items
+              .filter((item: any) => item.isChoosable)
+              .map((item: any) => (
+                <div key={item.id} className="space-y-2">
+                  <Label>Escolha até {item.maxChoices} {item.product.name}</Label>
+                  <Select
+                    value={selectedChoosableItems[item.id]?.[0] || ''}
+                    onValueChange={(value) => {
+                      setSelectedChoosableItems(prev => ({
+                        ...prev,
+                        [item.id]: [value]
+                      }));
+                    }}
                   >
-                    <span className="text-xs">{method.name}</span>
-                  </Button>
-                ))}
-                
-                <Button 
-                  variant="outline" 
-                  className="bg-cyan-400 hover:bg-cyan-500 text-white flex flex-col items-center justify-center py-4 h-auto"
-                  onClick={() => setCpfCnpjDialogOpen(true)}
-                >
-                  <IdCard className="h-5 w-5 mb-1" />
-                  <span className="text-xs">CPF/CNPJ</span>
-                </Button>
-              </div>
-            </div>
-          </div>
-        ) : (
-          <div className="w-full bg-gray-200 p-1 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-1 md:static md:z-auto">
-            <Button 
-              variant="outline" 
-              className="bg-cyan-400 hover:bg-cyan-500 text-white flex flex-col items-center justify-center py-4 h-auto"
-              onClick={() => cartItems.length > 0 && removeItem(cartItems[cartItems.length - 1].id)}
-            >
-              <X className="h-5 w-5 mb-1" />
-              <span className="text-xs">Cancelar Item</span>
-            </Button>
-            
-            <Button 
-              variant="outline" 
-              className="bg-cyan-400 hover:bg-cyan-500 text-white flex flex-col items-center justify-center py-4 h-auto"
-              onClick={cancelTicket}
-            >
-              <X className="h-5 w-5 mb-1" />
-              <span className="text-xs">Cancelar Tíquete</span>
-            </Button>
-            
-            <Button 
-              variant="outline" 
-              className="bg-cyan-400 hover:bg-cyan-500 text-white flex flex-col items-center justify-center py-4 h-auto"
-              onClick={cancelOperation}
-            >
-              <RefreshCcw className="h-5 w-5 mb-1" />
-              <span className="text-xs">Extornar</span>
-            </Button>
-            
-            {paymentMethods.map((method) => (
-              <Button
-                key={method.id}
-                variant="outline"
-                className="bg-cyan-400 hover:bg-cyan-500 text-white flex flex-col items-center justify-center py-4 h-auto"
-                onClick={() => finishTicket(method.id)}
-              >
-                <span className="text-xs">{method.name}</span>
-              </Button>
-            ))}
-            
-            <Button 
-              variant="outline" 
-              className="bg-cyan-400 hover:bg-cyan-500 text-white flex flex-col items-center justify-center py-4 h-auto"
-              onClick={() => setCpfCnpjDialogOpen(true)}
-            >
-              <IdCard className="h-5 w-5 mb-1" />
-              <span className="text-xs">CPF/CNPJ</span>
-            </Button>
-          </div>
-        )}
-
-        {/* Quick Products Modal */}
-        <Dialog open={quickProductsOpen} onOpenChange={setQuickProductsOpen}>
-          <DialogContent className="sm:max-w-[600px] w-full p-2 sm:p-6">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                Selecionar Produtos Rápidos
-              </DialogTitle>
-            </DialogHeader>
-            <div className="flex gap-2 overflow-x-auto pb-2 md:grid md:grid-cols-3 md:gap-4 md:overflow-x-visible">
-              {allItems.map((item) => (
-                <div 
-                  key={item.id} 
-                  className={`min-w-[220px] md:min-w-0 border rounded-lg p-4 transition-colors ${item.pinned ? 'border-yellow-400 bg-yellow-50' : 'hover:border-yellow-400'}`}
-                >
-                  <div className="flex justify-between items-start mb-2">
-                    <span className="text-sm font-medium">{item.code}</span>
-                    {item.type === 'product' && (
-                      <Checkbox 
-                        id={`product-${item.id}`} 
-                        checked={item.pinned}
-                        onCheckedChange={() => togglePinProduct(item.id)}
-                      />
-                    )}
-                  </div>
-                  <div className="text-sm mb-1">{item.name} {item.type === 'combo' && <span className="text-xs text-blue-600">(Combo)</span>}</div>
-                  <div className="text-sm text-green-600">R$ {item.price.toFixed(2)}</div>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {products
+                        .filter(p => p.categoryId === item.categoryId)
+                        .map(product => (
+                          <SelectItem key={product.id} value={product.id}>
+                            {product.name}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               ))}
-            </div>
-            <Button 
-              onClick={() => setQuickProductsOpen(false)} 
-              className="w-full bg-cyan-400 hover:bg-cyan-500 text-white"
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowDoseModal(false);
+                setSelectedDose(null);
+                setSelectedChoosableItems({});
+              }}
             >
-              Fechar
+              Cancelar
             </Button>
-          </DialogContent>
-        </Dialog>
-
-        {/* CPF/CNPJ Modal */}
-        <Dialog open={cpfCnpjDialogOpen} onOpenChange={setCpfCnpjDialogOpen}>
-          <DialogContent className="sm:max-w-[400px] w-full p-2 sm:p-6">
-            <DialogHeader>
-              <DialogTitle>Adicionar CPF/CNPJ</DialogTitle>
-            </DialogHeader>
-            <div className="py-4">
-              <Input
-                placeholder="Digite o CPF/CNPJ"
-                value={cpfCnpjValue}
-                onChange={(e) => setCpfCnpjValue(e.target.value)}
-                className="mb-4"
-              />
-              <Button 
-                onClick={handleCpfCnpjSubmit} 
-                className="w-full bg-cyan-400 hover:bg-cyan-500 text-white"
-              >
-                Adicionar
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-
-        {comboToConfigure && (
-          <ComboOptionsModal
-            open={comboModalOpen}
-            onOpenChange={setComboModalOpen}
-            combo={comboToConfigure}
-            onConfirm={async (choosableSelections) => {
-              // 1. Montar lista de todos os produtos do combo (fixos + escolhidos)
-              const produtosCombo: { productId: string, nome: string, precoOriginal: number, quantidade: number }[] = [];
-              // Fixos
-              for (const item of comboToConfigure.items) {
-                if (!item.isChoosable) {
-                  produtosCombo.push({
-                    productId: item.productId,
-                    nome: item.product?.name || '',
-                    precoOriginal: item.product?.price || 0,
-                    quantidade: Math.max(1, item.quantity)
-                  });
-                }
-              }
-              // Escolhíveis
-              for (const [categoryId, selections] of Object.entries(choosableSelections)) {
-                for (const [productId, quantidade] of Object.entries(selections)) {
-                  if (quantidade > 0) {
-                    // Buscar o preço do produto nas opções carregadas
-                    const categoria = comboToConfigure.items.find((i: any) => i.categoryId === categoryId);
-                    let preco = 0;
-                    let nome = '';
-                    if (categoria && categoria.product && categoria.product.category && categoria.product.category.id === categoryId) {
-                      preco = categoria.product.price;
-                      nome = categoria.product.name;
-                    } else if (comboToConfigure.options && comboToConfigure.options[categoryId]) {
-                      const prod = comboToConfigure.options[categoryId].find((p: any) => p.id === productId);
-                      if (prod) {
-                        preco = prod.price;
-                        nome = prod.name;
-                      }
-                    }
-                    produtosCombo.push({
-                      productId,
-                      nome,
-                      precoOriginal: preco,
-                      quantidade: Number(quantidade)
-                    });
-                  }
-                }
-              }
-              // 2. Calcular valor total original
-              const totalOriginal = produtosCombo.reduce((sum, p) => sum + p.precoOriginal * p.quantidade, 0);
-              // 3. Distribuir valor do combo proporcionalmente (sem arredondar no loop)
-              const totaisNaoArredondados = produtosCombo.map(p =>
-                totalOriginal > 0
-                  ? ((p.precoOriginal * p.quantidade) / totalOriginal) * comboToConfigure.price
-                  : p.precoOriginal * p.quantidade
-              );
-              // 4. Arredonde cada total
-              let totaisArredondados = totaisNaoArredondados.map(v => Math.round(v * 100) / 100);
-              // 5. Calcule a diferença
-              let soma = totaisArredondados.reduce((a, b) => a + b, 0);
-              let diff = Math.round((comboToConfigure.price - soma) * 100); // em centavos
-              // 6. Distribua o ajuste entre todos os itens do combo de forma cíclica
-              if (diff !== 0) {
-                const indicesOrdenados = Array.from({ length: totaisArredondados.length }, (_, i) => i);
-                let i = 0;
-                while (diff !== 0) {
-                  const idx = indicesOrdenados[i % indicesOrdenados.length];
-                  totaisArredondados[idx] += diff > 0 ? 0.01 : -0.01;
-                  totaisArredondados[idx] = Math.round(totaisArredondados[idx] * 100) / 100;
-                  diff += diff > 0 ? -1 : 1;
-                  i++;
-                }
-              }
-              // 7. Calcula preço unitário ajustado e desconto
-              const descontos = produtosCombo.map((p, idx) => {
-                const precoAjustado = Math.round((totaisArredondados[idx] / p.quantidade) * 100) / 100;
-                return {
-                  productId: p.productId,
-                  precoOriginal: p.precoOriginal,
-                  quantidade: p.quantidade,
-                  precoAjustado,
-                  nome: p.nome,
-                  desconto: p.precoOriginal - precoAjustado
-                };
-              });
-              // 8. Adicionar cada produto ao carrinho já com o preço ajustado
-              setCartItems(prev => ([
-                ...prev,
-                ...descontos.map(d => ({
-                  id: d.productId + '-' + Math.random().toString(36).substring(2, 8),
-                  productId: d.productId,
-                  code: d.productId.substring(0, 6),
-                  name: d.nome,
-                  quantity: d.quantidade,
-                  price: d.precoAjustado,
-                  total: d.precoAjustado * d.quantidade
-                }))
-              ]));
-              toast({ description: `${comboToConfigure.name} (Combo) adicionado ao carrinho.` });
-              setComboModalOpen(false);
-              setComboToConfigure(null);
-            }}
-          />
-        )}
-      </div>
+            <Button onClick={handleConfirmDose}>
+              Adicionar ao Carrinho
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

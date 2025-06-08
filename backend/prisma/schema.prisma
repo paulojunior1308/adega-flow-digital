@@ -45,6 +45,9 @@ model Product {
   isCombo     Boolean     @default(false)
   isPromotion Boolean     @default(false)
   pinned      Boolean     @default(false)
+  isFractioned Boolean    @default(false)
+  totalVolume Float?      // Volume total em ml para produtos fracionados
+  unitVolume  Float?      // Volume da unidade em ml para produtos fracionados
   cartItems   CartItem[]
   comboItems  ComboItem[]
   kitItems    KitItem[]
@@ -53,6 +56,7 @@ model Product {
   supplier    Supplier?   @relation(fields: [supplierId], references: [id])
   saleItems   SaleItem[]
   promotions  Promotion[] @relation("ProductToPromotion")
+  doseItems   DoseItem[]
 }
 
 model Category {
@@ -116,8 +120,10 @@ model SaleItem {
   discount  Float    @default(0)
   createdAt DateTime @default(now())
   saleId    String
-  productId String
-  product   Product  @relation(fields: [productId], references: [id])
+  productId String?
+  doseId    String?
+  product   Product? @relation(fields: [productId], references: [id])
+  dose      Dose?    @relation(fields: [doseId], references: [id])
   sale      Sale     @relation(fields: [saleId], references: [id])
 }
 
@@ -293,6 +299,30 @@ model Notification {
   createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id])
   order     Order?   @relation(fields: [orderId], references: [id])
+}
+
+model Dose {
+  id          String      @id @default(uuid())
+  name        String
+  description String
+  price       Float
+  image       String?
+  active      Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  items       DoseItem[]
+}
+
+model DoseItem {
+  id        String   @id @default(uuid())
+  doseId    String
+  productId String
+  quantity  Float    // Quantidade em ml ou unidades
+  isChoosable Boolean @default(false) // Se o produto pode ser escolhido (ex: tipo de energético)
+  maxChoices Int     @default(1)      // Número máximo de escolhas permitidas
+  categoryId String? // Categoria para produtos escolhíveis
+  dose      Dose     @relation(fields: [doseId], references: [id])
+  product   Product  @relation(fields: [productId], references: [id])
 }
 
 enum Role {
