@@ -516,6 +516,16 @@ export default function AdminPromotionsAndCombos() {
     }
   };
 
+  const handleOpenDoseDialog = (open: boolean) => {
+    setIsDoseDialogOpen(open);
+    if (open && products.length === 0) {
+      fetchData();
+    }
+    if (!open) {
+      resetForm();
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -1285,7 +1295,7 @@ export default function AdminPromotionsAndCombos() {
         </DialogContent>
       </Dialog>
       {/* Modal de criação de dose */}
-      <Dialog open={isDoseDialogOpen} onOpenChange={setIsDoseDialogOpen}>
+      <Dialog open={isDoseDialogOpen} onOpenChange={handleOpenDoseDialog}>
         <DialogContent className="max-w-lg w-full">
           <DialogHeader>
             <DialogTitle>{editingDose ? 'Editar Dose' : 'Adicionar Dose'}</DialogTitle>
