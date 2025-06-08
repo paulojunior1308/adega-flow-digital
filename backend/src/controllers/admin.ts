@@ -415,7 +415,9 @@ export const adminController = {
             const produto = comboItem.product;
             let quantidade = comboItem.quantity * item.quantity;
             if (produto.unit === 'ml' && produto.quantityPerUnit) {
+              const quantidadeOriginal = quantidade;
               quantidade = quantidade / produto.quantityPerUnit;
+              console.log(`[BACKEND][COMBO][${produto.name}] Dose recebida: ${quantidadeOriginal}ml, convertido para fração: ${quantidade}`);
             }
             saleItems.push({
               productId: produto.id,
@@ -438,7 +440,11 @@ export const adminController = {
         const produto = await prisma.product.findUnique({ where: { id: item.productId } });
         let quantidadeFinal = item.quantity;
         if (produto && produto.unit === 'ml' && produto.quantityPerUnit) {
+          const quantidadeOriginal = quantidadeFinal;
           quantidadeFinal = item.quantity / produto.quantityPerUnit;
+          console.log(`[BACKEND][${produto.name}] Dose recebida: ${quantidadeOriginal}ml, convertido para fração: ${quantidadeFinal}`);
+        } else {
+          console.log(`[BACKEND][${produto?.name}] Venda por unidade: ${quantidadeFinal} un`);
         }
         saleItems.push({
           productId: item.productId,

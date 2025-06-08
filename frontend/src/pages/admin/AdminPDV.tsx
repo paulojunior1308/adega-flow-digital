@@ -152,6 +152,8 @@ const AdminPDV = () => {
         const totalAmount = item.items.reduce((sum: number, ci: any) => sum + (ci.amount || 1), 0);
         const ingredientes = item.items.map((comboItem: any) => {
           const ingredienteValor = ((comboItem.amount || 1) / totalAmount) * item.price;
+          const logMsg = `[FRONTEND][CARRINHO][COMBO-DOSE] Produto: ${comboItem.product?.name}, Qtd: ${(comboItem.amount || 1) * quantity}, Unidade: ml, Valor: ${ingredienteValor}`;
+          console.log(logMsg);
           return {
             id: `${item.id}-${comboItem.productId}`,
             productId: comboItem.productId,
@@ -193,6 +195,9 @@ const AdminPDV = () => {
       }
     } else {
       // Produto avulso: id normal
+      const produtoLog = products.find(p => p.id === item.productId);
+      const unidadeLog = produtoLog?.unit || 'unidade';
+      console.log(`[FRONTEND][CARRINHO] Produto: ${item.name}, Qtd: ${quantity}, Unidade: ${unidadeLog}`);
       const existingItemIndex = cartItems.findIndex(ci => ci.id === item.id);
       if (existingItemIndex >= 0) {
         const updatedItems = [...cartItems];
@@ -318,6 +323,7 @@ const AdminPDV = () => {
           const totalAmount = item.items.reduce((sum: number, ci: any) => sum + (ci.amount || 1), 0);
           for (const comboItem of item.items) {
             const ingredienteValor = ((comboItem.amount || 1) / totalAmount) * item.price;
+            console.log(`[FRONTEND][ENVIO][COMBO-DOSE] Produto: ${comboItem.product?.name}, Qtd: ${(comboItem.amount || 1) * item.quantity}, Unidade: ml, Valor: ${ingredienteValor}`);
             itemsToSend.push({
               productId: comboItem.productId,
               quantity: (comboItem.amount || 1) * item.quantity,
@@ -327,6 +333,9 @@ const AdminPDV = () => {
           }
         } else {
           // Produto avulso ou combo tradicional
+          const produtoLog = products.find(p => p.id === item.productId);
+          const unidadeLog = produtoLog?.unit || 'unidade';
+          console.log(`[FRONTEND][ENVIO] Produto: ${item.name}, Qtd: ${item.quantity}, Unidade: ${unidadeLog}`);
           itemsToSend.push({
             productId: item.type === 'combo' ? undefined : item.productId,
             comboId: item.type === 'combo' ? item.comboId || item.id : undefined,
@@ -336,6 +345,7 @@ const AdminPDV = () => {
           });
         }
       }
+      console.log('[FRONTEND][ENVIO][FINAL] Itens enviados para o backend:', JSON.stringify(itemsToSend, null, 2));
       await api.post('/admin/pdv-sales', {
         items: itemsToSend,
         paymentMethodId
