@@ -1,4 +1,41 @@
-  createPDVSale: async (req: Request, res: Response) => {
+import { Request, Response } from 'express';
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
+
+interface AuthenticatedRequest extends Request {
+  user: {
+    id: string;
+  };
+}
+
+interface SaleItem {
+  productId?: string;
+  doseId?: string;
+  quantity: number;
+  price: number;
+  discount?: number;
+}
+
+interface Product {
+  id: string;
+  stock: number;
+  isFractioned: boolean;
+  totalVolume: number | null;
+  unitVolume: number | null;
+}
+
+interface Dose {
+  id: string;
+  name: string;
+  items: Array<{
+    product: Product;
+    quantity: number;
+  }>;
+}
+
+export const saleController = {
+  createPDVSale: async (req: AuthenticatedRequest, res: Response) => {
     const { items, paymentMethodId } = req.body;
     if (!items || !Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ error: 'Nenhum item informado.' });
@@ -49,7 +86,7 @@
     // Verificar estoque
     for (const item of validItems) {
       if (item.productId) {
-        const product = products.find(p => p.id === item.productId);
+        const product = products.find((p: Product) => p.id === item.productId);
         if (!product) {
           return res.status(400).json({ error: `Produto ${item.productId} não encontrado.` });
         }
@@ -66,7 +103,7 @@
           }
         }
       } else if (item.doseId) {
-        const dose = doses.find(d => d.id === item.doseId);
+        const dose = doses.find((d: Dose) => d.id === item.doseId);
         if (!dose) {
           return res.status(400).json({ error: `Dose ${item.doseId} não encontrada.` });
         }
@@ -114,7 +151,7 @@
     // Atualizar estoque
     for (const item of validItems) {
       if (item.productId) {
-        const product = products.find(p => p.id === item.productId);
+        const product = products.find((p: Product) => p.id === item.productId);
         if (product) {
           if (product.isFractioned) {
             const volumeToDeduct = item.quantity * (product.unitVolume || 0);
@@ -131,7 +168,7 @@
           }
         }
       } else if (item.doseId) {
-        const dose = doses.find(d => d.id === item.doseId);
+        const dose = doses.find((d: Dose) => d.id === item.doseId);
         if (dose) {
           for (const doseItem of dose.items) {
             const product = doseItem.product;
@@ -156,7 +193,7 @@
     }
 
     // Calcular e atualizar o total da venda
-    const total = sale.items.reduce((acc, item) => {
+    const total = sale.items.reduce((acc: number, item: SaleItem) => {
       return acc + (item.price * item.quantity) - (item.discount || 0);
     }, 0);
 
@@ -166,4 +203,5 @@
     });
 
     res.json({ ...sale, total });
-  }, 
+  }
+}; 

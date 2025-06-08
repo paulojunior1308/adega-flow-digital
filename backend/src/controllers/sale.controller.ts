@@ -8,10 +8,7 @@ interface SaleItem {
   doseId?: string;
   quantity: number;
   price: number;
-  choosableItems?: {
-    productId: string;
-    quantity: number;
-  }[];
+  choosableItems?: { productId: string; quantity: number }[];
 }
 
 interface CreateSaleRequest {
@@ -20,45 +17,56 @@ interface CreateSaleRequest {
   cpfCnpj?: string;
 }
 
-export const createSale = async (req: Request<{}, {}, CreateSaleRequest>, res: Response) => {
+interface AuthenticatedRequest extends Request {
+  user: {
+    id: string;
+  };
+}
+
+export const createSale = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { items, paymentMethodId, cpfCnpj } = req.body;
 
-    // Validar itens
-    if (!items || !Array.isArray(items) || items.length === 0) {
-      return res.status(400).json({ error: 'É necessário pelo menos um item para realizar a venda' });
+    if (!items || items.length === 0) {
+      return res.status(400).json({ error: 'É necessário pelo menos um item para a venda' });
     }
 
-    // Validar método de pagamento
     if (!paymentMethodId) {
       return res.status(400).json({ error: 'É necessário informar o método de pagamento' });
     }
 
-    // Criar a venda
+    // Calcula o total da venda
+    const total = items.reduce((acc: number, item: SaleItem) => acc + (item.price * item.quantity), 0);
+
+    // Cria a venda
     const sale = await prisma.sale.create({
       data: {
+        total,
         paymentMethodId,
-        cpfCnpj,
-        total: items.reduce((sum, item) => sum + (item.price * item.quantity), 0),
+        userId: req.user.id,
         items: {
-          create: items.map(item => ({
-            productId: item.productId,
-            doseId: item.doseId,
+          create: items.map((item: SaleItem) => ({
             quantity: item.quantity,
             price: item.price,
-            total: item.price * item.quantity
+            productId: item.productId,
+            doseId: item.doseId
           }))
         }
       },
       include: {
-        items: true
+        items: {
+          include: {
+            product: true,
+            dose: true
+          }
+        }
       }
     });
 
-    // Atualizar estoque dos produtos
+    // Atualiza o estoque dos produtos
     for (const item of items) {
       if (item.productId) {
-        // Se for um produto normal
+        // Atualiza o estoque do produto
         await prisma.product.update({
           where: { id: item.productId },
           data: {
@@ -68,7 +76,7 @@ export const createSale = async (req: Request<{}, {}, CreateSaleRequest>, res: R
           }
         });
       } else if (item.doseId) {
-        // Se for uma dose, atualizar o estoque dos produtos escolhidos
+        // Busca a dose e seus itens
         const dose = await prisma.dose.findUnique({
           where: { id: item.doseId },
           include: {
@@ -81,31 +89,31 @@ export const createSale = async (req: Request<{}, {}, CreateSaleRequest>, res: R
         });
 
         if (!dose) {
-          throw new Error(`Dose não encontrada: ${item.doseId}`);
+          continue;
         }
 
-        // Atualizar estoque dos produtos fixos
+        // Atualiza o estoque dos produtos da dose
         for (const doseItem of dose.items) {
-          if (!doseItem.isChoosable) {
+          if (doseItem.isChoosable && item.choosableItems) {
+            // Se o item é escolhível, atualiza apenas os produtos escolhidos
+            const chosenItem = item.choosableItems.find((ci: { productId: string; quantity: number }) => ci.productId === doseItem.productId);
+            if (chosenItem) {
+              await prisma.product.update({
+                where: { id: doseItem.productId },
+                data: {
+                  stock: {
+                    decrement: chosenItem.quantity
+                  }
+                }
+              });
+            }
+          } else {
+            // Se não é escolhível, atualiza normalmente
             await prisma.product.update({
               where: { id: doseItem.productId },
               data: {
                 stock: {
                   decrement: doseItem.quantity * item.quantity
-                }
-              }
-            });
-          }
-        }
-
-        // Atualizar estoque dos produtos escolhidos
-        if (item.choosableItems) {
-          for (const choosableItem of item.choosableItems) {
-            await prisma.product.update({
-              where: { id: choosableItem.productId },
-              data: {
-                stock: {
-                  decrement: choosableItem.quantity * item.quantity
                 }
               }
             });
