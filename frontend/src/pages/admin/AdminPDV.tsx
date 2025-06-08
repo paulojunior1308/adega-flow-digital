@@ -917,7 +917,12 @@ const AdminPDV = () => {
                   const produto = products.find(prod => prod.id === p.productId);
                   let quantidadeFinal = p.quantidade;
                   if (produto && produto.unit === 'ml' && produto.quantityPerUnit) {
-                    quantidadeFinal = p.quantidade / produto.quantityPerUnit;
+                    // Se vier amount, use amount; se não, use quantidade
+                    const quantidadeMl = (p as any).amount || p.quantidade;
+                    quantidadeFinal = quantidadeMl / produto.quantityPerUnit;
+                    console.log(`[FRONTEND][CARRINHO][CONVERSAO] Produto: ${produto.name}, Amount: ${quantidadeMl}ml, Unidade: ${produto.quantityPerUnit}ml, Fração: ${quantidadeFinal}`);
+                  } else {
+                    console.log(`[FRONTEND][CARRINHO][CONVERSAO] Produto: ${produto?.name}, Quantidade: ${quantidadeFinal} un`);
                   }
                   return {
                     id: comboToConfigure.id + '-' + p.productId + '-' + Math.random().toString(36).substring(2, 8),
