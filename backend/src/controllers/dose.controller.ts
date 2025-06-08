@@ -23,7 +23,9 @@ export const doseController = {
           items: {
             create: JSON.parse(items).map((item: any) => ({
               productId: item.productId,
-              quantity: parseFloat(item.quantity)
+              quantity: parseFloat(item.quantity),
+              allowFlavorSelection: !!item.allowFlavorSelection,
+              categoryId: item.categoryId || null
             }))
           }
         },
@@ -75,7 +77,9 @@ export const doseController = {
             deleteMany: {},
             create: JSON.parse(items).map((item: any) => ({
               productId: item.productId,
-              quantity: parseFloat(item.quantity)
+              quantity: parseFloat(item.quantity),
+              allowFlavorSelection: !!item.allowFlavorSelection,
+              categoryId: item.categoryId || null
             }))
           }
         },

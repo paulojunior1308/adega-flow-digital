@@ -293,17 +293,27 @@ export default function AdminPromotionsAndCombos() {
     if (imageFile && imageFile.size > 0) {
       imageUrl = await uploadToCloudinary(imageFile);
     }
+    const doseItems = selectedProducts.map(productId => {
+      if (productTypes[productId] === 'choosable') {
+        return {
+          productId,
+          allowFlavorSelection: true,
+          categoryId: choosableCategories[productId],
+          quantity: productQuantities[productId] || 1
+        };
+      }
+      return {
+        productId,
+        allowFlavorSelection: false,
+        quantity: productQuantities[productId] || 1
+      };
+    });
     const doseData = {
       name: formData.get('name'),
       description: formData.get('description'),
       price: formData.get('price'),
       image: imageUrl,
-      items: JSON.stringify(
-        selectedProducts.map(productId => ({
-          productId,
-          quantity: productQuantities[productId] || 1
-        }))
-      ),
+      items: JSON.stringify(doseItems),
       active: String(editingDose.active)
     };
     try {
@@ -466,17 +476,27 @@ export default function AdminPromotionsAndCombos() {
     if (imageFile && imageFile.size > 0) {
       imageUrl = await uploadToCloudinary(imageFile);
     }
+    const doseItems = selectedProducts.map(productId => {
+      if (productTypes[productId] === 'choosable') {
+        return {
+          productId,
+          allowFlavorSelection: true,
+          categoryId: choosableCategories[productId],
+          quantity: productQuantities[productId] || 1
+        };
+      }
+      return {
+        productId,
+        allowFlavorSelection: false,
+        quantity: productQuantities[productId] || 1
+      };
+    });
     const doseData = {
       name: formData.get('name'),
       description: formData.get('description'),
       price: formData.get('price'),
       image: imageUrl,
-      items: JSON.stringify(
-        selectedProducts.map(productId => ({
-          productId,
-          quantity: productQuantities[productId] || 1
-        }))
-      )
+      items: JSON.stringify(doseItems)
     };
     try {
       await api.post('/admin/doses', doseData);
@@ -1274,22 +1294,53 @@ export default function AdminPromotionsAndCombos() {
               <Label>Produtos e volumes da dose</Label>
               <ScrollArea className="h-40 border rounded p-2 mt-2">
                 {products.map(product => (
-                  <div key={product.id} className="flex items-center gap-2 mb-2">
-                    <Checkbox
-                      checked={selectedProducts.includes(product.id)}
-                      onCheckedChange={() => handleProductSelect(product.id)}
-                    />
-                    <span>{product.name}</span>
-                    {selectedProducts.includes(product.id) && (
-                      <Input
-                        type="number"
-                        min={1}
-                        placeholder="Volume (ml ou un)"
-                        value={productQuantities[product.id] || ''}
-                        onChange={e => setProductQuantities(q => ({ ...q, [product.id]: Number(e.target.value) }))}
-                        className="w-24"
+                  <div key={product.id} className="flex flex-col gap-1 mb-2 border-b pb-2">
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        checked={selectedProducts.includes(product.id)}
+                        onCheckedChange={() => handleProductSelect(product.id)}
                       />
-                    )}
+                      <span>{product.name}</span>
+                      {selectedProducts.includes(product.id) && (
+                        <>
+                          <Select
+                            value={productTypes[product.id] || 'fixed'}
+                            onValueChange={value => setProductTypes(prev => ({ ...prev, [product.id]: value as 'fixed' | 'choosable' }))}
+                          >
+                            <SelectTrigger className="w-[100px]">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="fixed">Fixo</SelectItem>
+                              <SelectItem value="choosable">Escolhível</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          {productTypes[product.id] === 'choosable' && (
+                            <Select
+                              value={choosableCategories[product.id] || ''}
+                              onValueChange={value => setChoosableCategories(prev => ({ ...prev, [product.id]: value }))}
+                            >
+                              <SelectTrigger className="w-[140px]">
+                                <SelectValue placeholder="Categoria" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {categories.map(category => (
+                                  <SelectItem key={category.id} value={category.id}>{category.name}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          )}
+                          <Input
+                            type="number"
+                            min={1}
+                            placeholder="Volume (ml ou un)"
+                            value={productQuantities[product.id] || ''}
+                            onChange={e => setProductQuantities(q => ({ ...q, [product.id]: Number(e.target.value) }))}
+                            className="w-24"
+                          />
+                        </>
+                      )}
+                    </div>
                   </div>
                 ))}
               </ScrollArea>

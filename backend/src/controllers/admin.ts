@@ -388,6 +388,79 @@ export const adminController = {
         });
       }
     }
+    for (const item of reallyValidItems) {
+      if (item.doseId) {
+        // Buscar a composição da dose
+        const dose = await prisma.dose.findUnique({
+          where: { id: item.doseId },
+          include: { items: true }
+        });
+        if (!dose) {
+          return res.status(400).json({ error: 'Dose não encontrada.' });
+        }
+        // Se houver seleções de escolhíveis, elas vêm em item.choosableSelections
+        const choosableSelections = item.choosableSelections || {};
+        for (const doseItem of dose.items) {
+          if (doseItem.allowFlavorSelection && doseItem.categoryId) {
+            // O usuário deve ter escolhido o produto para esta categoria
+            const selections = choosableSelections[doseItem.categoryId] || {};
+            for (const [productId, qty] of Object.entries(selections)) {
+              const quantidadeFinal = Number(qty) * item.quantity;
+              const produto = await prisma.product.findUnique({ where: { id: productId } });
+              if (!produto) {
+                return res.status(400).json({ error: `Produto escolhido não encontrado: ${productId}` });
+              }
+              // Se for fracionado, descontar do volume
+              if (produto.isFractioned) {
+                const novoVolume = (produto.totalVolume || 0) - (doseItem.quantity * quantidadeFinal);
+                if (novoVolume < 0) {
+                  return res.status(400).json({ error: `Estoque insuficiente (volume) para o produto: ${produto.name}` });
+                }
+                await prisma.product.update({
+                  where: { id: productId },
+                  data: { totalVolume: novoVolume }
+                });
+              } else {
+                const novoEstoque = (produto.stock || 0) - quantidadeFinal;
+                if (novoEstoque < 0) {
+                  return res.status(400).json({ error: `Estoque insuficiente para o produto: ${produto.name}` });
+                }
+                await prisma.product.update({
+                  where: { id: productId },
+                  data: { stock: novoEstoque }
+                });
+              }
+            }
+          } else {
+            // Produto fixo
+            const produto = await prisma.product.findUnique({ where: { id: doseItem.productId } });
+            if (!produto) {
+              return res.status(400).json({ error: `Produto da dose não encontrado: ${doseItem.productId}` });
+            }
+            // Se for fracionado, descontar do volume
+            if (produto.isFractioned) {
+              const novoVolume = (produto.totalVolume || 0) - (doseItem.quantity * item.quantity);
+              if (novoVolume < 0) {
+                return res.status(400).json({ error: `Estoque insuficiente (volume) para o produto: ${produto.name}` });
+              }
+              await prisma.product.update({
+                where: { id: doseItem.productId },
+                data: { totalVolume: novoVolume }
+              });
+            } else {
+              const novoEstoque = (produto.stock || 0) - (doseItem.quantity * item.quantity);
+              if (novoEstoque < 0) {
+                return res.status(400).json({ error: `Estoque insuficiente para o produto: ${produto.name}` });
+              }
+              await prisma.product.update({
+                where: { id: doseItem.productId },
+                data: { stock: novoEstoque }
+              });
+            }
+          }
+        }
+      }
+    }
     res.status(201).json(sale);
   },
 
