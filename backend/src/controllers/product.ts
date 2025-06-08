@@ -49,7 +49,7 @@ export const productController = {
 
   create: async (req: Request, res: Response) => {
     try {
-      const { name, description, price, categoryId, supplierId, stock, minStock, barcode, costPrice, image, unit, quantityPerUnit, canSellByUnit, canSellByDose } = req.body;
+      const { name, description, price, categoryId, supplierId, stock, minStock, barcode, costPrice, image } = req.body;
       const product = await prisma.product.create({
         data: {
           name,
@@ -58,14 +58,10 @@ export const productController = {
           costPrice: parseFloat(costPrice),
           categoryId,
           supplierId: supplierId || null,
-          stock: stock !== undefined ? stock.toString() : "0",
+          stock: parseInt(stock),
           minStock: minStock ? parseInt(minStock) : 0,
           barcode: barcode || null,
-          image: image || null,
-          unit: unit || null,
-          quantityPerUnit: quantityPerUnit ? parseInt(quantityPerUnit) : null,
-          canSellByUnit: typeof canSellByUnit === 'boolean' ? canSellByUnit : canSellByUnit === 'true',
-          canSellByDose: typeof canSellByDose === 'boolean' ? canSellByDose : canSellByDose === 'true',
+          image: image || null
         },
         include: {
           category: true,
@@ -82,7 +78,7 @@ export const productController = {
   update: async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
-      const { name, description, price, categoryId, supplierId, stock, minStock, barcode, costPrice, active, image, unit, quantityPerUnit, canSellByUnit, canSellByDose } = req.body;
+      const { name, description, price, categoryId, supplierId, stock, minStock, barcode, costPrice, active, image } = req.body;
       const product = await prisma.product.update({
         where: { id },
         data: {
@@ -90,15 +86,11 @@ export const productController = {
           description,
           price: parseFloat(price),
           costPrice: costPrice ? parseFloat(costPrice) : undefined,
-          stock: stock !== undefined ? stock.toString() : undefined,
+          stock: parseInt(stock),
           minStock: minStock ? parseInt(minStock) : undefined,
           barcode,
           active: typeof active === 'boolean' ? active : active === 'true' || active === '1',
           image: image || undefined,
-          unit: unit || null,
-          quantityPerUnit: quantityPerUnit ? parseInt(quantityPerUnit) : null,
-          canSellByUnit: typeof canSellByUnit === 'boolean' ? canSellByUnit : canSellByUnit === 'true',
-          canSellByDose: typeof canSellByDose === 'boolean' ? canSellByDose : canSellByDose === 'true',
           category: {
             connect: { id: categoryId }
           },
@@ -202,7 +194,7 @@ export const productController = {
 
       const product = await prisma.product.update({
         where: { id },
-        data: { stock: stock !== undefined ? stock.toString() : undefined },
+        data: { stock: parseInt(stock) },
         include: {
           category: true,
           supplier: true

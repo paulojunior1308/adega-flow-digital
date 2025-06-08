@@ -19,8 +19,6 @@ interface Product {
   price: number;
   pinned?: boolean;
   stock: number;
-  unit?: string;
-  quantityPerUnit?: number;
 }
 
 interface CartItem {
@@ -31,10 +29,6 @@ interface CartItem {
   quantity: number;
   price: number;
   total: number;
-  comboId?: string;
-  type: string;
-  comboType?: string;
-  items?: any[];
 }
 
 const AdminPDV = () => {
@@ -63,10 +57,9 @@ const AdminPDV = () => {
   useEffect(() => {
     api.get('/admin/products').then(res => setProducts(res.data.filter((p: any) => p.stock > 0)));
     api.get('/admin/combos').then(res => {
-      // Corrigir combos: mapear allowFlavorSelection para isChoosable e garantir comboType
+      // Corrigir combos: mapear allowFlavorSelection para isChoosable
       const combosCorrigidos = res.data.map((combo: any) => ({
         ...combo,
-        comboType: combo.type, // Garante que comboType está presente
         items: combo.items.map((item: any) => ({
           ...item,
           isChoosable: item.allowFlavorSelection
@@ -142,39 +135,12 @@ const AdminPDV = () => {
       return;
     }
     if (item.type === 'combo') {
-      if (item.comboType === 'dose') {
+      if (item.items && Array.isArray(item.items) && item.items.some((i: any) => i.isChoosable || i.allowFlavorSelection)) {
         setComboToConfigure(item);
         setComboModalOpen(true);
         return;
       }
-      // Combo tradicional
-      const existingItemIndex = cartItems.findIndex(ci => ci.id === item.id);
-      if (existingItemIndex >= 0) {
-        const updatedItems = [...cartItems];
-        updatedItems[existingItemIndex].quantity += quantity;
-        updatedItems[existingItemIndex].total = updatedItems[existingItemIndex].price * updatedItems[existingItemIndex].quantity;
-        setCartItems(updatedItems);
-        toast({ description: `Quantidade de ${item.name} atualizada.` });
-      } else {
-        const newItem: CartItem = {
-          id: item.id,
-          productId: item.id, // para combos, productId = id do combo
-          code: item.code,
-          name: item.name,
-          quantity: quantity,
-          price: item.price, // sempre usar o preço do combo
-          total: item.price * quantity,
-          comboId: item.id, // garantir que comboId seja enviado
-          type: 'combo',
-        };
-        setCartItems([...cartItems, newItem]);
-        toast({ description: `${item.name} adicionado ao carrinho.` });
-      }
-    } else {
       // Produto avulso: id normal
-      const produtoLog = products.find(p => p.id === item.productId);
-      const unidadeLog = produtoLog?.unit || 'unidade';
-      console.log(`[FRONTEND][CARRINHO] Produto: ${item.name}, Qtd: ${quantity}, Unidade: ${unidadeLog}`);
       const existingItemIndex = cartItems.findIndex(ci => ci.id === item.id);
       if (existingItemIndex >= 0) {
         const updatedItems = [...cartItems];
@@ -190,8 +156,29 @@ const AdminPDV = () => {
           name: item.name,
           quantity: quantity,
           price: item.price,
-          total: item.price * quantity,
-          type: 'product',
+          total: item.price * quantity
+        };
+        setCartItems([...cartItems, newItem]);
+        toast({ description: `${item.name} adicionado ao carrinho.` });
+      }
+    } else {
+      // Produto avulso: id normal
+      const existingItemIndex = cartItems.findIndex(ci => ci.id === item.id);
+      if (existingItemIndex >= 0) {
+        const updatedItems = [...cartItems];
+        updatedItems[existingItemIndex].quantity += quantity;
+        updatedItems[existingItemIndex].total = updatedItems[existingItemIndex].price * updatedItems[existingItemIndex].quantity;
+        setCartItems(updatedItems);
+        toast({ description: `Quantidade de ${item.name} atualizada.` });
+      } else {
+        const newItem: CartItem = {
+          id: item.id,
+          productId: item.id,
+          code: item.code,
+          name: item.name,
+          quantity: quantity,
+          price: item.price,
+          total: item.price * quantity
         };
         setCartItems([...cartItems, newItem]);
         toast({ description: `${item.name} adicionado ao carrinho.` });
@@ -292,17 +279,12 @@ const AdminPDV = () => {
       return;
     }
     try {
-      // Envie exatamente o que está no carrinho
-      const itemsToSend = cartItems.map(item => ({
-        productId: item.productId,
-        comboId: item.comboId,
-        quantity: item.quantity,
-        price: item.price,
-        type: item.type,
-      }));
-      console.log('[FRONTEND][ENVIO][FINAL] Itens enviados para o backend:', JSON.stringify(itemsToSend, null, 2));
       await api.post('/admin/pdv-sales', {
-        items: itemsToSend,
+        items: cartItems.map(item => ({
+          productId: item.productId,
+          quantity: item.quantity,
+          price: item.price
+        })),
         paymentMethodId
       });
       toast({
@@ -489,24 +471,7 @@ const AdminPDV = () => {
                         >
                           <Minus className="h-3 w-3" />
                         </Button>
-                        <span className="mx-2 font-medium">
-                          {(() => {
-                            let produto = products.find(prod => prod.id === item.productId);
-                            // Se não encontrar, tenta pegar do próprio p (caso venha do combo)
-                            if (!produto && (item as any).unit && (item as any).quantityPerUnit) {
-                              produto = item as any;
-                            }
-                            let quantidadeFinal = item.quantity;
-                            if (produto && produto.unit === 'ml' && produto.quantityPerUnit) {
-                              const quantidadeMl = (item as any).amount || item.quantity;
-                              quantidadeFinal = quantidadeMl / produto.quantityPerUnit;
-                              console.log(`[FRONTEND][CARRINHO][CONVERSAO] Produto: ${produto.name}, Amount: ${quantidadeMl}ml, Unidade: ${produto.quantityPerUnit}ml, Fração: ${quantidadeFinal}`);
-                            } else {
-                              console.log(`[FRONTEND][CARRINHO][CONVERSAO] Produto: ${produto?.name}, Quantidade: ${quantidadeFinal} un`);
-                            }
-                            return quantidadeFinal;
-                          })()}
-                        </span>
+                        <span className="mx-2 font-medium">{item.quantity}</span>
                         <Button 
                           variant="outline" 
                           size="icon" 
@@ -555,24 +520,7 @@ const AdminPDV = () => {
                               >
                                 <Minus className="h-3 w-3" />
                               </Button>
-                              <span className="mx-2">
-                                {(() => {
-                                  let produto = products.find(prod => prod.id === item.productId);
-                                  // Se não encontrar, tenta pegar do próprio p (caso venha do combo)
-                                  if (!produto && (item as any).unit && (item as any).quantityPerUnit) {
-                                    produto = item as any;
-                                  }
-                                  let quantidadeFinal = item.quantity;
-                                  if (produto && produto.unit === 'ml' && produto.quantityPerUnit) {
-                                    const quantidadeMl = (item as any).amount || item.quantity;
-                                    quantidadeFinal = quantidadeMl / produto.quantityPerUnit;
-                                    console.log(`[FRONTEND][CARRINHO][CONVERSAO] Produto: ${produto.name}, Amount: ${quantidadeMl}ml, Unidade: ${produto.quantityPerUnit}ml, Fração: ${quantidadeFinal}`);
-                                  } else {
-                                    console.log(`[FRONTEND][CARRINHO][CONVERSAO] Produto: ${produto?.name}, Quantidade: ${quantidadeFinal} un`);
-                                  }
-                                  return quantidadeFinal;
-                                })()}
-                              </span>
+                              <span className="mx-2">{item.quantity}</span>
                               <Button 
                                 variant="outline" 
                                 size="icon" 
@@ -811,7 +759,7 @@ const AdminPDV = () => {
             combo={comboToConfigure}
             onConfirm={async (choosableSelections) => {
               // 1. Montar lista de todos os produtos do combo (fixos + escolhidos)
-              const produtosCombo: { productId: string, nome: string, precoOriginal: number, quantidade: number, amount: number }[] = [];
+              const produtosCombo: { productId: string, nome: string, precoOriginal: number, quantidade: number }[] = [];
               // Fixos
               for (const item of comboToConfigure.items) {
                 if (!item.isChoosable) {
@@ -819,8 +767,7 @@ const AdminPDV = () => {
                     productId: item.productId,
                     nome: item.product?.name || '',
                     precoOriginal: item.product?.price || 0,
-                    quantidade: Math.max(1, item.quantity),
-                    amount: item.amount || item.quantity // Salva o valor em ml para conversão depois
+                    quantidade: Math.max(1, item.quantity)
                   });
                 }
               }
@@ -846,27 +793,25 @@ const AdminPDV = () => {
                       productId,
                       nome,
                       precoOriginal: preco,
-                      quantidade: Number(quantidade),
-                      amount: quantidade // Salva o valor em ml para conversão depois
+                      quantidade: Number(quantidade)
                     });
                   }
                 }
               }
               // 2. Calcular valor total original
-              // (Removido: cálculo antigo de totaisNaoArredondados e totaisArredondados)
+              const totalOriginal = produtosCombo.reduce((sum, p) => sum + p.precoOriginal * p.quantidade, 0);
               // 3. Distribuir valor do combo proporcionalmente (sem arredondar no loop)
-              // 4. Arredonde cada total
-              // 5. Calcule a diferença
-              // 6. Distribua o ajuste entre todos os itens do combo de forma cíclica
-              const totalAmount = produtosCombo.reduce((sum, p) => sum + (p.quantidade), 0);
-              let totaisNaoArredondados = produtosCombo.map(p =>
-                totalAmount > 0
-                  ? ((p.quantidade) / totalAmount) * comboToConfigure.price
-                  : 0
+              const totaisNaoArredondados = produtosCombo.map(p =>
+                totalOriginal > 0
+                  ? ((p.precoOriginal * p.quantidade) / totalOriginal) * comboToConfigure.price
+                  : p.precoOriginal * p.quantidade
               );
+              // 4. Arredonde cada total
               let totaisArredondados = totaisNaoArredondados.map(v => Math.round(v * 100) / 100);
+              // 5. Calcule a diferença
               let soma = totaisArredondados.reduce((a, b) => a + b, 0);
               let diff = Math.round((comboToConfigure.price - soma) * 100); // em centavos
+              // 6. Distribua o ajuste entre todos os itens do combo de forma cíclica
               if (diff !== 0) {
                 const indicesOrdenados = Array.from({ length: totaisArredondados.length }, (_, i) => i);
                 let i = 0;
@@ -878,36 +823,32 @@ const AdminPDV = () => {
                   i++;
                 }
               }
-              setCartItems((prev: CartItem[]) => ([
+              // 7. Calcula preço unitário ajustado e desconto
+              const descontos = produtosCombo.map((p, idx) => {
+                const precoAjustado = Math.round((totaisArredondados[idx] / p.quantidade) * 100) / 100;
+                return {
+                  productId: p.productId,
+                  precoOriginal: p.precoOriginal,
+                  quantidade: p.quantidade,
+                  precoAjustado,
+                  nome: p.nome,
+                  desconto: p.precoOriginal - precoAjustado
+                };
+              });
+              // 8. Adicionar cada produto ao carrinho já com o preço ajustado
+              setCartItems(prev => ([
                 ...prev,
-                ...produtosCombo.map((p, idx) => {
-                  let produto = products.find(prod => prod.id === p.productId);
-                  // Se não encontrar, tenta pegar do próprio p (caso venha do combo)
-                  if (!produto && (p as any).unit && (p as any).quantityPerUnit) {
-                    produto = p as any;
-                  }
-                  let quantidadeFinal = p.quantidade;
-                  if (produto && produto.unit === 'ml' && produto.quantityPerUnit) {
-                    const quantidadeMl = (p as any).amount || p.quantidade;
-                    quantidadeFinal = quantidadeMl / produto.quantityPerUnit;
-                    console.log(`[FRONTEND][CARRINHO][CONVERSAO] Produto: ${produto.name}, Amount: ${quantidadeMl}ml, Unidade: ${produto.quantityPerUnit}ml, Fração: ${quantidadeFinal}`);
-                  } else {
-                    console.log(`[FRONTEND][CARRINHO][CONVERSAO] Produto: ${produto?.name}, Quantidade: ${quantidadeFinal} un`);
-                  }
-                  return {
-                    id: comboToConfigure.id + '-' + p.productId + '-' + Math.random().toString(36).substring(2, 8),
-                    productId: p.productId,
-                    code: '',
-                    name: `${p.nome} (Dose de ${comboToConfigure.name})`,
-                    quantity: quantidadeFinal,
-                    price: totaisArredondados[idx],
-                    total: totaisArredondados[idx],
-                    type: 'product',
-                    parentCombo: { id: comboToConfigure.id, name: comboToConfigure.name }
-                  };
-                })
+                ...descontos.map(d => ({
+                  id: d.productId + '-' + Math.random().toString(36).substring(2, 8),
+                  productId: d.productId,
+                  code: d.productId.substring(0, 6),
+                  name: d.nome,
+                  quantity: d.quantidade,
+                  price: d.precoAjustado,
+                  total: d.precoAjustado * d.quantidade
+                }))
               ]));
-              toast({ description: `Produtos da dose ${comboToConfigure.name} adicionados ao carrinho.` });
+              toast({ description: `${comboToConfigure.name} (Combo) adicionado ao carrinho.` });
               setComboModalOpen(false);
               setComboToConfigure(null);
             }}

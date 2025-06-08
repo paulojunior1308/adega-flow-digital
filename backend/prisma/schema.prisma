@@ -32,7 +32,7 @@ model Product {
   description String?
   price       Float
   costPrice   Float
-  stock       Decimal   @default(0)
+  stock       Int         @default(0)
   minStock    Int         @default(0)
   barcode     String?     @unique
   sku         String?     @unique
@@ -53,10 +53,6 @@ model Product {
   supplier    Supplier?   @relation(fields: [supplierId], references: [id])
   saleItems   SaleItem[]
   promotions  Promotion[] @relation("ProductToPromotion")
-  unit            String?   // 'ml', 'unidade', etc.
-  quantityPerUnit Int?      // Ex: 900 para gin 900ml, 350 para energético 350ml
-  canSellByUnit   Boolean   @default(true)
-  canSellByDose   Boolean   @default(false)
 }
 
 model Category {
@@ -239,7 +235,6 @@ model Combo {
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
   items       ComboItem[]
-  type        String?     // 'combo' ou 'dose'
 }
 
 model ComboItem {
@@ -252,8 +247,6 @@ model ComboItem {
   categoryId           String?
   combo                Combo   @relation(fields: [comboId], references: [id])
   product              Product @relation(fields: [productId], references: [id])
-  unit                 String? // 'ml', 'unidade', etc.
-  amount               Int?    // Quanto consome por item (ex: 100 para 100ml)
 }
 
 model Promotion {

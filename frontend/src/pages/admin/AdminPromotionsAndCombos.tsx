@@ -80,9 +80,6 @@ export default function AdminPromotionsAndCombos() {
   const [categories, setCategories] = React.useState<{id: string, name: string}[]>([]);
   const [choosableCategories, setChoosableCategories] = React.useState<Record<string, string>>({});
   const [choosableQuantities, setChoosableQuantities] = React.useState<Record<string, number>>({});
-  const [comboType, setComboType] = React.useState<'combo' | 'dose'>('combo');
-  const [productUnits, setProductUnits] = React.useState<{ [productId: string]: string }>({});
-  const [productAmounts, setProductAmounts] = React.useState<{ [productId: string]: number }>({});
 
   const fetchData = React.useCallback(async () => {
     try {
@@ -296,19 +293,8 @@ export default function AdminPromotionsAndCombos() {
       description: formData.get('description'),
       price: formData.get('price'),
       image: imageUrl,
-      type: comboType,
       items: JSON.stringify(
         selectedProducts.map(productId => {
-          if (comboType === 'dose') {
-            return {
-              productId,
-              unit: productUnits[productId] || 'ml',
-              amount: productAmounts[productId] || 1,
-              allowFlavorSelection: productTypes[productId] === 'choosable',
-              categoryId: choosableCategories[productId],
-              quantity: choosableQuantities[productId] || productQuantities[productId] || 1
-            };
-          }
           if (productTypes[productId] === 'choosable') {
             return {
               productId,
@@ -877,18 +863,6 @@ export default function AdminPromotionsAndCombos() {
                 />
               </div>
               <div>
-                <Label htmlFor="comboType">Tipo do Combo</Label>
-                <Select value={comboType} onValueChange={(value) => setComboType(value as 'combo' | 'dose')}>
-                  <SelectTrigger className="w-[140px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="combo">Combo</SelectItem>
-                    <SelectItem value="dose">Dose</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
                 <Label>Produtos do Combo</Label>
                 <div className="flex items-center gap-2 mb-4">
                   <Search className="w-4 h-4 text-gray-500" />
@@ -964,32 +938,6 @@ export default function AdminPromotionsAndCombos() {
                                 className="w-16"
                                 placeholder="Qtd"
                               />
-                            )}
-                            {/* Campos de unidade e quantidade consumida para combos do tipo dose */}
-                            {comboType === 'dose' && (
-                              <>
-                                <Select
-                                  value={productUnits[product.id] || 'ml'}
-                                  onValueChange={value => setProductUnits(units => ({ ...units, [product.id]: value }))}
-                                >
-                                  <SelectTrigger className="w-[80px]">
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="ml">ml</SelectItem>
-                                    <SelectItem value="unidade">Unidade</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                                <Input
-                                  type="number"
-                                  min={1}
-                                  step={1}
-                                  value={productAmounts[product.id] || ''}
-                                  onChange={e => setProductAmounts(amts => ({ ...amts, [product.id]: Number(e.target.value) }))}
-                                  className="w-20"
-                                  placeholder={productUnits[product.id] === 'ml' ? 'ml consumidos' : 'Qtd consumida'}
-                                />
-                              </>
                             )}
                           </div>
                         )}

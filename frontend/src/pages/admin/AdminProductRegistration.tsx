@@ -43,10 +43,6 @@ interface ProductFormValues {
   stock: string;
   description: string;
   image: FileList | null;
-  unit: string;
-  quantityPerUnit: string;
-  canSellByUnit: boolean;
-  canSellByDose: boolean;
 }
 
 const CLOUDINARY_CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
@@ -80,11 +76,7 @@ const AdminProductRegistration = () => {
       costPrice: "",
       stock: "",
       description: "",
-      image: null,
-      unit: "ml",
-      quantityPerUnit: "",
-      canSellByUnit: true,
-      canSellByDose: false,
+      image: null
     }
   });
 
@@ -112,11 +104,7 @@ const AdminProductRegistration = () => {
           costPrice: product.costPrice.toString(),
           stock: product.stock.toString(),
           description: product.description || '',
-          image: null,
-          unit: product.unit,
-          quantityPerUnit: product.quantityPerUnit,
-          canSellByUnit: product.canSellByUnit,
-          canSellByDose: product.canSellByDose,
+          image: null
         });
         if (product.image) {
           setPreviewImage(product.image);
@@ -158,46 +146,29 @@ const AdminProductRegistration = () => {
 
     try {
       const token = JSON.parse(localStorage.getItem('auth-storage') || '{}')?.state?.token;
-      const payload = {
+      await api.post('/admin/products', {
         name: data.name,
         categoryId: data.category,
         price,
         costPrice,
         stock: data.stock,
         description: data.description || '',
-        image: imageUrl || product?.image || '',
-        unit: data.unit,
-        quantityPerUnit: data.quantityPerUnit,
-        canSellByUnit: data.canSellByUnit,
-        canSellByDose: data.canSellByDose,
-      };
-      if (id) {
-        await api.put(`/admin/products/${id}`, payload, {
-          headers: {
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-        });
-        toast({
-          title: "Produto atualizado com sucesso!",
-          description: `${data.name} foi atualizado.`,
-        });
-      } else {
-        await api.post('/admin/products', payload, {
-          headers: {
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-        });
-        toast({
-          title: "Produto cadastrado com sucesso!",
-          description: `${data.name} foi adicionado ao estoque.`,
-        });
-      }
+        image: imageUrl,
+      }, {
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      });
+      toast({
+        title: "Produto cadastrado com sucesso!",
+        description: `${data.name} foi adicionado ao estoque.`,
+      });
       setTimeout(() => {
         navigate('/admin-estoque');
       }, 2000);
     } catch (error: any) {
       toast({
-        title: id ? "Erro ao atualizar produto" : "Erro ao cadastrar produto",
+        title: "Erro ao cadastrar produto",
         description: error?.response?.data?.message || 'Tente novamente.',
         variant: 'destructive',
       });
@@ -319,78 +290,17 @@ const AdminProductRegistration = () => {
                       <FormItem>
                         <FormLabel>Estoque Inicial*</FormLabel>
                         <FormControl>
-                          <Input type="number" {...field} />
+                          <Input 
+                            type="number" 
+                            min="0" 
+                            placeholder="0" 
+                            {...field} 
+                            required
+                          />
                         </FormControl>
-                        <FormDescription>Informe o número de unidades (ex: garrafas, latas, etc).</FormDescription>
-                        <FormMessage />
                       </FormItem>
                     )}
                   />
-                  
-                  <FormField
-                    control={form.control}
-                    name="unit"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Unidade do Produto*</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value} required>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Selecione..." />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="ml">ml</SelectItem>
-                            <SelectItem value="unidade">Unidade</SelectItem>
-                            <SelectItem value="g">g</SelectItem>
-                            <SelectItem value="kg">kg</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="quantityPerUnit"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Quantidade por Unidade*</FormLabel>
-                        <FormControl>
-                          <Input type="number" {...field} />
-                        </FormControl>
-                        <FormDescription>Informe quantos ml tem cada unidade (ex: 900 para 900ml por garrafa).</FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <div className="flex gap-4 items-center">
-                    <FormField
-                      control={form.control}
-                      name="canSellByUnit"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-row items-center gap-2">
-                          <FormControl>
-                            <input type="checkbox" checked={field.value} onChange={e => field.onChange(e.target.checked)} />
-                          </FormControl>
-                          <FormLabel>Permitir venda por unidade</FormLabel>
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="canSellByDose"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-row items-center gap-2">
-                          <FormControl>
-                            <input type="checkbox" checked={field.value} onChange={e => field.onChange(e.target.checked)} />
-                          </FormControl>
-                          <FormLabel>Permitir venda por dose</FormLabel>
-                        </FormItem>
-                      )}
-                    />
-                  </div>
                 </div>
                 
                 <div className="space-y-4">

@@ -127,7 +127,7 @@ export const cartController = {
       where: { cartId: cart.id, productId, comboId: null },
     });
     const totalQuantity = (existing?.quantity || 0) + quantity;
-    if (totalQuantity > Number(product.stock)) {
+    if (totalQuantity > product.stock) {
       throw new AppError(`Estoque insuficiente. Só temos ${product.stock} unidade(s) de ${product.name}.`, 400);
     }
     if (existing) {

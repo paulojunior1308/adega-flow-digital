@@ -9,7 +9,7 @@ async function main() {
   const tables = await prisma.$queryRaw<Array<{ table_name: string }>>`
     SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'`;
   console.log('Tabelas existentes no banco:', tables.map(t => t.table_name));
-/*
+
   // Apagar todas as tabelas do banco (exceto _prisma_migrations)
 await prisma.$executeRawUnsafe(`
   DO $$ DECLARE
@@ -62,7 +62,7 @@ console.log('Tabelas apagadas com sucesso!');
     });
   }
   console.log('Categorias adicionadas com sucesso!'+ prisma.category.findMany());
-*/
+
   }
 
 main()
