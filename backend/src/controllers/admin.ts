@@ -432,13 +432,12 @@ export const adminController = {
               }
             }
           } else {
-            // Produto fixo
             const produto = await prisma.product.findUnique({ where: { id: doseItem.productId } });
             if (!produto) {
               return res.status(400).json({ error: `Produto da dose não encontrado: ${doseItem.productId}` });
             }
-            // Se for fracionado, descontar do volume
-            if (produto.isFractioned) {
+            // Usar discountBy para decidir como descontar
+            if (doseItem.discountBy === 'volume') {
               const novoVolume = (produto.totalVolume || 0) - (doseItem.quantity * item.quantity);
               if (novoVolume < 0) {
                 return res.status(400).json({ error: `Estoque insuficiente (volume) para o produto: ${produto.name}` });

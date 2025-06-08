@@ -513,6 +513,36 @@ const AdminPDV = () => {
                         </Button>
                         <span className="ml-auto font-semibold text-sm">Total: R$ {item.total.toFixed(2)}</span>
                       </div>
+                      {item.doseItems && (
+                        <div className="mt-2 bg-gray-100 rounded p-2">
+                          <div className="font-semibold text-xs mb-1 text-cyan-700">Composição:</div>
+                          <ul className="text-xs text-gray-700 space-y-1">
+                            {item.doseItems.map((doseItem, idx) => (
+                              <li key={doseItem.productId + '-' + idx} className="flex justify-between">
+                                <span>{doseItem.product?.name || 'Produto'}</span>
+                                <span>
+                                  {doseItem.quantity} {doseItem.discountBy === 'volume' || (doseItem.discountBy === undefined && doseItem.product?.isFractioned) ? 'ml' : 'un'}
+                                </span>
+                              </li>
+                            ))}
+                          </ul>
+                          {/* Se houver seleções escolhíveis, exibir também */}
+                          {item.choosableSelections && Object.keys(item.choosableSelections).length > 0 && (
+                            <div className="mt-1 text-cyan-800">
+                              <div className="font-semibold">Escolhas do cliente:</div>
+                              <ul className="list-disc ml-4">
+                                {Object.entries(item.choosableSelections).map(([cat, prods]) => (
+                                  Object.entries(prods).map(([prodId, qty]) => (
+                                    <li key={cat + '-' + prodId}>
+                                      {qty}x {prodId}
+                                    </li>
+                                  ))
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   ))
                 ) : (
@@ -539,7 +569,39 @@ const AdminPDV = () => {
                         <TableRow key={item.id} className="hover:bg-gray-50">
                           <TableCell>{index + 1}</TableCell>
                           <TableCell>{item.code}</TableCell>
-                          <TableCell className="font-medium">{item.name}</TableCell>
+                          <TableCell className="font-medium">
+                            {item.name}
+                            {item.doseItems && (
+                              <div className="mt-1 text-xs text-gray-700">
+                                <div className="font-semibold text-cyan-700">Composição:</div>
+                                <ul className="ml-2">
+                                  {item.doseItems.map((doseItem, idx) => (
+                                    <li key={doseItem.productId + '-' + idx} className="flex justify-between">
+                                      <span>{doseItem.product?.name || 'Produto'}</span>
+                                      <span>
+                                        {doseItem.quantity} {doseItem.discountBy === 'volume' || (doseItem.discountBy === undefined && doseItem.product?.isFractioned) ? 'ml' : 'un'}
+                                      </span>
+                                    </li>
+                                  ))}
+                                </ul>
+                                {/* Se houver seleções escolhíveis, exibir também */}
+                                {item.choosableSelections && Object.keys(item.choosableSelections).length > 0 && (
+                                  <div className="mt-1 text-cyan-800">
+                                    <div className="font-semibold">Escolhas do cliente:</div>
+                                    <ul className="list-disc ml-4">
+                                      {Object.entries(item.choosableSelections).map(([cat, prods]) => (
+                                        Object.entries(prods).map(([prodId, qty]) => (
+                                          <li key={cat + '-' + prodId}>
+                                            {qty}x {prodId}
+                                          </li>
+                                        ))
+                                      ))}
+                                    </ul>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </TableCell>
                           <TableCell>
                             <div className="flex items-center justify-center">
                               <Button 

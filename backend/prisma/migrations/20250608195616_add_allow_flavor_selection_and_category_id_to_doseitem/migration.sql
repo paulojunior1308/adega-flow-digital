@@ -3,7 +3,8 @@ ALTER TABLE "DoseItem" DROP CONSTRAINT "DoseItem_doseId_fkey";
 
 -- AlterTable
 ALTER TABLE "DoseItem" ADD COLUMN     "allowFlavorSelection" BOOLEAN NOT NULL DEFAULT false,
-ADD COLUMN     "categoryId" TEXT;
+ADD COLUMN     "categoryId" TEXT,
+ADD COLUMN     "discountBy" TEXT NOT NULL DEFAULT 'unit';
 
 -- AlterTable
 ALTER TABLE "cart_items" ADD COLUMN     "doseId" TEXT;

@@ -103,6 +103,7 @@ export default function AdminPromotionsAndCombos() {
   const [categories, setCategories] = React.useState<{id: string, name: string}[]>([]);
   const [choosableCategories, setChoosableCategories] = React.useState<Record<string, string>>({});
   const [choosableQuantities, setChoosableQuantities] = React.useState<Record<string, number>>({});
+  const [discountBy, setDiscountBy] = React.useState<Record<string, 'unit' | 'volume'>>({});
 
   const fetchData = React.useCallback(async () => {
     try {
@@ -299,13 +300,15 @@ export default function AdminPromotionsAndCombos() {
           productId,
           allowFlavorSelection: true,
           categoryId: choosableCategories[productId],
-          quantity: productQuantities[productId] || 1
+          quantity: productQuantities[productId] || 1,
+          discountBy: discountBy[productId] || (products.find(p => p.id === productId)?.isFractioned ? 'volume' : 'unit')
         };
       }
       return {
         productId,
         allowFlavorSelection: false,
-        quantity: productQuantities[productId] || 1
+        quantity: productQuantities[productId] || 1,
+        discountBy: discountBy[productId] || (products.find(p => p.id === productId)?.isFractioned ? 'volume' : 'unit')
       };
     });
     const doseData = {
@@ -482,13 +485,15 @@ export default function AdminPromotionsAndCombos() {
           productId,
           allowFlavorSelection: true,
           categoryId: choosableCategories[productId],
-          quantity: productQuantities[productId] || 1
+          quantity: productQuantities[productId] || 1,
+          discountBy: discountBy[productId] || (products.find(p => p.id === productId)?.isFractioned ? 'volume' : 'unit')
         };
       }
       return {
         productId,
         allowFlavorSelection: false,
-        quantity: productQuantities[productId] || 1
+        quantity: productQuantities[productId] || 1,
+        discountBy: discountBy[productId] || (products.find(p => p.id === productId)?.isFractioned ? 'volume' : 'unit')
       };
     });
     const doseData = {
@@ -1330,6 +1335,18 @@ export default function AdminPromotionsAndCombos() {
                               </SelectContent>
                             </Select>
                           )}
+                          <Select
+                            value={discountBy[product.id] || (product.isFractioned ? 'volume' : 'unit')}
+                            onValueChange={value => setDiscountBy(prev => ({ ...prev, [product.id]: value as 'unit' | 'volume' }))}
+                          >
+                            <SelectTrigger className="w-[120px]">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="unit">Descontar por unidade</SelectItem>
+                              <SelectItem value="volume">Descontar por volume (ml)</SelectItem>
+                            </SelectContent>
+                          </Select>
                           <Input
                             type="number"
                             min={1}
