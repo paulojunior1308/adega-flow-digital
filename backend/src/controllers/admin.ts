@@ -414,14 +414,13 @@ export const adminController = {
           for (const comboItem of combo.items) {
             const produto = comboItem.product;
             let quantidade = comboItem.quantity * item.quantity;
-            let price = 0;
             if (produto.unit === 'ml' && produto.quantityPerUnit) {
-              quantidade = quantidade * produto.quantityPerUnit; // ml
+              quantidade = quantidade / produto.quantityPerUnit;
             }
             saleItems.push({
               productId: produto.id,
               quantity: quantidade,
-              price: price // pode ajustar se quiser dividir o valor
+              price: 0 // pode ajustar se quiser dividir o valor
             });
           }
         } else if (combo.type === 'combo') {
@@ -436,9 +435,14 @@ export const adminController = {
           }
         }
       } else if (item.productId) {
+        const produto = await prisma.product.findUnique({ where: { id: item.productId } });
+        let quantidadeFinal = item.quantity;
+        if (produto && produto.unit === 'ml' && produto.quantityPerUnit) {
+          quantidadeFinal = item.quantity / produto.quantityPerUnit;
+        }
         saleItems.push({
           productId: item.productId,
-          quantity: item.quantity,
+          quantity: quantidadeFinal,
           price: item.price
         });
       }
