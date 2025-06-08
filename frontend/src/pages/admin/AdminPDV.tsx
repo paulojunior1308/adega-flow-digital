@@ -516,12 +516,12 @@ const AdminPDV = () => {
                           {(() => {
                             const produto = products.find(p => p.id === item.productId);
                             if (produto && produto.unit === 'ml' && produto.quantityPerUnit) {
-                              const ml = item.quantity * produto.quantityPerUnit;
-                              return `${ml.toFixed(1)} ml (${item.quantity.toFixed(1)} un)`;
+                              const ml = Math.round(item.quantity * produto.quantityPerUnit);
+                              return `${ml} ml (${item.quantity.toFixed(2)} un)`;
                             } else if (produto && produto.unit === 'unidade') {
-                              return `${item.quantity.toFixed(1)} un`;
+                              return `${item.quantity} un`;
                             } else {
-                              return item.quantity.toFixed(1);
+                              return item.quantity;
                             }
                           })()}
                         </span>
@@ -577,12 +577,12 @@ const AdminPDV = () => {
                                 {(() => {
                                   const produto = products.find(p => p.id === item.productId);
                                   if (produto && produto.unit === 'ml' && produto.quantityPerUnit) {
-                                    const ml = item.quantity * produto.quantityPerUnit;
-                                    return `${ml.toFixed(1)} ml (${item.quantity.toFixed(1)} un)`;
+                                    const ml = Math.round(item.quantity * produto.quantityPerUnit);
+                                    return `${ml} ml (${item.quantity.toFixed(2)} un)`;
                                   } else if (produto && produto.unit === 'unidade') {
-                                    return `${item.quantity.toFixed(1)} un`;
+                                    return `${item.quantity} un`;
                                   } else {
-                                    return item.quantity.toFixed(1);
+                                    return item.quantity;
                                   }
                                 })()}
                               </span>
