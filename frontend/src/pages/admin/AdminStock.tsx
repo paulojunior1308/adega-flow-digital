@@ -435,9 +435,9 @@ const AdminStock = () => {
                     <TableCell>R$ {product.price.toFixed(2)}</TableCell>
                     <TableCell className="font-medium">
                       {product.unit === 'ml' && product.quantityPerUnit ? (
-                        <span>{product.stock * product.quantityPerUnit} ml <span className="text-xs text-gray-500">({product.stock} un)</span></span>
+                        <span>{(product.stock * product.quantityPerUnit).toFixed(1)} ml <span className="text-xs text-gray-500">({product.stock.toFixed(1)} un)</span></span>
                       ) : (
-                        <span>{product.stock}</span>
+                        <span>{product.stock.toFixed(1)}</span>
                       )}
                     </TableCell>
                     <TableCell>{product.updatedAt ? new Date(product.updatedAt).toLocaleDateString('pt-BR') : '-'}</TableCell>

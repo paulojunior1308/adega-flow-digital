@@ -8,13 +8,13 @@ import { AppError } from '../config/errorHandler';
 async function subtrairEstoqueProduto(produto: any, quantidade: number, tipoVenda: 'ml' | 'unidade' = 'unidade') {
   if (produto.unit === 'ml' && produto.quantityPerUnit) {
     if (tipoVenda === 'ml') {
-      // Venda por dose: quantidade em fração de unidade
+      // Venda por dose: quantidade em ml
       const estoqueTotalMl = Number(produto.stock) * produto.quantityPerUnit;
-      const quantidadeMl = quantidade * produto.quantityPerUnit;
-      if (estoqueTotalMl < quantidadeMl) {
-        throw new Error(`Estoque insuficiente para o produto: ${produto.name}. Disponível: ${estoqueTotalMl} ml, solicitado: ${quantidadeMl} ml`);
+      if (estoqueTotalMl < quantidade) {
+        throw new Error(`Estoque insuficiente para o produto: ${produto.name}. Disponível: ${estoqueTotalMl} ml, solicitado: ${quantidade} ml`);
       }
-      const novoEstoque = Number(produto.stock) - quantidade;
+      const fracao = quantidade / produto.quantityPerUnit;
+      const novoEstoque = Math.round((Number(produto.stock) - fracao) * 10000) / 10000;
       await prisma.product.update({
         where: { id: produto.id },
         data: { stock: novoEstoque }
