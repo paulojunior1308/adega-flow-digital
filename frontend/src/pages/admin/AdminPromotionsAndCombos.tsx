@@ -452,6 +452,45 @@ export default function AdminPromotionsAndCombos() {
     }
   };
 
+  const handleCreateDose = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (selectedProducts.length === 0) {
+      toast.error('Selecione pelo menos um produto para a dose');
+      return;
+    }
+    setIsSubmitting(true);
+    const form = e.currentTarget;
+    const formData = new FormData(form);
+    let imageUrl = '';
+    const imageFile = formData.get('image') as File;
+    if (imageFile && imageFile.size > 0) {
+      imageUrl = await uploadToCloudinary(imageFile);
+    }
+    const doseData = {
+      name: formData.get('name'),
+      description: formData.get('description'),
+      price: formData.get('price'),
+      image: imageUrl,
+      items: JSON.stringify(
+        selectedProducts.map(productId => ({
+          productId,
+          quantity: productQuantities[productId] || 1
+        }))
+      )
+    };
+    try {
+      await api.post('/admin/doses', doseData);
+      toast.success('Dose cadastrada com sucesso');
+      fetchData();
+      resetForm();
+      setIsDoseDialogOpen(false);
+    } catch (error) {
+      toast.error('Erro ao cadastrar dose');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -475,6 +514,10 @@ export default function AdminPromotionsAndCombos() {
                 <TabsTrigger value="promocoes" className="flex items-center gap-2">
                   <Tag className="w-4 h-4" />
                   Promoções
+                </TabsTrigger>
+                <TabsTrigger value="doses" className="flex items-center gap-2">
+                  <Package className="w-4 h-4 rotate-45" />
+                  Doses
                 </TabsTrigger>
               </TabsList>
               <Button className="flex items-center gap-2" onClick={() => setIsComboDialogOpen(true)}>
@@ -769,6 +812,80 @@ export default function AdminPromotionsAndCombos() {
                     </Card>
                   ))}
                 </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="doses">
+              <div className="flex justify-end mb-4">
+                <Button className="flex items-center gap-2" onClick={() => setIsDoseDialogOpen(true)}>
+                  <Plus className="w-4 h-4" />
+                  Adicionar Dose
+                </Button>
+              </div>
+              <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 xl:grid-cols-3">
+                {doses.map((dose) => (
+                  <Card key={dose.id} className="min-h-[180px]">
+                    <CardHeader>
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <CardTitle>{dose.name}</CardTitle>
+                          <CardDescription>{dose.description}</CardDescription>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => setEditingDose(dose)}
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => handleDeleteDose(dose.id)}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2">
+                        <p className="font-semibold text-lg">
+                          {formatPrice(dose.price)}
+                        </p>
+                        <div className="space-y-1">
+                          {dose.items.map((item) => (
+                            <div key={item.id} className="flex items-center gap-2 text-sm">
+                              <span>{item.product.name}</span>
+                              <span className="text-gray-500">
+                                ({item.quantity}ml)
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </CardContent>
+                    <CardFooter>
+                      <div className="flex items-center gap-2">
+                        <Switch
+                          checked={dose.active}
+                          onCheckedChange={async (checked) => {
+                            try {
+                              await api.patch(`/admin/doses/${dose.id}/active`, {
+                                active: checked,
+                              });
+                              fetchData();
+                            } catch (error) {
+                              toast.error('Erro ao atualizar status da dose');
+                            }
+                          }}
+                        />
+                        <span>{dose.active ? 'Ativo' : 'Inativo'}</span>
+                      </div>
+                    </CardFooter>
+                  </Card>
+                ))}
               </div>
             </TabsContent>
           </Tabs>
@@ -1140,6 +1257,48 @@ export default function AdminPromotionsAndCombos() {
               </DialogFooter>
             </form>
           )}
+        </DialogContent>
+      </Dialog>
+      {/* Modal de criação de dose */}
+      <Dialog open={isDoseDialogOpen} onOpenChange={setIsDoseDialogOpen}>
+        <DialogContent className="max-w-lg w-full">
+          <DialogHeader>
+            <DialogTitle>{editingDose ? 'Editar Dose' : 'Adicionar Dose'}</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={editingDose ? handleUpdateDose : handleCreateDose} className="space-y-4">
+            <Input name="name" placeholder="Nome da Dose" defaultValue={editingDose?.name || ''} required />
+            <Textarea name="description" placeholder="Descrição" defaultValue={editingDose?.description || ''} />
+            <Input name="price" placeholder="Preço (R$)" type="number" step="0.01" defaultValue={editingDose?.price || ''} required />
+            <Input name="image" type="file" accept="image/*" />
+            <div>
+              <Label>Produtos e volumes da dose</Label>
+              <ScrollArea className="h-40 border rounded p-2 mt-2">
+                {products.map(product => (
+                  <div key={product.id} className="flex items-center gap-2 mb-2">
+                    <Checkbox
+                      checked={selectedProducts.includes(product.id)}
+                      onCheckedChange={() => handleProductSelect(product.id)}
+                    />
+                    <span>{product.name}</span>
+                    {selectedProducts.includes(product.id) && (
+                      <Input
+                        type="number"
+                        min={1}
+                        placeholder="Volume (ml ou un)"
+                        value={productQuantities[product.id] || ''}
+                        onChange={e => setProductQuantities(q => ({ ...q, [product.id]: Number(e.target.value) }))}
+                        className="w-24"
+                      />
+                    )}
+                  </div>
+                ))}
+              </ScrollArea>
+            </div>
+            <DialogFooter>
+              <Button type="submit">{editingDose ? 'Salvar Alterações' : 'Cadastrar Dose'}</Button>
+              <Button type="button" variant="outline" onClick={() => { setIsDoseDialogOpen(false); resetForm(); }}>Cancelar</Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
     </div>

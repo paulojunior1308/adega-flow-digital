@@ -417,10 +417,10 @@ const AdminProductRegistration = () => {
                     <>
                       <FormField
                         control={form.control}
-                        name="totalVolume"
+                        name="unitVolume"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Volume Total (ml)*</FormLabel>
+                            <FormLabel>Volume da Garrafa (ml)*</FormLabel>
                             <FormControl>
                               <Input 
                                 type="text"
@@ -434,32 +434,7 @@ const AdminProductRegistration = () => {
                               />
                             </FormControl>
                             <FormDescription>
-                              Volume total do produto em mililitros
-                            </FormDescription>
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="unitVolume"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Volume da Unidade (ml)*</FormLabel>
-                            <FormControl>
-                              <Input 
-                                type="text"
-                                placeholder="Ex: 100"
-                                {...field}
-                                required
-                                onChange={(e) => {
-                                  const value = e.target.value.replace(/[^\d.,]/g, '');
-                                  field.onChange(value);
-                                }}
-                              />
-                            </FormControl>
-                            <FormDescription>
-                              Volume de uma unidade do produto em mililitros
+                              Volume de uma unidade do produto em mililitros (ex: garrafa de 1000ml)
                             </FormDescription>
                           </FormItem>
                         )}
