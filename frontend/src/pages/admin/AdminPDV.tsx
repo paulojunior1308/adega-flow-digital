@@ -63,9 +63,10 @@ const AdminPDV = () => {
   useEffect(() => {
     api.get('/admin/products').then(res => setProducts(res.data.filter((p: any) => p.stock > 0)));
     api.get('/admin/combos').then(res => {
-      // Corrigir combos: mapear allowFlavorSelection para isChoosable
+      // Corrigir combos: mapear allowFlavorSelection para isChoosable e garantir comboType
       const combosCorrigidos = res.data.map((combo: any) => ({
         ...combo,
+        comboType: combo.type, // Garante que comboType está presente
         items: combo.items.map((item: any) => ({
           ...item,
           isChoosable: item.allowFlavorSelection
