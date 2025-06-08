@@ -163,15 +163,26 @@ const AdminPDV = () => {
       }
     } else if (item.type === 'dose') {
       // Explodir a dose em itens separados no carrinho, um para cada produto da composição
-      const newDoseItems = item.items.map((doseItem: any) => ({
-        id: `${doseItem.productId}-dose-${item.id}-${Math.random().toString(36).substring(2, 8)}`,
-        productId: doseItem.productId,
-        code: doseItem.product?.code || '',
-        name: `Dose de ${item.name} - ${doseItem.product?.name || ''}`,
-        quantity: doseItem.quantity * quantity, // quantidade proporcional
-        price: 0, // O preço total da dose será somado no final
-        total: 0
-      }));
+      const totalQtd = item.items.reduce((sum: number, di: any) => sum + di.quantity * quantity, 0);
+      const newDoseItems = item.items.map((doseItem: any, idx: number) => {
+        // Distribuir o preço proporcionalmente à quantidade
+        let itemPrice = 0;
+        if (idx === item.items.length - 1) {
+          // O último item recebe o restante para evitar problemas de arredondamento
+          itemPrice = item.price - newDoseItems?.slice(0, idx).reduce((sum: number, ni: any) => sum + (ni.price * ni.quantity), 0) || 0;
+        } else {
+          itemPrice = parseFloat(((doseItem.quantity * quantity) / totalQtd * item.price).toFixed(2));
+        }
+        return {
+          id: `${doseItem.productId}-dose-${item.id}-${Math.random().toString(36).substring(2, 8)}`,
+          productId: doseItem.productId,
+          code: doseItem.product?.code || '',
+          name: `Dose de ${item.name} - ${doseItem.product?.name || ''}`,
+          quantity: doseItem.quantity * quantity, // quantidade proporcional
+          price: itemPrice,
+          total: itemPrice * (doseItem.quantity * quantity)
+        };
+      });
       setCartItems([...cartItems, ...newDoseItems]);
       toast({ description: `${item.name} (Dose) adicionada ao carrinho.` });
       return;
