@@ -328,12 +328,37 @@ export const adminController = {
         itemProductId: item.productId
       });
       if (produto.isFractioned) {
-        if ((produto.totalVolume || 0) < item.quantity) {
+        // Verifica se é venda de dose (doseId presente)
+        let volumeNecessario = 0;
+        if (item.doseId) {
+          // Buscar a dose e o doseItem correspondente
+          const dose = await prisma.dose.findUnique({
+            where: { id: item.doseId },
+            include: { items: true }
+          });
+          const doseItem = dose?.items.find(di => di.productId === item.productId);
+          volumeNecessario = (doseItem?.quantity || produto.unitVolume || 0) * item.quantity;
+          console.log('[VALIDACAO ESTOQUE] Dose:', {
+            doseId: item.doseId,
+            doseItemQuantity: doseItem?.quantity,
+            volumeNecessario,
+            totalVolumeDisponivel: produto.totalVolume
+          });
+        } else {
+          // Venda direta
+          volumeNecessario = (produto.unitVolume || 0) * item.quantity;
+          console.log('[VALIDACAO ESTOQUE] Venda direta:', {
+            unitVolume: produto.unitVolume,
+            volumeNecessario,
+            totalVolumeDisponivel: produto.totalVolume
+          });
+        }
+        if ((produto.totalVolume || 0) < volumeNecessario) {
           console.error('[ERRO ESTOQUE] Produto fracionado sem volume suficiente:', {
             id: produto.id,
             nome: produto.name,
             totalVolume: produto.totalVolume,
-            solicitado: item.quantity
+            volumeNecessario
           });
           return res.status(400).json({ error: `Estoque insuficiente para o produto: ${produto.name}` });
         }
