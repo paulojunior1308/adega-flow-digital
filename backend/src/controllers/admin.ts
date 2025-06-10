@@ -313,51 +313,17 @@ export const adminController = {
     const validProductIds = new Set(allProducts.map((p: any) => p.id));
     const reallyValidItems = validItems.filter(item => validProductIds.has(item.productId));
     console.log('Itens realmente válidos para venda:', reallyValidItems);
-    // Verificar estoque antes de criar a venda
+    // Verificar estoque de todos os itens antes de descontar
     for (const item of reallyValidItems) {
-      if (item.comboId) {
-        const combo = await prisma.combo.findUnique({
-          where: { id: item.comboId },
-          include: { items: true }
-        });
-        if (combo) {
-          for (const comboItem of combo.items) {
-            const produto = await prisma.product.findUnique({ where: { id: comboItem.productId } });
-            const quantidadeFinal = (produto?.stock || 0) - (comboItem.quantity * item.quantity);
-            if (quantidadeFinal < 0) {
-              return res.status(400).json({ error: `Estoque insuficiente para o produto do combo: ${produto?.name}. Disponível: ${produto?.stock}, solicitado: ${comboItem.quantity * item.quantity}` });
-            }
-          }
+      const produto = await prisma.product.findUnique({ where: { id: item.productId } });
+      if (!produto) continue;
+      if (produto.isFractioned) {
+        if ((produto.totalVolume || 0) < item.quantity) {
+          return res.status(400).json({ error: `Estoque insuficiente para o produto: ${produto.name}` });
         }
-      } else if (item.productId) {
-        const produto = await prisma.product.findUnique({ where: { id: item.productId } });
-        console.log('Produto buscado do banco:', produto);
-        console.log('Item recebido:', item);
-        if (!produto) continue;
-        if (produto.isFractioned) {
-          // Descontar do volume total (ml)
-          const novoVolume = (produto.totalVolume || 0) - item.quantity;
-          if (novoVolume < 0) {
-            console.error('Estoque insuficiente (volume) para o produto:', produto.name);
-            return res.status(400).json({ error: `Estoque insuficiente (volume) para o produto: ${produto.name}. Disponível: ${produto.totalVolume}, solicitado: ${item.quantity}` });
-          }
-          await prisma.product.update({
-            where: { id: item.productId },
-            data: { totalVolume: novoVolume }
-          });
-          console.log(`Novo volume de ${produto.name}: ${novoVolume}`);
-        } else {
-          // Descontar do estoque em unidades
-          const novoEstoque = (produto.stock || 0) - item.quantity;
-          if (novoEstoque < 0) {
-            console.error('Estoque insuficiente para o produto:', produto.name);
-            return res.status(400).json({ error: `Estoque insuficiente para o produto: ${produto.name}. Disponível: ${produto.stock}, solicitado: ${item.quantity}` });
-          }
-          await prisma.product.update({
-            where: { id: item.productId },
-            data: { stock: novoEstoque }
-          });
-          console.log(`Novo estoque de ${produto.name}: ${novoEstoque}`);
+      } else {
+        if ((produto.stock || 0) < item.quantity) {
+          return res.status(400).json({ error: `Estoque insuficiente para o produto: ${produto.name}` });
         }
       }
     }
@@ -365,7 +331,7 @@ export const adminController = {
     const sale = await prisma.sale.create({
       data: {
         userId,
-        total: reallyValidItems.reduce((sum: number, item: any) => sum + (item.price || 0) * (item.quantity || 1), 0),
+        total: reallyValidItems.reduce((sum: number, item: any) => sum + (item.price || 0), 0),
         paymentMethodId,
         items: {
           create: reallyValidItems.map((item: any) => ({
@@ -389,7 +355,7 @@ export const adminController = {
         if (combo) {
           for (const comboItem of combo.items) {
             const produto = await prisma.product.findUnique({ where: { id: comboItem.productId } });
-            const quantidadeFinal = (produto?.stock || 0) - (comboItem.quantity * item.quantity);
+            const quantidadeFinal = (produto?.stock || 0) - item.quantity;
             if (quantidadeFinal < 0) {
               return res.status(400).json({ error: `Estoque insuficiente para o produto do combo: ${produto?.name}` });
             }
@@ -397,7 +363,7 @@ export const adminController = {
           for (const comboItem of combo.items) {
             await prisma.product.update({
               where: { id: comboItem.productId },
-              data: { stock: { decrement: comboItem.quantity * item.quantity } }
+              data: { stock: { decrement: item.quantity } }
             });
           }
         }
