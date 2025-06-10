@@ -95,7 +95,10 @@ const AdminStock = () => {
     costPrice: '',
     stock: '',
     description: '',
-    image: null as File | null
+    image: null as File | null,
+    isFractioned: false,
+    unitVolume: '',
+    totalVolume: '',
   });
   const [categories, setCategories] = useState<Category[]>([]);
   
@@ -202,7 +205,10 @@ const AdminStock = () => {
       costPrice: product.costPrice?.toString() || '',
       stock: product.stock.toString(),
       description: product.description || '',
-      image: null
+      image: null,
+      isFractioned: false,
+      unitVolume: '',
+      totalVolume: '',
     });
     setIsEditDialogOpen(true);
   };
@@ -223,6 +229,11 @@ const AdminStock = () => {
         stock: parseInt(editForm.stock),
         description: editForm.description,
         image: imageUrl,
+        isFractioned: editForm.isFractioned,
+        unitVolume: editForm.isFractioned ? Number(editForm.unitVolume) : null,
+        totalVolume: editForm.isFractioned && editForm.stock && editForm.unitVolume
+          ? Number(editForm.stock) * Number(editForm.unitVolume)
+          : null,
       });
       // Atualizar a lista de produtos
       const updatedProducts = products.map(p => 
@@ -632,6 +643,49 @@ const AdminStock = () => {
                   }}
                 />
               </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={editForm.isFractioned || false}
+                    onChange={e => setEditForm({ ...editForm, isFractioned: e.target.checked })}
+                  />
+                  Produto Fracionado
+                </label>
+              </div>
+              {editForm.isFractioned && (
+                <>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Volume da Garrafa (ml)</label>
+                    <Input
+                      type="number"
+                      min={1}
+                      value={editForm.unitVolume || ''}
+                      onChange={e => {
+                        const value = e.target.value.replace(/[^\d.,]/g, '');
+                        setEditForm({ ...editForm, unitVolume: value });
+                      }}
+                      placeholder="Ex: 1000"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium">Volume Total (ml)</label>
+                    <Input
+                      type="text"
+                      value={
+                        editForm.stock && editForm.unitVolume
+                          ? String(Number(editForm.stock) * Number(editForm.unitVolume))
+                          : ''
+                      }
+                      readOnly
+                      disabled
+                      placeholder="Volume total calculado"
+                    />
+                    <p className="text-xs text-gray-500">Volume total disponível em estoque (estoque x volume da garrafa)</p>
+                  </div>
+                </>
+              )}
             </div>
             
             <DialogFooter>
