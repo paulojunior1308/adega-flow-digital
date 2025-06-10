@@ -329,7 +329,7 @@ export const adminController = {
       });
       if (produto.isFractioned) {
         const unitVolume = produto.unitVolume || 1;
-        const volumeNecessario = item.quantity * unitVolume;
+        const volumeNecessario = item.quantity;
         const unidadesConsumidas = Math.floor(volumeNecessario / unitVolume);
         const volumeRestante = volumeNecessario % unitVolume;
         console.log('[VALIDACAO ESTOQUE] Venda direta:', {
@@ -414,7 +414,7 @@ export const adminController = {
         const produto = await prisma.product.findUnique({ where: { id: item.productId } });
         if (produto?.isFractioned) {
           const unitVolume = produto.unitVolume || 1;
-          const volumeNecessario = item.quantity * unitVolume;
+          const volumeNecessario = item.quantity;
           const unidadesConsumidas = Math.floor(volumeNecessario / unitVolume);
           const volumeRestante = volumeNecessario % unitVolume;
           console.log('[DESCONTO ESTOQUE] Produto fracionado:', {
