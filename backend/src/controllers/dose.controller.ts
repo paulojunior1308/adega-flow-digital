@@ -37,6 +37,7 @@ export const doseController = {
         }
       });
 
+      console.log('Dose criada:', JSON.stringify(dose, null, 2));
       return res.json(dose);
     } catch (error) {
       console.error('Erro ao criar dose:', error);
@@ -92,6 +93,7 @@ export const doseController = {
         }
       });
 
+      console.log('Dose atualizada:', JSON.stringify(updatedDose, null, 2));
       return res.json(updatedDose);
     } catch (error) {
       console.error('Erro ao atualizar dose:', error);
