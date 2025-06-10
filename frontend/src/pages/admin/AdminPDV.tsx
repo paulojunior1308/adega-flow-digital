@@ -173,7 +173,7 @@ const AdminPDV = () => {
           acumulado += itemPrice * (doseItem.quantity * quantity);
         } else {
           // O último item recebe o restante para fechar o valor total
-          itemPrice = parseFloat((((item.price * 1) - acumulado) / (doseItem.quantity * quantity)).toFixed(2));
+          itemPrice = parseFloat((item.price - acumulado).toFixed(2));
         }
         return {
           id: `${doseItem.productId}-dose-${item.id}-${Math.random().toString(36).substring(2, 8)}`,

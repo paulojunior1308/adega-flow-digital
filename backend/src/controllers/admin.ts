@@ -331,6 +331,8 @@ export const adminController = {
         }
       } else if (item.productId) {
         const produto = await prisma.product.findUnique({ where: { id: item.productId } });
+        console.log('Produto buscado do banco:', produto);
+        console.log('Item recebido:', item);
         if (!produto) continue;
         if (produto.isFractioned) {
           // Descontar do volume total (ml)
@@ -432,6 +434,8 @@ export const adminController = {
             for (const [productId, qty] of Object.entries(selections)) {
               const quantidadeFinal = Number(qty) * item.quantity;
               const produto = await prisma.product.findUnique({ where: { id: productId } });
+              console.log('Produto escolhido buscado do banco:', produto);
+              console.log('Item recebido:', item);
               if (!produto) {
                 console.error('Produto escolhido não encontrado:', productId);
                 return res.status(400).json({ error: `Produto escolhido não encontrado: ${productId}` });
@@ -463,6 +467,8 @@ export const adminController = {
             }
           } else {
             const produto = await prisma.product.findUnique({ where: { id: doseItem.productId } });
+            console.log('Produto da dose buscado do banco:', produto);
+            console.log('DoseItem recebido:', doseItem, 'Item da venda:', item);
             if (!produto) {
               console.error('Produto da dose não encontrado:', doseItem.productId);
               return res.status(400).json({ error: `Produto da dose não encontrado: ${doseItem.productId}` });
