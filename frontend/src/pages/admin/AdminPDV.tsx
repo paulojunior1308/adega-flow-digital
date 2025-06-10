@@ -904,7 +904,7 @@ const AdminPDV = () => {
             combo={comboToConfigure}
             onConfirm={(choosableSelections) => {
               // 1. Montar lista de todos os produtos do combo (fixos + escolhidos)
-              const produtosCombo: { productId: string, nome: string, precoOriginal: number, quantidade: number }[] = [];
+              const produtosCombo = [];
               // Fixos
               for (const item of comboToConfigure.items) {
                 if (!item.isChoosable) {
@@ -921,14 +921,10 @@ const AdminPDV = () => {
                 for (const [productId, quantidade] of Object.entries(selections)) {
                   if (quantidade > 0) {
                     // Buscar o preço do produto nas opções carregadas
-                    const categoria = comboToConfigure.items.find((i: any) => i.categoryId === categoryId);
                     let preco = 0;
                     let nome = '';
-                    if (categoria && categoria.product && categoria.product.category && categoria.product.category.id === categoryId) {
-                      preco = categoria.product.price;
-                      nome = categoria.product.name;
-                    } else if (comboToConfigure.options && comboToConfigure.options[categoryId]) {
-                      const prod = comboToConfigure.options[categoryId].find((p: any) => p.id === productId);
+                    if (comboToConfigure.options && comboToConfigure.options[categoryId]) {
+                      const prod = comboToConfigure.options[categoryId].find((p) => p.id === productId);
                       if (prod) {
                         preco = prod.price;
                         nome = prod.name;
@@ -983,18 +979,17 @@ const AdminPDV = () => {
               setCartItems(prev => ([
                 ...prev,
                 ...descontos.map(d => ({
-                  id: d.productId + '-dose-' + Math.random().toString(36).substring(2, 8),
+                  id: d.productId + '-combo-' + Math.random().toString(36).substring(2, 8),
                   productId: d.productId,
                   code: d.productId.substring(0, 6),
-                  name: `Dose de ${comboToConfigure.name} - ${d.nome}`,
+                  name: `Combo ${comboToConfigure.name} - ${d.nome}`,
                   quantity: d.quantidade,
                   price: d.precoAjustado,
                   total: d.precoAjustado
                 }))
               ]));
-              toast({ description: `${comboToConfigure.name} (Combo) adicionado ao carrinho.` });
               setComboModalOpen(false);
-              setComboToConfigure(null);
+              toast({ description: `${comboToConfigure.name} adicionado ao carrinho.` });
             }}
           />
         )}
