@@ -137,7 +137,7 @@ const AdminProductRegistration = () => {
     const price = parseFloat(data.price.replace(',', '.'));
     const costPrice = parseFloat(data.costPrice.replace(',', '.'));
     const unitVolume = data.isFractioned ? parseFloat(data.unitVolume.replace(',', '.')) : null;
-
+    
     if (isNaN(price) || isNaN(costPrice)) {
       toast({
         title: "Erro no preço",
