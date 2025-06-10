@@ -68,6 +68,8 @@ interface Product {
   description?: string;
   image?: string;
   active: boolean;
+  isFractioned: boolean;
+  totalVolume: string;
 }
 
 // Category interface
@@ -407,6 +409,7 @@ const AdminStock = () => {
                     <ArrowUpDown className="h-4 w-4" />
                   </Button>
                 </TableHead>
+                <TableHead>Volume (ml)</TableHead>
                 <TableHead>Última Atualização</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Ações</TableHead>
@@ -431,6 +434,7 @@ const AdminStock = () => {
                         product.stock
                       )}
                     </TableCell>
+                    <TableCell>{product.isFractioned ? product.totalVolume : '-'}</TableCell>
                     <TableCell>{product.updatedAt ? new Date(product.updatedAt).toLocaleDateString('pt-BR') : '-'}</TableCell>
                     <TableCell>
                       <Switch
