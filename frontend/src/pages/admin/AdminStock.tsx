@@ -101,6 +101,7 @@ const AdminStock = () => {
     isFractioned: false,
     unitVolume: '',
     totalVolume: '',
+    active: true,
   });
   const [categories, setCategories] = useState<Category[]>([]);
   
@@ -211,6 +212,7 @@ const AdminStock = () => {
       isFractioned: false,
       unitVolume: '',
       totalVolume: '',
+      active: typeof product.active === 'boolean' ? product.active : true,
     });
     setIsEditDialogOpen(true);
   };
@@ -236,6 +238,7 @@ const AdminStock = () => {
         totalVolume: editForm.isFractioned && editForm.stock && editForm.unitVolume
           ? Number(editForm.stock) * Number(editForm.unitVolume)
           : null,
+        active: editForm.active,
       });
       // Atualizar a lista de produtos
       const updatedProducts = products.map(p => 
@@ -652,7 +655,7 @@ const AdminStock = () => {
                 <label className="text-sm font-medium flex items-center gap-2">
                   <input
                     type="checkbox"
-                    checked={editForm.isFractioned || false}
+                    checked={editForm.isFractioned}
                     onChange={e => setEditForm({ ...editForm, isFractioned: e.target.checked })}
                   />
                   Produto Fracionado
@@ -690,6 +693,17 @@ const AdminStock = () => {
                   </div>
                 </>
               )}
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={editForm.active}
+                    onChange={e => setEditForm({ ...editForm, active: e.target.checked })}
+                  />
+                  Ativo
+                </label>
+              </div>
             </div>
             
             <DialogFooter>
