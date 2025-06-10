@@ -435,22 +435,22 @@ export const adminController = {
             // Venda fracionada (por volume)
             const unitVolume = produto.unitVolume || 1;
             const volumeNecessario = item.quantity;
-            const unidadesConsumidas = Math.floor(volumeNecessario / unitVolume);
-            const volumeRestante = volumeNecessario % unitVolume;
+            const novoTotalVolume = (produto.totalVolume || 0) - volumeNecessario;
+            const novoStock = Math.floor(novoTotalVolume / unitVolume);
             console.log('[DESCONTO ESTOQUE] Produto fracionado:', {
               id: produto.id,
               nome: produto.name,
               volumeNecessario,
-              unidadesConsumidas,
-              volumeRestante,
               totalVolumeAntes: produto.totalVolume,
-              stockAntes: produto.stock
+              novoTotalVolume,
+              stockAntes: produto.stock,
+              novoStock
             });
             await prisma.product.update({
               where: { id: item.productId },
               data: {
-                totalVolume: { decrement: volumeNecessario },
-                stock: { decrement: unidadesConsumidas }
+                totalVolume: novoTotalVolume,
+                stock: novoStock
               }
             });
           }
