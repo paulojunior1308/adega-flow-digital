@@ -70,6 +70,9 @@ const AdminProductRegistration = () => {
   const { id } = useParams();
   const [product, setProduct] = useState<any>(null);
   
+  // Novo estado para volume total
+  const [calculatedTotalVolume, setCalculatedTotalVolume] = useState<string>('');
+
   const form = useForm<ProductFormValues>({
     defaultValues: {
       name: "",
@@ -83,6 +86,21 @@ const AdminProductRegistration = () => {
       unitVolume: ""
     }
   });
+
+  // Atualiza o volume total sempre que estoque ou unitVolume mudarem
+  useEffect(() => {
+    if (form.watch("isFractioned")) {
+      const stock = parseFloat(form.watch("stock") || '0');
+      const unitVolume = parseFloat(form.watch("unitVolume") || '0');
+      if (!isNaN(stock) && !isNaN(unitVolume) && stock > 0 && unitVolume > 0) {
+        setCalculatedTotalVolume((stock * unitVolume).toString());
+      } else {
+        setCalculatedTotalVolume('');
+      }
+    } else {
+      setCalculatedTotalVolume('');
+    }
+  }, [form.watch("stock"), form.watch("unitVolume"), form.watch("isFractioned")]);
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -115,6 +133,10 @@ const AdminProductRegistration = () => {
         if (product.image) {
           setPreviewImage(product.image);
         }
+        // Preenche o volume total ao editar
+        if (product.isFractioned && product.unitVolume && product.stock) {
+          setCalculatedTotalVolume((parseFloat(product.unitVolume) * parseFloat(product.stock)).toString());
+        }
       });
     }
   }, [id, form]);
@@ -137,6 +159,7 @@ const AdminProductRegistration = () => {
     const price = parseFloat(data.price.replace(',', '.'));
     const costPrice = parseFloat(data.costPrice.replace(',', '.'));
     const unitVolume = data.isFractioned ? parseFloat(data.unitVolume.replace(',', '.')) : null;
+    const totalVolume = data.isFractioned && calculatedTotalVolume ? parseFloat(calculatedTotalVolume) : null;
     
     if (isNaN(price) || isNaN(costPrice)) {
       toast({
@@ -172,7 +195,8 @@ const AdminProductRegistration = () => {
         description: data.description || '',
         image: imageUrl,
         isFractioned: data.isFractioned,
-        unitVolume
+        unitVolume,
+        totalVolume
       }, {
         headers: {
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -434,6 +458,18 @@ const AdminProductRegistration = () => {
                           </FormItem>
                         )}
                       />
+                      {/* Campo Volume Total (ml) somente leitura */}
+                      <div className="space-y-1">
+                        <label className="text-sm font-medium">Volume Total (ml)</label>
+                        <Input
+                          type="text"
+                          value={calculatedTotalVolume}
+                          readOnly
+                          disabled
+                          placeholder="Volume total calculado"
+                        />
+                        <p className="text-xs text-gray-500">Volume total disponível em estoque (estoque inicial x volume da garrafa)</p>
+                      </div>
                     </>
                   )}
                 </div>
