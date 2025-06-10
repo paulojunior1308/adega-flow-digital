@@ -163,53 +163,30 @@ const AdminPDV = () => {
       }
     } else if (item.type === 'dose') {
       // Verifica se há itens escolhíveis
-      const hasChoosable = item.items.some((i: any) => i.allowFlavorSelection);
+      const hasChoosable = item.items.some((i: any) => i.isChoosable || i.allowFlavorSelection);
       if (hasChoosable) {
         setDoseToConfigure(item);
         setDoseOptionsModalOpen(true);
         return;
       }
       // Se não houver escolhíveis, distribui o valor igual ao combo
-      const produtosDose: { productId: string, nome: string, precoOriginal: number, quantidade: number }[] = [];
+      const produtosDose: { productId: string, nome: string, quantidade: number }[] = [];
       for (const doseItem of item.items) {
         produtosDose.push({
           productId: doseItem.productId,
           nome: doseItem.product?.name || '',
-          precoOriginal: doseItem.product?.price || 0,
           quantidade: Math.max(1, doseItem.quantity)
         });
       }
-      const totalOriginal = produtosDose.reduce((sum, p) => sum + p.precoOriginal * p.quantidade, 0);
-      const totaisNaoArredondados = produtosDose.map(p =>
-        totalOriginal > 0
-          ? ((p.precoOriginal * p.quantidade) / totalOriginal) * item.price
-          : p.precoOriginal * p.quantidade
-      );
-      let totaisArredondados = totaisNaoArredondados.map(v => Math.round(v * 100) / 100);
-      let soma = totaisArredondados.reduce((a, b) => a + b, 0);
-      let diff = Math.round((item.price - soma) * 100); // em centavos
-      if (diff !== 0) {
-        const indicesOrdenados = Array.from({ length: totaisArredondados.length }, (_, i) => i);
-        let i = 0;
-        while (diff !== 0) {
-          const idx = indicesOrdenados[i % indicesOrdenados.length];
-          totaisArredondados[idx] += diff > 0 ? 0.01 : -0.01;
-          totaisArredondados[idx] = Math.round(totaisArredondados[idx] * 100) / 100;
-          diff += diff > 0 ? -1 : 1;
-          i++;
-        }
-      }
-      const descontos = produtosDose.map((p, idx) => {
-        const precoAjustado = Math.round((totaisArredondados[idx] / p.quantidade) * 100) / 100;
-        return {
-          productId: p.productId,
-          precoOriginal: p.precoOriginal,
-          quantidade: p.quantidade * quantity,
-          precoAjustado,
-          nome: p.nome,
-          desconto: p.precoOriginal - precoAjustado
-        };
-      });
+      const numItems = produtosDose.length;
+      const basePrice = Math.floor((item.price / numItems) * 100) / 100;
+      const remainder = item.price - (basePrice * numItems);
+      const descontos = produtosDose.map((p, idx) => ({
+        productId: p.productId,
+        nome: p.nome,
+        quantidade: p.quantidade,
+        precoAjustado: idx === 0 ? basePrice + remainder : basePrice
+      }));
       setCartItems(prev => ([
         ...prev,
         ...descontos.map(d => ({
@@ -975,10 +952,9 @@ const AdminPDV = () => {
                 const precoAjustado = Math.round((totaisArredondados[idx] / p.quantidade) * 100) / 100;
                 return {
                   productId: p.productId,
-                  precoOriginal: p.precoOriginal,
+                  nome: p.nome,
                   quantidade: p.quantidade,
                   precoAjustado,
-                  nome: p.nome,
                   desconto: p.precoOriginal - precoAjustado
                 };
               });
@@ -986,10 +962,10 @@ const AdminPDV = () => {
               setCartItems(prev => ([
                 ...prev,
                 ...descontos.map(d => ({
-                  id: d.productId + '-' + Math.random().toString(36).substring(2, 8),
+                  id: d.productId + '-dose-' + Math.random().toString(36).substring(2, 8),
                   productId: d.productId,
                   code: d.productId.substring(0, 6),
-                  name: d.nome,
+                  name: `Dose de ${comboToConfigure.name} - ${d.nome}`,
                   quantity: d.quantidade,
                   price: d.precoAjustado,
                   total: d.precoAjustado * d.quantidade
@@ -1070,14 +1046,13 @@ const AdminPDV = () => {
             }}
             onConfirm={(choosableSelections) => {
               // Montar lista de todos os produtos da dose (fixos + escolhidos)
-              const produtosDose: { productId: string, nome: string, precoOriginal: number, quantidade: number }[] = [];
+              const produtosDose: { productId: string, nome: string, quantidade: number }[] = [];
               // Fixos
               for (const item of doseToConfigure.items) {
                 if (!item.allowFlavorSelection) {
                   produtosDose.push({
                     productId: item.productId,
                     nome: item.product?.name || '',
-                    precoOriginal: item.product?.price || 0,
                     quantidade: Math.max(1, item.quantity)
                   });
                 }
@@ -1086,61 +1061,25 @@ const AdminPDV = () => {
               for (const [categoryId, selections] of Object.entries(choosableSelections)) {
                 for (const [productId, quantidade] of Object.entries(selections)) {
                   if (quantidade > 0) {
-                    // Buscar o preço do produto nas opções carregadas
-                    const categoria = doseToConfigure.items.find((i: any) => i.categoryId === categoryId);
-                    let preco = 0;
                     let nome = '';
-                    if (categoria && categoria.product && categoria.product.category && categoria.product.category.id === categoryId) {
-                      preco = categoria.product.price;
-                      nome = categoria.product.name;
-                    } else if (doseToConfigure.options && doseToConfigure.options[categoryId]) {
-                      const prod = doseToConfigure.options[categoryId].find((p: any) => p.id === productId);
-                      if (prod) {
-                        preco = prod.price;
-                        nome = prod.name;
-                      }
-                    }
+                    nome = products.find((p: any) => p.id === productId)?.name || '';
                     produtosDose.push({
                       productId,
                       nome,
-                      precoOriginal: preco,
                       quantidade: Number(quantidade)
                     });
                   }
                 }
               }
-              // Distribuir valor igual ao combo
-              const totalOriginal = produtosDose.reduce((sum, p) => sum + p.precoOriginal * p.quantidade, 0);
-              const totaisNaoArredondados = produtosDose.map(p =>
-                totalOriginal > 0
-                  ? ((p.precoOriginal * p.quantidade) / totalOriginal) * doseToConfigure.price
-                  : p.precoOriginal * p.quantidade
-              );
-              let totaisArredondados = totaisNaoArredondados.map(v => Math.round(v * 100) / 100);
-              let soma = totaisArredondados.reduce((a, b) => a + b, 0);
-              let diff = Math.round((doseToConfigure.price - soma) * 100); // em centavos
-              if (diff !== 0) {
-                const indicesOrdenados = Array.from({ length: totaisArredondados.length }, (_, i) => i);
-                let i = 0;
-                while (diff !== 0) {
-                  const idx = indicesOrdenados[i % indicesOrdenados.length];
-                  totaisArredondados[idx] += diff > 0 ? 0.01 : -0.01;
-                  totaisArredondados[idx] = Math.round(totaisArredondados[idx] * 100) / 100;
-                  diff += diff > 0 ? -1 : 1;
-                  i++;
-                }
-              }
-              const descontos = produtosDose.map((p, idx) => {
-                const precoAjustado = Math.round((totaisArredondados[idx] / p.quantidade) * 100) / 100;
-                return {
-                  productId: p.productId,
-                  precoOriginal: p.precoOriginal,
-                  quantidade: p.quantidade,
-                  precoAjustado,
-                  nome: p.nome,
-                  desconto: p.precoOriginal - precoAjustado
-                };
-              });
+              const numItems = produtosDose.length;
+              const basePrice = Math.floor((doseToConfigure.price / numItems) * 100) / 100;
+              const remainder = doseToConfigure.price - (basePrice * numItems);
+              const descontos = produtosDose.map((p, idx) => ({
+                productId: p.productId,
+                nome: p.nome,
+                quantidade: p.quantidade,
+                precoAjustado: idx === 0 ? basePrice + remainder : basePrice
+              }));
               setCartItems(prev => ([
                 ...prev,
                 ...descontos.map(d => ({
