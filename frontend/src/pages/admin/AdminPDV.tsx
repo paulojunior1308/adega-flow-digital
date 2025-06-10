@@ -341,6 +341,27 @@ const AdminPDV = () => {
             };
           }
           // Produto normal
+          const produto = products.find(p => p.id === item.productId);
+          if (produto?.isFractioned) {
+            // Se a quantidade for exatamente 1 unidade, considera venda de unidade
+            if (item.quantity === 1) {
+              return {
+                productId: item.productId,
+                quantity: item.quantity,
+                price: item.price,
+                sellingByVolume: false
+              };
+            } else {
+              // Venda fracionada (por volume)
+              return {
+                productId: item.productId,
+                quantity: item.quantity,
+                price: item.price,
+                sellingByVolume: true
+              };
+            }
+          }
+          // Produto não fracionado
           return {
             productId: item.productId,
             quantity: item.quantity,

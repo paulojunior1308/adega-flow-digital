@@ -413,26 +413,47 @@ export const adminController = {
       } else if (item.productId) {
         const produto = await prisma.product.findUnique({ where: { id: item.productId } });
         if (produto?.isFractioned) {
-          const unitVolume = produto.unitVolume || 1;
-          const volumeNecessario = item.quantity;
-          const unidadesConsumidas = Math.floor(volumeNecessario / unitVolume);
-          const volumeRestante = volumeNecessario % unitVolume;
-          console.log('[DESCONTO ESTOQUE] Produto fracionado:', {
-            id: produto.id,
-            nome: produto.name,
-            volumeNecessario,
-            unidadesConsumidas,
-            volumeRestante,
-            totalVolumeAntes: produto.totalVolume,
-            stockAntes: produto.stock
-          });
-          await prisma.product.update({
-            where: { id: item.productId },
-            data: {
-              totalVolume: { decrement: volumeNecessario },
-              stock: { decrement: unidadesConsumidas }
-            }
-          });
+          // Se a venda for de unidade inteira (ex: 1 garrafa)
+          if (item.quantity === 1 && !item.sellingByVolume) {
+            // Venda de unidade inteira
+            const unitVolume = produto.unitVolume || 1;
+            console.log('[DESCONTO ESTOQUE] Produto fracionado - venda de unidade:', {
+              id: produto.id,
+              nome: produto.name,
+              unitVolume,
+              totalVolumeAntes: produto.totalVolume,
+              stockAntes: produto.stock
+            });
+            await prisma.product.update({
+              where: { id: item.productId },
+              data: {
+                stock: { decrement: 1 },
+                totalVolume: { decrement: unitVolume }
+              }
+            });
+          } else {
+            // Venda fracionada (por volume)
+            const unitVolume = produto.unitVolume || 1;
+            const volumeNecessario = item.quantity;
+            const unidadesConsumidas = Math.floor(volumeNecessario / unitVolume);
+            const volumeRestante = volumeNecessario % unitVolume;
+            console.log('[DESCONTO ESTOQUE] Produto fracionado:', {
+              id: produto.id,
+              nome: produto.name,
+              volumeNecessario,
+              unidadesConsumidas,
+              volumeRestante,
+              totalVolumeAntes: produto.totalVolume,
+              stockAntes: produto.stock
+            });
+            await prisma.product.update({
+              where: { id: item.productId },
+              data: {
+                totalVolume: { decrement: volumeNecessario },
+                stock: { decrement: unidadesConsumidas }
+              }
+            });
+          }
         } else {
           const quantidadeFinal = (produto?.stock || 0) - item.quantity;
           if (quantidadeFinal < 0) {
