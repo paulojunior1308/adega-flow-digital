@@ -196,7 +196,7 @@ const AdminPDV = () => {
           name: `Dose de ${item.name} - ${d.nome}`,
           quantity: d.quantidade,
           price: d.precoAjustado,
-          total: d.precoAjustado * d.quantidade
+          total: d.precoAjustado
         }))
       ]));
       toast({ description: `${item.name} (Dose) adicionada ao carrinho.` });
@@ -968,7 +968,7 @@ const AdminPDV = () => {
                   name: `Dose de ${comboToConfigure.name} - ${d.nome}`,
                   quantity: d.quantidade,
                   price: d.precoAjustado,
-                  total: d.precoAjustado * d.quantidade
+                  total: d.precoAjustado
                 }))
               ]));
               toast({ description: `${comboToConfigure.name} (Combo) adicionado ao carrinho.` });
@@ -1089,7 +1089,7 @@ const AdminPDV = () => {
                   name: `Dose de ${doseToConfigure.name} - ${d.nome}`,
                   quantity: d.quantidade,
                   price: d.precoAjustado,
-                  total: d.precoAjustado * d.quantidade
+                  total: d.precoAjustado
                 }))
               ]));
               toast({ description: `${doseToConfigure.name} (Dose) adicionada ao carrinho.` });
