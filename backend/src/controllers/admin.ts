@@ -317,12 +317,34 @@ export const adminController = {
     for (const item of reallyValidItems) {
       const produto = await prisma.product.findUnique({ where: { id: item.productId } });
       if (!produto) continue;
+      console.log('[VALIDACAO ESTOQUE] Produto:', {
+        id: produto.id,
+        nome: produto.name,
+        isFractioned: produto.isFractioned,
+        stock: produto.stock,
+        totalVolume: produto.totalVolume,
+        unitVolume: produto.unitVolume,
+        itemQuantity: item.quantity,
+        itemProductId: item.productId
+      });
       if (produto.isFractioned) {
         if ((produto.totalVolume || 0) < item.quantity) {
+          console.error('[ERRO ESTOQUE] Produto fracionado sem volume suficiente:', {
+            id: produto.id,
+            nome: produto.name,
+            totalVolume: produto.totalVolume,
+            solicitado: item.quantity
+          });
           return res.status(400).json({ error: `Estoque insuficiente para o produto: ${produto.name}` });
         }
       } else {
         if ((produto.stock || 0) < item.quantity) {
+          console.error('[ERRO ESTOQUE] Produto não fracionado sem estoque suficiente:', {
+            id: produto.id,
+            nome: produto.name,
+            stock: produto.stock,
+            solicitado: item.quantity
+          });
           return res.status(400).json({ error: `Estoque insuficiente para o produto: ${produto.name}` });
         }
       }
