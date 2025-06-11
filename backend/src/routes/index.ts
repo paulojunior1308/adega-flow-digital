@@ -55,7 +55,10 @@ router.get('/admin-pdv', authorizeRoles('ADMIN'), adminController.getPDV);
 
 router.use('/', clientRoutes);
 
-// Rotas de doses
+// Rotas públicas de doses
+router.use('/doses', doseRoutes);
+
+// Rotas de doses protegidas para admin
 router.use('/admin/doses', authMiddleware, authorizeRoles('ADMIN'), doseRoutes);
 
 export default router; 
