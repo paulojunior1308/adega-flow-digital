@@ -245,7 +245,7 @@ const ClientCatalog = () => {
       }));
       setCombos(combosCorrigidos);
     });
-    api.get('/api/doses').then(res => {
+    api.get('/doses').then(res => {
       setDoses(res.data);
     });
   }, []);
@@ -364,7 +364,9 @@ const ClientCatalog = () => {
                     {category.name}
                   </TabsTrigger>
                 ))}
-                <TabsTrigger key="combo" value="combo" className="flex-shrink-0">Combos</TabsTrigger>
+                {!categories.some(c => c.name.toLowerCase() === 'combos') && (
+                  <TabsTrigger key="combo" value="combo" className="flex-shrink-0">Combos</TabsTrigger>
+                )}
               </TabsList>
               
               {categories.map(category => (
