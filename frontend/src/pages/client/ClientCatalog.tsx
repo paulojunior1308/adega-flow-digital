@@ -543,7 +543,7 @@ const ClientCatalog = () => {
             }))
           }}
           onConfirm={async (choosableSelections) => {
-            // Montar lista de todos os produtos da dose (fixos + escolhidos)
+            // Montar lista de todos os produtos da dose (fixos + escolhíveis)
             const produtosDose = [];
             // Fixos
             for (const item of doseToConfigure.items) {
@@ -592,25 +592,17 @@ const ClientCatalog = () => {
                 i++;
               }
             }
-            // Adicionar cada produto ao carrinho do frontend
-            const novosItens = produtosDose.map((p, idx) => ({
-              id: p.productId + '-dose-' + Math.random().toString(36).substring(2, 8),
-              product: {
-                id: p.productId,
-                name: `Dose de ${doseToConfigure.name} - ${p.nome}`,
-                price: Math.round((totaisArredondados[idx] / p.quantidade) * 100) / 100,
-                image: '',
-                description: '',
-                category: '',
-                rating: 5,
-                tags: [],
-                type: 'dose',
-                stock: 9999,
-                oldPrice: undefined
-              },
-              quantity: p.quantidade
-            }));
-            setCart(prev => [...prev, ...novosItens]);
+            // Adicionar cada produto ao carrinho do backend
+            for (let idx = 0; idx < produtosDose.length; idx++) {
+              const p = produtosDose[idx];
+              await api.post('/cart', {
+                productId: p.productId,
+                quantity: p.quantidade,
+                price: Math.round((totaisArredondados[idx] / p.quantidade) * 100) / 100
+              });
+            }
+            const res = await api.get('/cart');
+            setCart(res.data?.items || []);
             toast({
               title: 'Dose adicionada',
               description: `${doseToConfigure.name} (Dose) adicionada ao carrinho`,
