@@ -598,11 +598,18 @@ const ClientCatalog = () => {
               const p = produtosDose[idx];
               const produtoInfo = products.find((prod: any) => prod.id === p.productId);
               const isFractioned = produtoInfo?.isFractioned;
-              await api.post('/cart', {
-                productId: p.productId,
-                quantity: isFractioned ? p.quantidade : p.quantidade,
-                price: Math.round((totaisArredondados[idx] / p.quantidade) * 100) / 100
-              });
+              try {
+                await api.post('/cart', {
+                  productId: p.productId,
+                  quantity: isFractioned ? p.quantidade : p.quantidade,
+                  price: Math.round((totaisArredondados[idx] / p.quantidade) * 100) / 100,
+                  name: `Dose de ${doseToConfigure.name} - ${p.nome}`,
+                  isDose: true,
+                  doseName: doseToConfigure.name
+                });
+              } catch (err) {
+                // Se o backend não aceitar name/isDose/doseName, ignore o erro
+              }
             }
             const res = await api.get('/cart');
             setCart(res.data?.items || []);
