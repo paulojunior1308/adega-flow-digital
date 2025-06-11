@@ -974,6 +974,23 @@ export default function AdminPromotionsAndCombos() {
                   />
                 </div>
                 <div>
+                  <Label htmlFor="combo-category-edit">Categoria</Label>
+                  <Select
+                    value={comboCategoryId || editingCombo.categoryId || (editingCombo.category && editingCombo.category.id) || ''}
+                    onValueChange={setComboCategoryId}
+                    required
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione a categoria" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories.map(category => (
+                        <SelectItem key={category.id} value={category.id}>{category.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
                   <Label>Produtos do Combo</Label>
                   <div className="flex items-center gap-2 mb-4">
                     <Search className="w-4 h-4 text-gray-500" />
@@ -1325,8 +1342,12 @@ export default function AdminPromotionsAndCombos() {
             <Input name="price" placeholder="Preço (R$)" type="number" step="0.01" defaultValue={editingDose?.price || ''} required />
             <Input name="image" type="file" accept="image/*" />
             <div>
-              <Label htmlFor="dose-category">Categoria</Label>
-              <Select id="dose-category" value={doseCategoryId} onValueChange={setDoseCategoryId} required>
+              <Label htmlFor="dose-category-edit">Categoria</Label>
+              <Select
+                value={doseCategoryId || editingDose.categoryId || (editingDose.category && editingDose.category.id) || ''}
+                onValueChange={setDoseCategoryId}
+                required
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione a categoria" />
                 </SelectTrigger>
