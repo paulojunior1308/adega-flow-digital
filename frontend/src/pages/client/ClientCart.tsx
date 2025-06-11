@@ -305,11 +305,27 @@ const ClientCart = () => {
 
   const sendOrder = async () => {
     try {
+      // Agrupar doses para somar apenas o valor fixo de cada dose
+      const { doses, outros } = agruparDoses(cart);
+      let totalPedido = 0;
+      // Soma o valor fixo de cada dose
+      for (const items of Object.values(doses)) {
+        if (items.length > 0) {
+          totalPedido += items[0]?.dosePrice ?? items.reduce((sum, i) => sum + ((i.price ?? i.product.price) * i.quantity), 0);
+        }
+      }
+      // Soma o valor dos outros itens (avulsos/combos)
+      for (const item of outros) {
+        if (!(item.isDose && item.doseName)) {
+          totalPedido += (item.price ?? item.product.price) * item.quantity;
+        }
+      }
       const payload = {
         addressId: selectedAddress,
         paymentMethodId: paymentMethod,
         instructions,
-        discountCode: discountCode || undefined
+        discountCode: discountCode || undefined,
+        total: totalPedido
       };
       const res = await api.post('/orders', payload);
       const { id: orderId, items, total } = res.data;
@@ -448,39 +464,46 @@ const ClientCart = () => {
                               {Object.entries(doses).map(([doseName, items]) => {
                                 // O valor da dose é o valor fixo cadastrado (dosePrice) se disponível, senão soma dos proporcionais
                                 const doseTotal = items[0]?.dosePrice ?? items.reduce((sum, i) => sum + ((i.price ?? i.product.price) * i.quantity), 0);
+                                // Usar a imagem do primeiro produto da dose como imagem da dose
+                                const doseImage = items[0]?.product.image && !items[0]?.product.image.startsWith('http') ? API_URL + items[0]?.product.image : items[0]?.product.image;
                                 return (
-                                  <div key={doseName} className="border rounded-md mb-4 bg-gray-50">
-                                    <div className="flex items-center justify-between p-4 border-b">
-                                      <div>
-                                        <h3 className="font-bold text-element-blue-dark">{doseName}</h3>
-                                        <span className="text-xs text-gray-500">Dose personalizada</span>
+                                  <div key={doseName} className="border rounded-md mb-4 bg-gray-50 flex items-center">
+                                    <img src={doseImage} alt={doseName} className="w-24 h-24 object-cover rounded-md m-4" />
+                                    <div className="flex-1">
+                                      <div className="flex items-center justify-between border-b pb-2">
+                                        <div>
+                                          <h3 className="font-bold text-element-blue-dark text-lg">{doseName}</h3>
+                                          <span className="text-xs text-gray-500">Dose personalizada</span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                          <span className="font-bold text-lg text-element-blue-dark">R$ {doseTotal.toFixed(2)}</span>
+                                          <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700 hover:bg-red-50" onClick={() => {
+                                            // Remove todos os itens da dose
+                                            items.forEach(i => removeFromCart(i.id));
+                                          }}>
+                                            <Trash2 className="h-4 w-4 mr-1" /> Remover
+                                          </Button>
+                                        </div>
                                       </div>
-                                      <div className="flex items-center gap-2">
-                                        <span className="font-bold text-lg text-element-blue-dark">R$ {doseTotal.toFixed(2)}</span>
-                                        <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700 hover:bg-red-50" onClick={() => {
-                                          // Remove todos os itens da dose
-                                          items.forEach(i => removeFromCart(i.id));
-                                        }}>
-                                          <Trash2 className="h-4 w-4 mr-1" /> Remover
-                                        </Button>
+                                      <div className="pt-2">
+                                        <span className="text-xs text-gray-500">Acompanha:</span>
+                                        <ul className="text-sm text-gray-700 mt-1">
+                                          {items.map(i => (
+                                            <li key={i.id} className="flex items-center gap-2 mb-1">
+                                              <span>{i.product.name}</span>
+                                              <span className="ml-auto">{i.quantity} {i.product.isFractioned ? 'ml' : 'un'}</span>
+                                            </li>
+                                          ))}
+                                        </ul>
                                       </div>
-                                    </div>
-                                    <div className="p-4 pt-2">
-                                      <ul className="text-sm text-gray-700">
-                                        {items.map(i => (
-                                          <li key={i.id} className="flex items-center gap-2 mb-1">
-                                            <img src={i.product.image && !i.product.image.startsWith('http') ? API_URL + i.product.image : i.product.image} alt={i.product.name} className="w-8 h-8 object-cover rounded mr-2" />
-                                            <span>{i.product.name}</span>
-                                            <span className="ml-auto">{i.quantity} {i.product.isFractioned ? 'ml' : 'un'}</span>
-                                          </li>
-                                        ))}
-                                      </ul>
                                     </div>
                                   </div>
                                 );
                               })}
-                              {/* Itens avulsos e combos */}
+                              {/* Itens avulsos e combos (exclui produtos de dose) */}
                               {outros.map((item) => {
+                                // Não renderizar produtos que pertencem a uma dose
+                                if (item.isDose && item.doseName) return null;
                                 const descontoCombo = comboDescontos.find((d) => d.productId === item.product.id);
                                 return (
                                   <div key={item.id} className="flex items-center py-4 border-b last:border-b-0">
