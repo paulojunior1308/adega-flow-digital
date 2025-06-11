@@ -568,7 +568,7 @@ export default function AdminPromotionsAndCombos() {
             </div>
             <TabsContent value="combos">
               <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 xl:grid-cols-3">
-                {combos.map((combo) => (
+                {(combos || []).map((combo) => (
                   <Card key={combo.id} className="min-h-[180px]">
                     <CardHeader>
                       <div className="flex justify-between items-start">
@@ -787,7 +787,7 @@ export default function AdminPromotionsAndCombos() {
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
-                  {promotions.map((promotion) => (
+                  {(promotions || []).map((promotion) => (
                     <Card key={promotion.id}>
                       <CardHeader>
                         <div className="flex justify-between items-start">
@@ -864,7 +864,7 @@ export default function AdminPromotionsAndCombos() {
                 </Button>
               </div>
               <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 xl:grid-cols-3">
-                {doses.map((dose) => (
+                {(doses || []).map((dose) => (
                   <Card key={dose.id} className="min-h-[180px]">
                     <CardHeader>
                       <div className="flex justify-between items-start">
@@ -976,7 +976,7 @@ export default function AdminPromotionsAndCombos() {
                 <div>
                   <Label htmlFor="combo-category-edit">Categoria</Label>
                   <Select
-                    value={comboCategoryId || editingCombo.categoryId || (editingCombo.category && editingCombo.category.id) || ''}
+                    value={comboCategoryId || editingCombo?.categoryId || (editingCombo?.category && editingCombo.category.id) || ''}
                     onValueChange={setComboCategoryId}
                     required
                   >
@@ -1344,7 +1344,7 @@ export default function AdminPromotionsAndCombos() {
             <div>
               <Label htmlFor="dose-category-edit">Categoria</Label>
               <Select
-                value={doseCategoryId || editingDose.categoryId || (editingDose.category && editingDose.category.id) || ''}
+                value={doseCategoryId || editingDose?.categoryId || (editingDose?.category && editingDose.category.id) || ''}
                 onValueChange={setDoseCategoryId}
                 required
               >
@@ -1361,7 +1361,7 @@ export default function AdminPromotionsAndCombos() {
             <div>
               <Label>Produtos e volumes da dose</Label>
               <ScrollArea className="h-40 border rounded p-2 mt-2">
-                {products.map(product => (
+                {(products || []).map(product => (
                   <div key={product.id} className="flex flex-col gap-1 mb-2 border-b pb-2">
                     <div className="flex items-center gap-2">
                       <Checkbox
