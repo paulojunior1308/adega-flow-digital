@@ -394,7 +394,22 @@ const ClientCart = () => {
     await sendOrder();
   };
   
-      return (
+  // Função utilitária para agrupar itens de dose
+  function agruparDoses(cart) {
+    const doses: Record<string, any> = {};
+    const outros: any[] = [];
+    for (const item of cart) {
+      if (item.isDose && item.doseName) {
+        if (!doses[item.doseName]) doses[item.doseName] = [];
+        doses[item.doseName].push(item);
+      } else {
+        outros.push(item);
+      }
+    }
+    return { doses, outros };
+  }
+
+  return (
     <div className="min-h-screen bg-element-gray-light pt-16 md:pt-0">
       <ClientSidebar />
       
@@ -425,65 +440,106 @@ const ClientCart = () => {
                       <h2 className="text-xl font-semibold mb-4">Itens do Carrinho</h2>
                       
                       <div className="space-y-4">
-                        {cart.map((item) => {
-                          // Verifica se há desconto para este produto
-                          const descontoCombo = comboDescontos.find((d) => d.productId === item.product.id);
+                        {(() => {
+                          const { doses, outros } = agruparDoses(cart);
                           return (
-                          <div key={item.id} className="flex items-center py-4 border-b last:border-b-0">
-                            <img 
-                                src={item.product.image && !item.product.image.startsWith('http') ? API_URL + item.product.image : item.product.image} 
-                              alt={item.product.name} 
-                              className="w-24 h-24 object-cover rounded-md mr-4"
-                            />
-                            <div className="flex-1">
-                              <h3 className="font-medium mb-1">{item.product.name}</h3>
-                              <p className="text-sm text-gray-500 mb-3">{item.product.description}</p>
-                              <p className="font-bold text-element-blue-dark">
-                                  R$ {(item.price ?? item.product.price).toFixed(2)}
-                                </p>
-                                {descontoCombo && descontoCombo.desconto > 0 && (
-                                  <p className="text-xs text-green-700 mt-1">
-                                    <span className="line-through text-red-500 mr-1">R$ {descontoCombo.precoOriginal.toFixed(2)}</span>
-                                    <span>Desconto combo: -R$ {descontoCombo.desconto.toFixed(2)}</span>
-                                  </p>
-                                )}
-                            </div>
-                              <div className="flex items-center space-x-2">
-                              <div className="flex items-center border rounded-md">
-                                <Button 
-                                  variant="ghost" 
-                                  size="icon" 
-                                  className="h-8 w-8"
-                                  onClick={() => decrementQuantity(item.id)}
-                                >
-                                  <Minus className="h-4 w-4" />
-                                </Button>
-                                <span className="w-8 text-center">{item.quantity}</span>
-                                <Button 
-                                  variant="ghost" 
-                                  size="icon" 
-                                  className="h-8 w-8"
-                                  onClick={() => incrementQuantity(item.id)}
-                                >
-                                  <Plus className="h-4 w-4" />
-                                </Button>
-                              </div>
-                              <Button 
-                                variant="ghost" 
-                                size="sm"
-                                className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                                onClick={() => {
-                                  console.log('Remover item:', item);
-                                  removeFromCart(item.id);
-                                }}
-                              >
-                                <Trash2 className="h-4 w-4 mr-1" />
-                                Remover
-                              </Button>
-                            </div>
-                          </div>
+                            <>
+                              {/* Doses agrupadas */}
+                              {Object.entries(doses).map(([doseName, items]) => {
+                                const doseTotal = items.reduce((sum, i) => sum + ((i.price ?? i.product.price) * i.quantity), 0);
+                                return (
+                                  <div key={doseName} className="border rounded-md mb-4 bg-gray-50">
+                                    <div className="flex items-center justify-between p-4 border-b">
+                                      <div>
+                                        <h3 className="font-bold text-element-blue-dark">{doseName}</h3>
+                                        <span className="text-xs text-gray-500">Dose personalizada</span>
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        <span className="font-bold text-lg text-element-blue-dark">R$ {doseTotal.toFixed(2)}</span>
+                                        <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700 hover:bg-red-50" onClick={() => {
+                                          // Remove todos os itens da dose
+                                          items.forEach(i => removeFromCart(i.id));
+                                        }}>
+                                          <Trash2 className="h-4 w-4 mr-1" /> Remover
+                                        </Button>
+                                      </div>
+                                    </div>
+                                    <div className="p-4 pt-2">
+                                      <ul className="text-sm text-gray-700">
+                                        {items.map(i => (
+                                          <li key={i.id} className="flex items-center gap-2 mb-1">
+                                            <img src={i.product.image && !i.product.image.startsWith('http') ? API_URL + i.product.image : i.product.image} alt={i.product.name} className="w-8 h-8 object-cover rounded mr-2" />
+                                            <span>{i.product.name}</span>
+                                            <span className="ml-auto">{i.quantity} {i.product.isFractioned ? 'ml' : 'un'}</span>
+                                          </li>
+                                        ))}
+                                      </ul>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                              {/* Itens avulsos e combos */}
+                              {outros.map((item) => {
+                                const descontoCombo = comboDescontos.find((d) => d.productId === item.product.id);
+                                return (
+                                  <div key={item.id} className="flex items-center py-4 border-b last:border-b-0">
+                                    <img 
+                                        src={item.product.image && !item.product.image.startsWith('http') ? API_URL + item.product.image : item.product.image} 
+                                      alt={item.product.name} 
+                                      className="w-24 h-24 object-cover rounded-md mr-4"
+                                    />
+                                    <div className="flex-1">
+                                      <h3 className="font-medium mb-1">{item.product.name}</h3>
+                                      <p className="text-sm text-gray-500 mb-3">{item.product.description}</p>
+                                      <p className="font-bold text-element-blue-dark">
+                                          R$ {(item.price ?? item.product.price).toFixed(2)}
+                                        </p>
+                                        {descontoCombo && descontoCombo.desconto > 0 && (
+                                          <p className="text-xs text-green-700 mt-1">
+                                            <span className="line-through text-red-500 mr-1">R$ {descontoCombo.precoOriginal.toFixed(2)}</span>
+                                            <span>Desconto combo: -R$ {descontoCombo.desconto.toFixed(2)}</span>
+                                          </p>
+                                        )}
+                                    </div>
+                                      <div className="flex items-center space-x-2">
+                                      <div className="flex items-center border rounded-md">
+                                        <Button 
+                                          variant="ghost" 
+                                          size="icon" 
+                                          className="h-8 w-8"
+                                          onClick={() => decrementQuantity(item.id)}
+                                        >
+                                          <Minus className="h-4 w-4" />
+                                        </Button>
+                                        <span className="w-8 text-center">{item.quantity}</span>
+                                        <Button 
+                                          variant="ghost" 
+                                          size="icon" 
+                                          className="h-8 w-8"
+                                          onClick={() => incrementQuantity(item.id)}
+                                        >
+                                          <Plus className="h-4 w-4" />
+                                        </Button>
+                                      </div>
+                                      <Button 
+                                        variant="ghost" 
+                                        size="sm"
+                                        className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                                        onClick={() => {
+                                          console.log('Remover item:', item);
+                                          removeFromCart(item.id);
+                                        }}
+                                      >
+                                        <Trash2 className="h-4 w-4 mr-1" />
+                                        Remover
+                                      </Button>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </>
                           );
-                        })}
+                        })()}
                       </div>
                     </CardContent>
                   </Card>
