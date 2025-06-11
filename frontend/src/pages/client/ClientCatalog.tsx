@@ -605,7 +605,8 @@ const ClientCatalog = () => {
                   price: Math.round((totaisArredondados[idx] / p.quantidade) * 100) / 100,
                   name: `Dose de ${doseToConfigure.name} - ${p.nome}`,
                   isDose: true,
-                  doseName: doseToConfigure.name
+                  doseName: doseToConfigure.name,
+                  ...(isFractioned ? { sellingByVolume: true } : {})
                 });
               } catch (err) {
                 // Se o backend não aceitar name/isDose/doseName, ignore o erro
