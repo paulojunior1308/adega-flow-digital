@@ -29,6 +29,7 @@ interface Product {
   tags: string[];
   type: string;
   stock: number;
+  isFractioned?: boolean;
 }
 
 // Tipos para os itens do carrinho
@@ -595,9 +596,11 @@ const ClientCatalog = () => {
             // Adicionar cada produto ao carrinho do backend
             for (let idx = 0; idx < produtosDose.length; idx++) {
               const p = produtosDose[idx];
+              const produtoInfo = products.find((prod: any) => prod.id === p.productId);
+              const isFractioned = produtoInfo?.isFractioned;
               await api.post('/cart', {
                 productId: p.productId,
-                quantity: p.quantidade,
+                quantity: isFractioned ? p.quantidade : p.quantidade,
                 price: Math.round((totaisArredondados[idx] / p.quantidade) * 100) / 100
               });
             }
