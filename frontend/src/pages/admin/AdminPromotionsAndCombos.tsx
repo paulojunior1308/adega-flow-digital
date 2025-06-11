@@ -292,11 +292,7 @@ export default function AdminPromotionsAndCombos() {
     setIsSubmitting(true);
     const form = e.currentTarget;
     const formData = new FormData(form);
-    let imageUrl = editingDose.image || '';
-    const imageFile = formData.get('image') as File;
-    if (imageFile && imageFile.size > 0) {
-      imageUrl = await uploadToCloudinary(imageFile);
-    }
+    // Montar os items da dose
     const doseItems = selectedProducts.map(productId => {
       if (productTypes[productId] === 'choosable') {
         return {
@@ -314,17 +310,13 @@ export default function AdminPromotionsAndCombos() {
         discountBy: discountBy[productId] || (products.find(p => p.id === productId)?.isFractioned ? 'volume' : 'unit')
       };
     });
-    const doseData = {
-      name: formData.get('name'),
-      description: formData.get('description'),
-      price: formData.get('price'),
-      image: imageUrl,
-      items: JSON.stringify(doseItems),
-      active: String(editingDose.active),
-      categoryId: doseCategoryId,
-    };
+    formData.set('items', JSON.stringify(doseItems));
+    formData.set('active', String(editingDose.active));
+    formData.set('categoryId', doseCategoryId || '');
     try {
-      await api.put(`/admin/doses/${editingDose.id}`, doseData);
+      await api.put(`/admin/doses/${editingDose.id}`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
       toast.success('Dose atualizada com sucesso');
       fetchData();
       resetForm();
@@ -479,11 +471,7 @@ export default function AdminPromotionsAndCombos() {
     setIsSubmitting(true);
     const form = e.currentTarget;
     const formData = new FormData(form);
-    let imageUrl = '';
-    const imageFile = formData.get('image') as File;
-    if (imageFile && imageFile.size > 0) {
-      imageUrl = await uploadToCloudinary(imageFile);
-    }
+    // Montar os items da dose
     const doseItems = selectedProducts.map(productId => {
       if (productTypes[productId] === 'choosable') {
         return {
@@ -501,16 +489,12 @@ export default function AdminPromotionsAndCombos() {
         discountBy: discountBy[productId] || (products.find(p => p.id === productId)?.isFractioned ? 'volume' : 'unit')
       };
     });
-    const doseData = {
-      name: formData.get('name'),
-      description: formData.get('description'),
-      price: formData.get('price'),
-      image: imageUrl,
-      items: JSON.stringify(doseItems),
-      categoryId: doseCategoryId,
-    };
+    formData.set('items', JSON.stringify(doseItems));
+    formData.set('categoryId', doseCategoryId || '');
     try {
-      await api.post('/admin/doses', doseData);
+      await api.post('/admin/doses', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
       toast.success('Dose cadastrada com sucesso');
       fetchData();
       resetForm();
@@ -1344,7 +1328,7 @@ export default function AdminPromotionsAndCombos() {
             <div>
               <Label htmlFor="dose-category-edit">Categoria</Label>
               <Select
-                value={doseCategoryId || editingDose?.categoryId || (editingDose?.category && editingDose.category.id) || ''}
+                value={doseCategoryId || ''}
                 onValueChange={setDoseCategoryId}
                 required
               >

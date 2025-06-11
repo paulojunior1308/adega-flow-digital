@@ -49,6 +49,8 @@ const ClientCatalog = () => {
   const [doses, setDoses] = useState([]);
   const [comboModalOpen, setComboModalOpen] = useState(false);
   const [comboToConfigure, setComboToConfigure] = useState<any>(null);
+  const [doseModalOpen, setDoseModalOpen] = useState(false);
+  const [doseToConfigure, setDoseToConfigure] = useState<any>(null);
   
   const location = useLocation();
   const navigate = useNavigate();
@@ -96,6 +98,23 @@ const ClientCatalog = () => {
         setComboModalOpen(true);
         return;
       }
+    } else if (product.type === 'dose') {
+      const dose = doses.find((d: any) => d.id === product.id);
+      if (dose && dose.items.some((item: any) => item.allowFlavorSelection)) {
+        setDoseToConfigure(dose);
+        setDoseModalOpen(true);
+        return;
+      }
+      // Se não houver escolhíveis, adiciona direto
+      await api.post('/cart', { doseId: product.id, quantity: 1 });
+      const res = await api.get('/cart');
+      setCart(res.data?.items || []);
+      toast({
+        title: 'Dose adicionada',
+        description: `${product.name} adicionada ao carrinho`,
+        duration: 2000,
+      });
+      return;
     } else {
       // Produto avulso: checar estoque antes de adicionar
       const cartItem = cart.find(item => item.product.id === product.id);
@@ -212,7 +231,10 @@ const ClientCatalog = () => {
               )}
             </div>
             <Button 
-              onClick={() => addToCart(product)} 
+              onClick={(e) => {
+                e.stopPropagation();
+                addToCart(product);
+              }} 
               variant="outline" 
               size="icon" 
               className="rounded-full hover:bg-element-blue-neon hover:text-white"
@@ -506,6 +528,24 @@ const ClientCatalog = () => {
               duration: 2500,
             });
             setComboToConfigure(null);
+          }}
+        />
+      )}
+      {doseToConfigure && (
+        <ComboOptionsModal
+          open={doseModalOpen}
+          onOpenChange={setDoseModalOpen}
+          combo={doseToConfigure}
+          onConfirm={async (choosableSelections) => {
+            // Montar payload para dose
+            await api.post('/cart', { doseId: doseToConfigure.id, quantity: 1, selections: choosableSelections });
+            const res = await api.get('/cart');
+            setCart(res.data?.items || []);
+            toast({
+              title: 'Dose adicionada',
+              description: `${doseToConfigure.name} adicionada ao carrinho`,
+              duration: 2000,
+            });
           }}
         />
       )}
