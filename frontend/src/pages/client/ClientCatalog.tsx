@@ -245,7 +245,7 @@ const ClientCatalog = () => {
       }));
       setCombos(combosCorrigidos);
     });
-    api.get('/doses').then(res => {
+    api.get('/api/doses').then(res => {
       setDoses(res.data);
     });
   }, []);
