@@ -535,7 +535,13 @@ const ClientCatalog = () => {
         <ComboOptionsModal
           open={doseModalOpen}
           onOpenChange={setDoseModalOpen}
-          combo={doseToConfigure}
+          combo={{
+            ...doseToConfigure,
+            items: doseToConfigure.items.map((item: any) => ({
+              ...item,
+              isChoosable: item.allowFlavorSelection
+            }))
+          }}
           onConfirm={async (choosableSelections) => {
             // Montar lista de todos os produtos da dose (fixos + escolhidos)
             const produtosDose = [];
