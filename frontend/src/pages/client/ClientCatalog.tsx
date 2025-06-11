@@ -30,6 +30,8 @@ interface Product {
   type: string;
   stock: number;
   isFractioned?: boolean;
+  totalVolume?: number;
+  unitVolume?: number;
 }
 
 // Tipos para os itens do carrinho
@@ -598,17 +600,35 @@ const ClientCatalog = () => {
               const p = produtosDose[idx];
               const produtoInfo = products.find((prod: any) => prod.id === p.productId);
               const isFractioned = produtoInfo?.isFractioned;
+              
+              const payload = {
+                productId: p.productId,
+                quantity: isFractioned ? p.quantidade : p.quantidade,
+                price: Math.round((totaisArredondados[idx] / p.quantidade) * 100) / 100,
+                name: `Dose de ${doseToConfigure.name} - ${p.nome}`,
+                isDose: true,
+                doseName: doseToConfigure.name,
+                ...(isFractioned ? { sellingByVolume: true } : {})
+              };
+
+              console.log('[CLIENTE-CATALOGO] Enviando produto para o carrinho:', {
+                produto: p.nome,
+                isFractioned,
+                payload,
+                produtoInfo: {
+                  id: produtoInfo?.id,
+                  nome: produtoInfo?.name,
+                  isFractioned: produtoInfo?.isFractioned,
+                  stock: produtoInfo?.stock,
+                  totalVolume: produtoInfo?.totalVolume,
+                  unitVolume: produtoInfo?.unitVolume
+                }
+              });
+
               try {
-                await api.post('/cart', {
-                  productId: p.productId,
-                  quantity: isFractioned ? p.quantidade : p.quantidade,
-                  price: Math.round((totaisArredondados[idx] / p.quantidade) * 100) / 100,
-                  name: `Dose de ${doseToConfigure.name} - ${p.nome}`,
-                  isDose: true,
-                  doseName: doseToConfigure.name,
-                  ...(isFractioned ? { sellingByVolume: true } : {})
-                });
+                await api.post('/cart', payload);
               } catch (err) {
+                console.error('[CLIENTE-CATALOGO] Erro ao adicionar ao carrinho:', err);
                 // Se o backend não aceitar name/isDose/doseName, ignore o erro
               }
             }
