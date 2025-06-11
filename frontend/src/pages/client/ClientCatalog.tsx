@@ -595,43 +595,18 @@ const ClientCatalog = () => {
                 i++;
               }
             }
-            // Adicionar cada produto ao carrinho do backend
-            for (let idx = 0; idx < produtosDose.length; idx++) {
-              const p = produtosDose[idx];
-              const produtoInfo = products.find((prod: any) => prod.id === p.productId);
-              const isFractioned = produtoInfo?.isFractioned;
-              
-              const payload = {
-                productId: p.productId,
-                quantity: isFractioned ? p.quantidade : p.quantidade,
-                price: Math.round((totaisArredondados[idx] / p.quantidade) * 100) / 100,
-                name: `Dose de ${doseToConfigure.name} - ${p.nome}`,
-                isDose: true,
-                doseName: doseToConfigure.name,
-                ...(isFractioned ? { sellingByVolume: true } : {})
-              };
-
-              console.log('[CLIENTE-CATALOGO] Enviando produto para o carrinho:', {
-                produto: p.nome,
-                isFractioned,
-                payload,
-                produtoInfo: {
-                  id: produtoInfo?.id,
-                  nome: produtoInfo?.name,
-                  isFractioned: produtoInfo?.isFractioned,
-                  stock: produtoInfo?.stock,
-                  totalVolume: produtoInfo?.totalVolume,
-                  unitVolume: produtoInfo?.unitVolume
-                }
-              });
-
-              try {
-                await api.post('/cart', payload);
-              } catch (err) {
-                console.error('[CLIENTE-CATALOGO] Erro ao adicionar ao carrinho:', err);
-                // Se o backend não aceitar name/isDose/doseName, ignore o erro
-              }
-            }
+            // Montar priceByProduct para o backend
+            const priceByProduct = produtosDose.reduce((acc, p, idx) => {
+              acc[p.productId] = Math.round((totaisArredondados[idx] / p.quantidade) * 100) / 100;
+              return acc;
+            }, {} as Record<string, number>);
+            // Enviar dose como item único para o carrinho
+            await api.post('/cart', {
+              doseId: doseToConfigure.id,
+              quantity: 1,
+              choosableSelections,
+              priceByProduct
+            });
             const res = await api.get('/cart');
             setCart(res.data?.items || []);
             toast({
