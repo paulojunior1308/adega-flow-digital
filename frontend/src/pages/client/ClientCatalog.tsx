@@ -537,8 +537,29 @@ const ClientCatalog = () => {
           onOpenChange={setDoseModalOpen}
           combo={doseToConfigure}
           onConfirm={async (choosableSelections) => {
-            // Montar payload para dose
-            await api.post('/cart', { doseId: doseToConfigure.id, quantity: 1, selections: choosableSelections });
+            // Montar lista de todos os produtos da dose (fixos + escolhidos)
+            const produtosDose = [];
+            // Fixos
+            for (const item of doseToConfigure.items) {
+              if (!item.allowFlavorSelection) {
+                produtosDose.push({
+                  productId: item.productId,
+                  quantidade: Math.max(1, item.quantity)
+                });
+              }
+            }
+            // Escolhíveis
+            for (const [categoryId, selections] of Object.entries(choosableSelections)) {
+              for (const [productId, quantidade] of Object.entries(selections)) {
+                if (quantidade > 0) {
+                  produtosDose.push({
+                    productId,
+                    quantidade: Number(quantidade)
+                  });
+                }
+              }
+            }
+            await api.post('/cart', { doseId: doseToConfigure.id, products: produtosDose });
             const res = await api.get('/cart');
             setCart(res.data?.items || []);
             toast({
