@@ -446,6 +446,7 @@ const ClientCart = () => {
                             <>
                               {/* Doses agrupadas */}
                               {Object.entries(doses).map(([doseName, items]) => {
+                                // O valor da dose é a soma dos preços proporcionais dos itens (que sempre soma o valor cadastrado)
                                 const doseTotal = items.reduce((sum, i) => sum + ((i.price ?? i.product.price) * i.quantity), 0);
                                 return (
                                   <div key={doseName} className="border rounded-md mb-4 bg-gray-50">
