@@ -129,8 +129,8 @@ export const cartController = {
     const totalQuantity = (existing?.quantity || 0) + quantity;
     // Ajuste para produtos fracionáveis: comparar/descontar em ml
     if (product.isFractioned) {
-      if (totalQuantity > product.stock) {
-        throw new AppError(`Estoque insuficiente. Só temos ${product.stock} ml de ${product.name}.`, 400);
+      if (totalQuantity > (product.totalVolume || 0)) {
+        throw new AppError(`Estoque insuficiente. Só temos ${product.totalVolume} ml de ${product.name}.`, 400);
       }
     } else {
       if (totalQuantity > product.stock) {
