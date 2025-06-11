@@ -127,8 +127,15 @@ export const cartController = {
       where: { cartId: cart.id, productId, comboId: null },
     });
     const totalQuantity = (existing?.quantity || 0) + quantity;
-    if (totalQuantity > product.stock) {
-      throw new AppError(`Estoque insuficiente. Só temos ${product.stock} unidade(s) de ${product.name}.`, 400);
+    // Ajuste para produtos fracionáveis: comparar/descontar em ml
+    if (product.isFractioned) {
+      if (totalQuantity > product.stock) {
+        throw new AppError(`Estoque insuficiente. Só temos ${product.stock} ml de ${product.name}.`, 400);
+      }
+    } else {
+      if (totalQuantity > product.stock) {
+        throw new AppError(`Estoque insuficiente. Só temos ${product.stock} unidade(s) de ${product.name}.`, 400);
+      }
     }
     if (existing) {
       const updated = await prisma.cartItem.update({
