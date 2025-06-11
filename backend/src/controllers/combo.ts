@@ -14,7 +14,8 @@ export const comboController = {
                 }
               }
             }
-          }
+          },
+          category: true
         }
       });
       res.json(combos);
@@ -26,7 +27,7 @@ export const comboController = {
 
   create: async (req: Request, res: Response) => {
     try {
-      const { name, description, price, items, image } = req.body;
+      const { name, description, price, items, image, categoryId } = req.body;
       const parsedItems = JSON.parse(items);
       const combo = await prisma.combo.create({
         data: {
@@ -34,6 +35,7 @@ export const comboController = {
           description,
           price: parseFloat(price),
           image: image || undefined,
+          categoryId: categoryId || null,
           items: {
             create: parsedItems.map((item: any) => ({
               productId: item.productId,
@@ -53,7 +55,8 @@ export const comboController = {
                 }
               }
             }
-          }
+          },
+          category: true
         }
       });
       res.json(combo);
@@ -66,7 +69,7 @@ export const comboController = {
   update: async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
-      const { name, description, price, items, active, image } = req.body;
+      const { name, description, price, items, active, image, categoryId } = req.body;
       const parsedItems = JSON.parse(items);
       await prisma.comboItem.deleteMany({
         where: { comboId: id }
@@ -79,6 +82,7 @@ export const comboController = {
           price: parseFloat(price),
           active: active === 'true',
           image: image || undefined,
+          categoryId: categoryId || null,
           items: {
             create: parsedItems.map((item: any) => ({
               productId: item.productId,
@@ -98,7 +102,8 @@ export const comboController = {
                 }
               }
             }
-          }
+          },
+          category: true
         }
       });
       res.json(combo);

@@ -5,7 +5,7 @@ import { uploadToCloudinary } from '../utils/cloudinary';
 export const doseController = {
   async create(req: Request, res: Response) {
     try {
-      const { name, description, price, items } = req.body;
+      const { name, description, price, items, categoryId } = req.body;
       let image = '';
 
       if (req.file) {
@@ -18,6 +18,7 @@ export const doseController = {
           description,
           price: parseFloat(price),
           image,
+          categoryId: categoryId || null,
           items: {
             create: JSON.parse(items).map((item: any) => ({
               productId: item.productId,
@@ -33,7 +34,8 @@ export const doseController = {
             include: {
               product: true
             }
-          }
+          },
+          category: true
         }
       });
 
@@ -48,7 +50,7 @@ export const doseController = {
   async update(req: Request, res: Response) {
     try {
       const { id } = req.params;
-      const { name, description, price, items, active } = req.body;
+      const { name, description, price, items, active, categoryId } = req.body;
       let image = '';
 
       const dose = await prisma.dose.findUnique({
@@ -73,6 +75,7 @@ export const doseController = {
           price: parseFloat(price),
           image: image || dose.image,
           active: active === 'true',
+          categoryId: categoryId || null,
           items: {
             deleteMany: {},
             create: JSON.parse(items).map((item: any) => ({
@@ -89,7 +92,8 @@ export const doseController = {
             include: {
               product: true
             }
-          }
+          },
+          category: true
         }
       });
 
@@ -132,7 +136,8 @@ export const doseController = {
             include: {
               product: true
             }
-          }
+          },
+          category: true
         }
       });
 
@@ -154,7 +159,8 @@ export const doseController = {
             include: {
               product: true
             }
-          }
+          },
+          category: true
         }
       });
 

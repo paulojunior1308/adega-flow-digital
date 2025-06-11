@@ -67,6 +67,8 @@ model Category {
   updatedAt   DateTime  @updatedAt
   description String?
   products    Product[]
+  combos      Combo[]
+  doses       Dose[]
 }
 
 model Client {
@@ -241,6 +243,8 @@ model Combo {
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
   items       ComboItem[]
+  categoryId  String?
+  category    Category?   @relation(fields: [categoryId], references: [id])
 }
 
 model ComboItem {
@@ -312,6 +316,8 @@ model Dose {
   updatedAt   DateTime    @updatedAt
   items       DoseItem[]
   cartItems   CartItem[]
+  categoryId  String?
+  category    Category?   @relation(fields: [categoryId], references: [id])
 }
 
 model DoseItem {

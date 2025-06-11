@@ -46,6 +46,7 @@ const ClientCatalog = () => {
   const [cartTotal, setCartTotal] = useState(0);
   const [categories, setCategories] = useState([]);
   const [combos, setCombos] = useState([]);
+  const [doses, setDoses] = useState([]);
   const [comboModalOpen, setComboModalOpen] = useState(false);
   const [comboToConfigure, setComboToConfigure] = useState<any>(null);
   
@@ -244,6 +245,9 @@ const ClientCatalog = () => {
       }));
       setCombos(combosCorrigidos);
     });
+    api.get('/doses').then(res => {
+      setDoses(res.data);
+    });
   }, []);
 
   const allProducts = React.useMemo(() => [
@@ -256,11 +260,23 @@ const ClientCatalog = () => {
       oldPrice: undefined,
       image: c.image,
       description: c.description,
-      category: 'combo',
+      category: c.categoryId || (c.category && c.category.id) || 'combo',
       rating: 5,
       tags: [],
-    }))
-  ], [products, combos]);
+    })),
+    ...doses.map(d => ({
+      ...d,
+      type: 'dose',
+      name: d.name,
+      price: d.price,
+      oldPrice: undefined,
+      image: d.image,
+      description: d.description,
+      category: d.categoryId || (d.category && d.category.id) || 'dose',
+      rating: 5,
+      tags: [],
+    })),
+  ], [products, combos, doses]);
 
   useEffect(() => {
     let result = allProducts;

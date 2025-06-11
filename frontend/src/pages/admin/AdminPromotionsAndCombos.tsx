@@ -104,6 +104,8 @@ export default function AdminPromotionsAndCombos() {
   const [choosableCategories, setChoosableCategories] = React.useState<Record<string, string>>({});
   const [choosableQuantities, setChoosableQuantities] = React.useState<Record<string, number>>({});
   const [discountBy, setDiscountBy] = React.useState<Record<string, 'unit' | 'volume'>>({});
+  const [comboCategoryId, setComboCategoryId] = React.useState<string>('');
+  const [doseCategoryId, setDoseCategoryId] = React.useState<string>('');
 
   const fetchData = React.useCallback(async () => {
     try {
@@ -225,7 +227,8 @@ export default function AdminPromotionsAndCombos() {
           };
         })
       ),
-      active: String(editingCombo.active)
+      active: String(editingCombo.active),
+      categoryId: comboCategoryId,
     };
     console.log('Payload enviado (edição):', comboData);
     try {
@@ -317,7 +320,8 @@ export default function AdminPromotionsAndCombos() {
       price: formData.get('price'),
       image: imageUrl,
       items: JSON.stringify(doseItems),
-      active: String(editingDose.active)
+      active: String(editingDose.active),
+      categoryId: doseCategoryId,
     };
     try {
       await api.put(`/admin/doses/${editingDose.id}`, doseData);
@@ -411,7 +415,8 @@ export default function AdminPromotionsAndCombos() {
             quantity: productQuantities[productId] || 1
           };
         })
-      )
+      ),
+      categoryId: comboCategoryId,
     };
     console.log('Payload enviado (cadastro):', comboData);
     try {
@@ -501,7 +506,8 @@ export default function AdminPromotionsAndCombos() {
       description: formData.get('description'),
       price: formData.get('price'),
       image: imageUrl,
-      items: JSON.stringify(doseItems)
+      items: JSON.stringify(doseItems),
+      categoryId: doseCategoryId,
     };
     try {
       await api.post('/admin/doses', doseData);
@@ -1104,6 +1110,19 @@ export default function AdminPromotionsAndCombos() {
                 />
               </div>
               <div>
+                <Label htmlFor="combo-category">Categoria</Label>
+                <Select id="combo-category" value={comboCategoryId} onValueChange={setComboCategoryId} required>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione a categoria" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.map(category => (
+                      <SelectItem key={category.id} value={category.id}>{category.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
                 <Label>Produtos do Combo</Label>
                 <div className="flex items-center gap-2 mb-4">
                   <Search className="w-4 h-4 text-gray-500" />
@@ -1305,6 +1324,19 @@ export default function AdminPromotionsAndCombos() {
             <Textarea name="description" placeholder="Descrição" defaultValue={editingDose?.description || ''} />
             <Input name="price" placeholder="Preço (R$)" type="number" step="0.01" defaultValue={editingDose?.price || ''} required />
             <Input name="image" type="file" accept="image/*" />
+            <div>
+              <Label htmlFor="dose-category">Categoria</Label>
+              <Select id="dose-category" value={doseCategoryId} onValueChange={setDoseCategoryId} required>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione a categoria" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map(category => (
+                    <SelectItem key={category.id} value={category.id}>{category.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <div>
               <Label>Produtos e volumes da dose</Label>
               <ScrollArea className="h-40 border rounded p-2 mt-2">
