@@ -55,15 +55,22 @@ const getRandomProducts = (products, count = 4) => {
 const API_URL = 'https://adega-flow-digital.onrender.com';
 
 const categoryImages = {
-  'Whisky': '/uploads/whisky.png',
+  'Whiskys': '/uploads/whisky.png',
   'Refrigerantes': '/uploads/refrigerantes.png',
-  'Gin': '/uploads/gin.png',
   'GIN': '/uploads/gin.png',
   'Carvão': '/uploads/carvao.png',
   'Energéticos': '/uploads/energeticos.png',
   'Essências': '/uploads/essencias.png',
   'Cervejas': '/uploads/cervejas.png',
-  'Gelo de Coco': '/uploads/gelo-de-coco.png',
+  'Gelos': '/uploads/gelo-de-coco.png',
+  'Vinhos': '/uploads/vinhos.png',
+  'Descartáveis': '/uploads/descartaveis.png',
+  'Salgadinhos': '/uploads/salgadinhos.png',
+  'Churrasco': '/uploads/churrasco.png',
+  'Alumínio': '/uploads/aluminio.png',
+  'Cigarros': '/uploads/cigarros.png',
+  'Doses': '/uploads/doses.png',
+  'Drinks': '/uploads/drinks.png'
 };
 
 const getImageUrl = (image?: string) => {
