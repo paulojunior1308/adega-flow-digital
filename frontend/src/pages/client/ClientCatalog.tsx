@@ -544,7 +544,9 @@ const ClientCatalog = () => {
               if (!item.allowFlavorSelection) {
                 produtosDose.push({
                   productId: item.productId,
-                  quantidade: Math.max(1, item.quantity)
+                  nome: item.product?.name || '',
+                  quantidade: Math.max(1, item.quantity),
+                  precoOriginal: item.product?.price || 0
                 });
               }
             }
@@ -552,21 +554,63 @@ const ClientCatalog = () => {
             for (const [categoryId, selections] of Object.entries(choosableSelections)) {
               for (const [productId, quantidade] of Object.entries(selections)) {
                 if (quantidade > 0) {
+                  const prod = products.find((p: any) => p.id === productId);
                   produtosDose.push({
                     productId,
-                    quantidade: Number(quantidade)
+                    nome: prod?.name || '',
+                    quantidade: Number(quantidade),
+                    precoOriginal: prod?.price || 0
                   });
                 }
               }
             }
-            await api.post('/cart', { doseId: doseToConfigure.id, products: produtosDose });
-            const res = await api.get('/cart');
-            setCart(res.data?.items || []);
+            // Calcular preço proporcional igual ao PDV
+            const numItems = produtosDose.length;
+            const totalOriginal = produtosDose.reduce((sum, p) => sum + p.precoOriginal * p.quantidade, 0);
+            const totaisNaoArredondados = produtosDose.map(p =>
+              totalOriginal > 0
+                ? ((p.precoOriginal * p.quantidade) / totalOriginal) * doseToConfigure.price
+                : p.precoOriginal * p.quantidade
+            );
+            let totaisArredondados = totaisNaoArredondados.map(v => Math.round(v * 100) / 100);
+            let soma = totaisArredondados.reduce((a, b) => a + b, 0);
+            let diff = Math.round((doseToConfigure.price - soma) * 100); // em centavos
+            if (diff !== 0) {
+              const indicesOrdenados = Array.from({ length: totaisArredondados.length }, (_, i) => i);
+              let i = 0;
+              while (diff !== 0) {
+                const idx = indicesOrdenados[i % indicesOrdenados.length];
+                totaisArredondados[idx] += diff > 0 ? 0.01 : -0.01;
+                totaisArredondados[idx] = Math.round(totaisArredondados[idx] * 100) / 100;
+                diff += diff > 0 ? -1 : 1;
+                i++;
+              }
+            }
+            // Adicionar cada produto ao carrinho do frontend
+            const novosItens = produtosDose.map((p, idx) => ({
+              id: p.productId + '-dose-' + Math.random().toString(36).substring(2, 8),
+              product: {
+                id: p.productId,
+                name: `Dose de ${doseToConfigure.name} - ${p.nome}`,
+                price: Math.round((totaisArredondados[idx] / p.quantidade) * 100) / 100,
+                image: '',
+                description: '',
+                category: '',
+                rating: 5,
+                tags: [],
+                type: 'dose',
+                stock: 9999,
+                oldPrice: undefined
+              },
+              quantity: p.quantidade
+            }));
+            setCart(prev => [...prev, ...novosItens]);
             toast({
               title: 'Dose adicionada',
-              description: `${doseToConfigure.name} adicionada ao carrinho`,
+              description: `${doseToConfigure.name} (Dose) adicionada ao carrinho`,
               duration: 2000,
             });
+            setDoseToConfigure(null);
           }}
         />
       )}
