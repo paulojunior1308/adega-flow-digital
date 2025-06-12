@@ -575,56 +575,25 @@ const ClientCatalog = () => {
             }
             // Calcular preço proporcional igual ao PDV
             const numItems = produtosDose.length;
-            const totalOriginal = produtosDose.reduce((sum, p) => sum + p.precoOriginal * p.quantidade, 0);
-            const totaisNaoArredondados = produtosDose.map(p =>
-              totalOriginal > 0
-                ? ((p.precoOriginal * p.quantidade) / totalOriginal) * doseToConfigure.price
-                : p.precoOriginal * p.quantidade
-            );
-            let totaisArredondados = totaisNaoArredondados.map(v => Math.round(v * 100) / 100);
-            let soma = totaisArredondados.reduce((a, b) => a + b, 0);
-            let diff = Math.round((doseToConfigure.price - soma) * 100); // em centavos
-            if (diff !== 0) {
-              const indicesOrdenados = Array.from({ length: totaisArredondados.length }, (_, i) => i);
-              let i = 0;
-              while (diff !== 0) {
-                const idx = indicesOrdenados[i % indicesOrdenados.length];
-                totaisArredondados[idx] += diff > 0 ? 0.01 : -0.01;
-                totaisArredondados[idx] = Math.round(totaisArredondados[idx] * 100) / 100;
-                diff += diff > 0 ? -1 : 1;
-                i++;
-              }
-            }
+            const basePrice = Math.floor((doseToConfigure.price / numItems) * 100) / 100;
+            const remainder = doseToConfigure.price - (basePrice * numItems);
+            const totaisArredondados = produtosDose.map((p, idx) => idx === 0 ? basePrice + remainder : basePrice);
             // Adicionar cada produto ao carrinho do backend
             for (let idx = 0; idx < produtosDose.length; idx++) {
               const p = produtosDose[idx];
               const produtoInfo = products.find((prod: any) => prod.id === p.productId);
               const isFractioned = produtoInfo?.isFractioned;
-              const payload = {
-                productId: p.productId,
-                quantity: isFractioned ? p.quantidade : p.quantidade,
-                price: Math.round((totaisArredondados[idx] / p.quantidade) * 100) / 100,
-                name: `Dose de ${doseToConfigure.name} - ${p.nome}`,
-                isDose: true,
-                doseName: doseToConfigure.name,
-                dosePrice: doseToConfigure.price,
-                ...(isFractioned ? { sellingByVolume: true } : {})
-              };
-              console.log('[CLIENTE-CATALOGO] Enviando produto para o carrinho:', {
-                produto: p.nome,
-                isFractioned,
-                payload,
-                produtoInfo: {
-                  id: produtoInfo?.id,
-                  nome: produtoInfo?.name,
-                  isFractioned: produtoInfo?.isFractioned,
-                  stock: produtoInfo?.stock,
-                  totalVolume: produtoInfo?.totalVolume,
-                  unitVolume: produtoInfo?.unitVolume
-                }
-              });
+              const precoAjustado = Math.round((totaisArredondados[idx] / p.quantidade) * 100) / 100;
               try {
-                await api.post('/cart', payload);
+                await api.post('/cart', {
+                  productId: p.productId,
+                  quantity: isFractioned ? p.quantidade : p.quantidade,
+                  price: precoAjustado,
+                  name: `Dose de ${doseToConfigure.name} - ${p.nome}`,
+                  isDose: true,
+                  doseName: doseToConfigure.name,
+                  ...(isFractioned ? { sellingByVolume: true } : {})
+                });
               } catch (err) {
                 console.error('[CLIENTE-CATALOGO] Erro ao adicionar ao carrinho:', err);
                 // Se o backend não aceitar name/isDose/doseName, ignore o erro
