@@ -257,20 +257,41 @@ export const orderController = {
               const selections = (choosableSelections as Record<string, Record<string, number>>)[doseItem.categoryId] || {};
               for (const [productId, qty] of Object.entries(selections)) {
                 const quantidadeFinal = Number(qty) * item.quantity;
-                console.log(`[DESCONTO ESTOQUE][DOSE] Descontando ${quantidadeFinal} unidades do produto ${productId}`);
-                await prisma.product.update({
-                  where: { id: productId },
-                  data: { stock: { decrement: quantidadeFinal } }
-                });
+                // Buscar produto para saber se é fracionado
+                const produto = await prisma.product.findUnique({ where: { id: productId } });
+                if (produto?.isFractioned) {
+                  const novoVolume = (produto.totalVolume || 0) - quantidadeFinal;
+                  console.log(`[DESCONTO ESTOQUE][DOSE] Descontando ${quantidadeFinal}ml do produto fracionado ${produto.name}`);
+                  await prisma.product.update({
+                    where: { id: productId },
+                    data: { totalVolume: novoVolume }
+                  });
+                } else {
+                  console.log(`[DESCONTO ESTOQUE][DOSE] Descontando ${quantidadeFinal} unidades do produto ${produto?.name}`);
+                  await prisma.product.update({
+                    where: { id: productId },
+                    data: { stock: { decrement: quantidadeFinal } }
+                  });
+                }
               }
             } else {
               // Se não for escolhível, desconta o produto da dose
               const quantidadeFinal = Number(doseItem.quantity) * item.quantity;
-              console.log(`[DESCONTO ESTOQUE][DOSE] Descontando ${quantidadeFinal} unidades do produto ${doseItem.productId}`);
-              await prisma.product.update({
-                where: { id: doseItem.productId },
-                data: { stock: { decrement: quantidadeFinal } }
-              });
+              const produto = await prisma.product.findUnique({ where: { id: doseItem.productId } });
+              if (produto?.isFractioned) {
+                const novoVolume = (produto.totalVolume || 0) - quantidadeFinal;
+                console.log(`[DESCONTO ESTOQUE][DOSE] Descontando ${quantidadeFinal}ml do produto fracionado ${produto.name}`);
+                await prisma.product.update({
+                  where: { id: doseItem.productId },
+                  data: { totalVolume: novoVolume }
+                });
+              } else {
+                console.log(`[DESCONTO ESTOQUE][DOSE] Descontando ${quantidadeFinal} unidades do produto ${produto?.name}`);
+                await prisma.product.update({
+                  where: { id: doseItem.productId },
+                  data: { stock: { decrement: quantidadeFinal } }
+                });
+              }
             }
           }
         } else {
