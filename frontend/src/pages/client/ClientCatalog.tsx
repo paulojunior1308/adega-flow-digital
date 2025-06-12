@@ -573,42 +573,26 @@ const ClientCatalog = () => {
                 }
               }
             }
-            // Distribuição percentual: 40% para o produto mais caro, 60% dividido entre os demais
+            // Lógica idêntica ao admin-pdv para calcular preços dos produtos da dose
             const numItems = produtosDose.length;
-            let totaisArredondados: number[] = [];
-            if (numItems === 1) {
-              totaisArredondados = [doseToConfigure.price];
-            } else {
-              // Ordenar produtos por precoOriginal decrescente
-              const produtosOrdenados = [...produtosDose].sort((a, b) => (b.precoOriginal || 0) - (a.precoOriginal || 0));
-              const maior = produtosOrdenados[0];
-              const outros = produtosOrdenados.slice(1);
-              const valorMaior = Math.round((doseToConfigure.price * 0.4) * 100) / 100;
-              const valorOutros = Math.round(((doseToConfigure.price * 0.6) / outros.length) * 100) / 100;
-              totaisArredondados = produtosDose.map((p) => {
-                if (p.productId === maior.productId) return valorMaior;
-                return valorOutros;
-              });
-              // Ajuste de centavos para garantir soma exata
-              let soma = totaisArredondados.reduce((a, b) => a + b, 0);
-              let diff = Math.round((doseToConfigure.price - soma) * 100) / 100;
-              if (diff !== 0) {
-                const idx = produtosDose.findIndex(p => p.productId === maior.productId);
-                totaisArredondados[idx] += diff;
-              }
-            }
-            // Adicionar cada produto ao carrinho do backend
-            for (let idx = 0; idx < produtosDose.length; idx++) {
-              const p = produtosDose[idx];
-              const produtoInfo = products.find((prod: any) => prod.id === p.productId);
+            const basePrice = Math.floor((doseToConfigure.price / numItems) * 100) / 100;
+            const remainder = doseToConfigure.price - (basePrice * numItems);
+            const descontos = produtosDose.map((p, idx) => ({
+              productId: p.productId,
+              nome: p.nome,
+              quantidade: p.quantidade,
+              precoAjustado: idx === 0 ? basePrice + remainder : basePrice
+            }));
+            for (let idx = 0; idx < descontos.length; idx++) {
+              const d = descontos[idx];
+              const produtoInfo = products.find((prod: any) => prod.id === d.productId);
               const isFractioned = produtoInfo?.isFractioned;
-              const precoAjustado = totaisArredondados[idx];
               try {
                 await api.post('/cart', {
-                  productId: p.productId,
-                  quantity: isFractioned ? p.quantidade : p.quantidade,
-                  price: precoAjustado,
-                  name: `Dose de ${doseToConfigure.name} - ${p.nome}`,
+                  productId: d.productId,
+                  quantity: isFractioned ? d.quantidade : d.quantidade,
+                  price: d.precoAjustado,
+                  name: `Dose de ${doseToConfigure.name} - ${d.nome}`,
                   isDose: true,
                   doseName: doseToConfigure.name,
                   ...(isFractioned ? { sellingByVolume: true } : {})
