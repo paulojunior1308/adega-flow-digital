@@ -224,17 +224,17 @@ export const orderController = {
         for (const item of order.items) {
           if (item.productId) {
             const produto = await prisma.product.findUnique({ where: { id: item.productId } });
-            if (produto?.isFractioned && (item as any).soldVolume) {
+            if (produto?.isFractioned && item.quantity) {
               // Produto fracionado: descontar do totalVolume
-              console.log(`[ESTOQUE] Descontando soldVolume do produto fracionado:`, {
+              console.log(`[ESTOQUE] Descontando volume do produto fracionado:`, {
                 produtoId: item.productId,
                 nome: produto.name,
-                soldVolume: (item as any).soldVolume,
+                quantity: item.quantity,
                 totalVolumeAntes: produto.totalVolume
               });
               await prisma.product.update({
                 where: { id: item.productId },
-                data: { totalVolume: { decrement: (item as any).soldVolume } }
+                data: { totalVolume: { decrement: item.quantity } }
               });
             } else {
               // Produto normal: descontar do stock
