@@ -97,7 +97,12 @@ export const orderController = {
     }
 
     // Calcula total usando o preço ajustado do cartItem
-    const totalProdutos = cart.items.reduce((sum: number, item: any) => sum + (item.price ?? item.product.price) * item.quantity, 0);
+    const totalProdutos = cart.items.reduce((sum: number, item: any) => {
+      if (item.product.isFractioned) {
+        return sum + (item.price ?? item.product.price);
+      }
+      return sum + ((item.price ?? item.product.price) * item.quantity);
+    }, 0);
     const total = totalProdutos + deliveryFee;
 
     // Cria o pedido
@@ -118,7 +123,7 @@ export const orderController = {
             productId: item.productId,
             quantity: item.quantity,
             price: item.price ?? item.product.price,
-            soldVolume: item.soldVolume ?? null,
+            soldVolume: item.soldVolume ?? (item.product.isFractioned ? item.quantity : null),
           })),
         },
       } as any,

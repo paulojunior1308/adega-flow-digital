@@ -130,7 +130,7 @@ export const cartController = {
     const totalQuantity = (existing?.quantity || 0) + quantity;
     // Ajuste para produtos fracionáveis: comparar/descontar em ml
     if (product.isFractioned) {
-      const soldVolume = quantity; // Aqui quantity já representa o volume em ml
+      const soldVolumeFinal = soldVolume || quantity;
       if (totalQuantity > (product.totalVolume || 0)) {
         throw new AppError(`Estoque insuficiente. Só temos ${product.totalVolume} ml de ${product.name}.`, 400);
       }
@@ -139,7 +139,7 @@ export const cartController = {
           where: { id: existing.id },
           data: { 
             quantity: totalQuantity,
-            soldVolume: (existing.soldVolume || 0) + soldVolume
+            soldVolume: (existing.soldVolume || 0) + soldVolumeFinal
           },
           include: { product: true },
         });
@@ -151,7 +151,7 @@ export const cartController = {
             cartId: cart.id,
             productId,
             quantity,
-            soldVolume,
+            soldVolume: soldVolumeFinal,
             comboId: null,
             ...(price !== undefined ? { price } : {}),
           },
