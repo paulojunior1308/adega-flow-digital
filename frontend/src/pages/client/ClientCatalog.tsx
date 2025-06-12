@@ -602,7 +602,7 @@ const ClientCatalog = () => {
               const p = produtosDose[idx];
               const produtoInfo = products.find((prod: any) => prod.id === p.productId);
               const isFractioned = produtoInfo?.isFractioned;
-              const precoAjustado = Math.round((totaisArredondados[idx] / p.quantidade) * 100) / 100;
+              const precoAjustado = totaisArredondados[idx];
               try {
                 await api.post('/cart', {
                   productId: p.productId,
