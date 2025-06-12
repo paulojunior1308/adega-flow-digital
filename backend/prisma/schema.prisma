@@ -229,8 +229,11 @@ model OrderItem {
   productId String
   quantity  Int     @default(1)
   price     Float
+  doseId    String?  // Novo campo para referenciar doses
+  choosableSelections Json?  // Novo campo para armazenar seleções de itens escolhíveis
   order     Order   @relation(fields: [orderId], references: [id])
   product   Product @relation(fields: [productId], references: [id])
+  dose      Dose?   @relation(fields: [doseId], references: [id])
 }
 
 model Combo {
@@ -316,6 +319,7 @@ model Dose {
   updatedAt   DateTime    @updatedAt
   items       DoseItem[]
   cartItems   CartItem[]
+  orderItems  OrderItem[]
   categoryId  String?
   category    Category?   @relation(fields: [categoryId], references: [id])
 }
