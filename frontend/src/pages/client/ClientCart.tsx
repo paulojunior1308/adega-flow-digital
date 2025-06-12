@@ -416,6 +416,21 @@ const ClientCart = () => {
     return { doses, outros };
   }
 
+  // Função utilitária para agrupar combos
+  function agruparCombos(cart) {
+    const combos: Record<string, any> = {};
+    const outros: any[] = [];
+    for (const item of cart) {
+      if (item.comboId) {
+        if (!combos[item.comboId]) combos[item.comboId] = [];
+        combos[item.comboId].push(item);
+      } else if (!item.dose) {
+        outros.push(item);
+      }
+    }
+    return { combos, outros };
+  }
+
   return (
     <div className="min-h-screen bg-element-gray-light pt-16 md:pt-0">
       <ClientSidebar />
@@ -448,14 +463,14 @@ const ClientCart = () => {
                       
                       <div className="space-y-4">
                         {(() => {
-                          const { doses, outros } = agruparDoses(cart);
+                          const { doses, outros: semDoses } = agruparDoses(cart);
+                          const { combos, outros } = agruparCombos(semDoses);
                           return (
                             <>
                               {/* Doses agrupadas */}
                               {Object.entries(doses).map(([doseId, items]) => {
                                 const doseInfo = items[0]?.dose;
                                 if (!doseInfo) return null;
-                                const doseTotal = items.reduce((sum, i) => sum + ((i.price ?? i.product.price)), 0);
                                 return (
                                   <div key={doseId} className="border rounded-md mb-4 bg-gray-50">
                                     <div className="flex items-center justify-between p-4 border-b">
@@ -466,7 +481,6 @@ const ClientCart = () => {
                                       <div className="flex items-center gap-2">
                                         <span className="font-bold text-lg text-element-blue-dark">R$ {doseInfo.price.toFixed(2)}</span>
                                         <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700 hover:bg-red-50" onClick={() => {
-                                          // Remove todos os itens da dose
                                           items.forEach(i => removeFromCart(i.id));
                                         }}>
                                           <Trash2 className="h-4 w-4 mr-1" /> Remover
@@ -487,7 +501,42 @@ const ClientCart = () => {
                                   </div>
                                 );
                               })}
-                              {/* Itens avulsos e combos */}
+                              {/* Combos agrupados */}
+                              {Object.entries(combos).map(([comboId, items]) => {
+                                const comboInfo = items[0]?.combo || items[0]?.product; // fallback para product
+                                const comboName = comboInfo?.name || 'Combo';
+                                const comboPrice = items.reduce((sum, i) => sum + ((i.price ?? i.product.price) * i.quantity), 0);
+                                return (
+                                  <div key={comboId} className="border rounded-md mb-4 bg-gray-50">
+                                    <div className="flex items-center justify-between p-4 border-b">
+                                      <div>
+                                        <h3 className="font-bold text-element-blue-dark">{comboName}</h3>
+                                        <span className="text-xs text-gray-500">Combo personalizado</span>
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        <span className="font-bold text-lg text-element-blue-dark">R$ {comboPrice.toFixed(2)}</span>
+                                        <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700 hover:bg-red-50" onClick={() => {
+                                          items.forEach(i => removeFromCart(i.id));
+                                        }}>
+                                          <Trash2 className="h-4 w-4 mr-1" /> Remover
+                                        </Button>
+                                      </div>
+                                    </div>
+                                    <div className="p-4 pt-2">
+                                      <ul className="text-sm text-gray-700">
+                                        {items.map((comboItem: any, idx: number) => (
+                                          <li key={comboItem.product.id + '-' + idx} className="flex items-center gap-2 mb-1">
+                                            <img src={comboItem.product.image && !comboItem.product.image.startsWith('http') ? API_URL + comboItem.product.image : comboItem.product.image} alt={comboItem.product.name} className="w-8 h-8 object-cover rounded mr-2" />
+                                            <span>{comboItem.product.name}</span>
+                                            <span className="ml-auto">{comboItem.quantity} un</span>
+                                          </li>
+                                        ))}
+                                      </ul>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                              {/* Itens avulsos */}
                               {outros.map((item) => {
                                 const descontoCombo = comboDescontos.find((d) => d.productId === item.product.id);
                                 return (
