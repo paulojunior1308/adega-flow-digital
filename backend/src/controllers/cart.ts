@@ -29,7 +29,6 @@ export const cartController = {
     // @ts-ignore
     const userId = req.user.id;
     let { productId, comboId, quantity, price } = req.body;
-    console.log('[CARRINHO] Payload recebido:', req.body);
     quantity = quantity || 1;
     let cart = await prisma.cart.findUnique({ where: { userId } });
     if (!cart) {
@@ -41,15 +40,13 @@ export const cartController = {
         where: { id: comboId },
         include: { items: true }
       });
-      console.log('[CARRINHO] Combo encontrado:', combo);
       if (!combo) {
         throw new AppError('Combo não encontrado', 404);
       }
       const createdItems = [];
       const choosableSelections = req.body.choosableSelections || {};
-      console.log('[CARRINHO] Recebido choosableSelections:', JSON.stringify(choosableSelections));
+      console.log('Recebido choosableSelections:', JSON.stringify(choosableSelections));
       for (const comboItem of combo.items) {
-        console.log('[CARRINHO] Processando comboItem:', comboItem);
         if (comboItem.allowFlavorSelection && comboItem.categoryId) {
           // Adicionar os escolhidos pelo cliente para esta categoria
           const selections = choosableSelections[comboItem.categoryId] || {};
@@ -121,7 +118,6 @@ export const cartController = {
     // Produto normal
     productId = String(productId);
     const product = await prisma.product.findUnique({ where: { id: productId } });
-    console.log('[CARRINHO] Produto encontrado:', product);
     if (!product) {
       console.error('Produto não encontrado no banco:', productId);
       throw new AppError('Produto não encontrado', 404);
@@ -130,12 +126,10 @@ export const cartController = {
     const existing = await prisma.cartItem.findFirst({
       where: { cartId: cart.id, productId, comboId: null },
     });
-    console.log('[CARRINHO] CartItem existente:', existing);
     const totalQuantity = (existing?.quantity || 0) + quantity;
     // Ajuste para produtos fracionáveis: comparar/descontar em ml
     if (product.isFractioned) {
       const soldVolume = quantity; // Aqui quantity já representa o volume em ml
-      console.log('[CARRINHO] Produto fracionado - calculando soldVolume:', { quantity, soldVolume });
       if (totalQuantity > (product.totalVolume || 0)) {
         throw new AppError(`Estoque insuficiente. Só temos ${product.totalVolume} ml de ${product.name}.`, 400);
       }
@@ -148,7 +142,7 @@ export const cartController = {
           },
           include: { product: true },
         });
-        console.log('[CARRINHO] Produto fracionado atualizado:', updated);
+        console.log(`[CARRINHO] Produto fracionado atualizado:`, updated);
         return res.status(201).json(updated);
       } else {
         const item = await prisma.cartItem.create({
@@ -162,7 +156,7 @@ export const cartController = {
           },
           include: { product: true },
         });
-        console.log('[CARRINHO] Produto fracionado adicionado:', item);
+        console.log(`[CARRINHO] Produto fracionado adicionado:`, item);
         return res.status(201).json(item);
       }
     } else {

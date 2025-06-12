@@ -586,15 +586,16 @@ const ClientCatalog = () => {
             for (let idx = 0; idx < descontos.length; idx++) {
               const d = descontos[idx];
               const produtoInfo = products.find((prod: any) => prod.id === d.productId);
-              const isFractioned = produtoInfo?.isFractioned ?? !!produtoInfo?.unitVolume;
+              const isFractioned = produtoInfo?.isFractioned;
               try {
                 await api.post('/cart', {
                   productId: d.productId,
-                  quantity: isFractioned ? d.quantidade : 1, // Se fracionado, quantity = ml; se não, quantity = 1
+                  quantity: 1, // Sempre 1 para doses!
                   price: d.precoAjustado,
                   name: `Dose de ${doseToConfigure.name} - ${d.nome}`,
                   isDose: true,
-                  doseName: doseToConfigure.name
+                  doseName: doseToConfigure.name,
+                  ...(isFractioned ? { soldVolume: d.quantidade } : {})
                 });
               } catch (err) {
                 console.error('[CLIENTE-CATALOGO] Erro ao adicionar ao carrinho:', err);
