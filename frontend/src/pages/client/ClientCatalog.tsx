@@ -436,7 +436,7 @@ const ClientCatalog = () => {
           combo={comboToConfigure}
           onConfirm={async (choosableSelections) => {
             // 1. Montar lista de todos os produtos do combo (fixos + escolhidos)
-            const produtosCombo: { productId: string, nome: string, precoOriginal: number, quantidade: number }[] = [];
+            const produtosCombo = [];
             // Fixos
             for (const item of comboToConfigure.items) {
               if (!item.isChoosable) {
@@ -453,14 +453,10 @@ const ClientCatalog = () => {
               for (const [productId, quantidade] of Object.entries(selections)) {
                 if (quantidade > 0) {
                   // Buscar o preço do produto nas opções carregadas
-                  const categoria = comboToConfigure.items.find(i => i.categoryId === categoryId);
                   let preco = 0;
                   let nome = '';
-                  if (categoria && categoria.product && categoria.product.category && categoria.product.category.id === categoryId) {
-                    preco = categoria.product.price;
-                    nome = categoria.product.name;
-                  } else if (comboToConfigure.options && comboToConfigure.options[categoryId]) {
-                    const prod = comboToConfigure.options[categoryId].find((p: any) => p.id === productId);
+                  if (comboToConfigure.options && comboToConfigure.options[categoryId]) {
+                    const prod = comboToConfigure.options[categoryId].find((p) => p.id === productId);
                     if (prod) {
                       preco = prod.price;
                       nome = prod.name;
@@ -490,12 +486,10 @@ const ClientCatalog = () => {
             let diff = Math.round((comboToConfigure.price - soma) * 100); // em centavos
             // 6. Distribua o ajuste entre todos os itens do combo de forma cíclica
             if (diff !== 0) {
-              // Índices de todos os itens
               const indicesOrdenados = Array.from({ length: totaisArredondados.length }, (_, i) => i);
               let i = 0;
               while (diff !== 0) {
                 const idx = indicesOrdenados[i % indicesOrdenados.length];
-                // Ajusta 1 centavo para cima ou para baixo
                 totaisArredondados[idx] += diff > 0 ? 0.01 : -0.01;
                 totaisArredondados[idx] = Math.round(totaisArredondados[idx] * 100) / 100;
                 diff += diff > 0 ? -1 : 1;
@@ -507,22 +501,31 @@ const ClientCatalog = () => {
               const precoAjustado = Math.round((totaisArredondados[idx] / p.quantidade) * 100) / 100;
               return {
                 productId: p.productId,
-                precoOriginal: p.precoOriginal,
+                nome: p.nome,
                 quantidade: p.quantidade,
-                totalAjustado: totaisArredondados[idx],
                 precoAjustado,
                 desconto: p.precoOriginal - precoAjustado
               };
             });
-            // 8. Salvar descontos no localStorage
-            localStorage.setItem('comboDescontos', JSON.stringify(descontos));
-            // 9. Enviar apenas UM POST para o backend com comboId, quantity, choosableSelections e priceByProduct
-            await api.post('/cart', {
-              comboId: comboToConfigure.id,
-              quantity: 1,
-              choosableSelections,
-              priceByProduct: descontos.reduce((acc, d) => ({ ...acc, [d.productId]: d.precoAjustado }), {})
-            });
+            for (let idx = 0; idx < descontos.length; idx++) {
+              const d = descontos[idx];
+              const produtoInfo = products.find((prod: any) => prod.id === d.productId);
+              const isFractioned = produtoInfo?.isFractioned;
+              try {
+                const payload = {
+                  productId: d.productId,
+                  quantity: d.quantidade,
+                  price: d.precoAjustado,
+                  name: `Combo ${comboToConfigure.name} - ${d.nome}`,
+                  isCombo: true,
+                  comboName: comboToConfigure.name,
+                  ...(isFractioned ? { sellingByVolume: true } : {})
+                };
+                await api.post('/cart', payload);
+              } catch (err) {
+                // Se o backend não aceitar name/isCombo/comboName, ignore o erro
+              }
+            }
             const res = await api.get('/cart');
             setCart(res.data?.items || []);
             toast({
@@ -595,12 +598,10 @@ const ClientCatalog = () => {
                   name: `Dose de ${doseToConfigure.name} - ${d.nome}`,
                   isDose: true,
                   doseName: doseToConfigure.name,
-                  ...(isFractioned ? { soldVolume: d.quantidade } : {})
+                  ...(isFractioned ? { sellingByVolume: true } : {})
                 };
-                console.log('[CLIENTE-CATALOGO] Enviando payload para /cart:', payload);
                 await api.post('/cart', payload);
               } catch (err) {
-                console.error('[CLIENTE-CATALOGO] Erro ao adicionar ao carrinho:', err);
                 // Se o backend não aceitar name/isDose/doseName, ignore o erro
               }
             }
