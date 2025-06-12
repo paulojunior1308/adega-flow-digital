@@ -586,7 +586,7 @@ const ClientCatalog = () => {
             for (let idx = 0; idx < descontos.length; idx++) {
               const d = descontos[idx];
               const produtoInfo = products.find((prod: any) => prod.id === d.productId);
-              const isFractioned = produtoInfo?.isFractioned;
+              const isFractioned = produtoInfo?.isFractioned ?? !!produtoInfo?.unitVolume;
               try {
                 await api.post('/cart', {
                   productId: d.productId,
