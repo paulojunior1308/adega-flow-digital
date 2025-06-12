@@ -68,6 +68,8 @@ interface CartItem {
   product: Product;
   quantity: number;
   price?: number;
+  isDose?: boolean;
+  doseName?: string;
 }
 
 interface Address {
@@ -180,7 +182,12 @@ const ClientCart = () => {
   
   // Calcular subtotal e total
   useEffect(() => {
-    const calculatedSubtotal = cart.reduce((sum, item) => sum + ((item.price ?? item.product.price) * item.quantity), 0);
+    const calculatedSubtotal = cart.reduce((sum, item) => {
+      if (item.isDose) {
+        return sum + (item.price ?? item.product.price);
+      }
+      return sum + ((item.price ?? item.product.price) * item.quantity);
+    }, 0);
     setSubtotal(calculatedSubtotal);
     setTotal(calculatedSubtotal - discount + deliveryFee);
   }, [cart, discount, deliveryFee]);
@@ -493,7 +500,7 @@ const ClientCart = () => {
                                       <h3 className="font-medium mb-1">{item.product.name}</h3>
                                       <p className="text-sm text-gray-500 mb-3">{item.product.description}</p>
                                       <p className="font-bold text-element-blue-dark">
-                                          R$ {(item.price ?? item.product.price).toFixed(2)}
+                                          R$ {(item.isDose ? (item.price ?? item.product.price) : (item.price ?? item.product.price) * item.quantity).toFixed(2)}
                                         </p>
                                         {descontoCombo && descontoCombo.desconto > 0 && (
                                           <p className="text-xs text-green-700 mt-1">
