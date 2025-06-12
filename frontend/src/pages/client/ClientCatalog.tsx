@@ -573,26 +573,33 @@ const ClientCatalog = () => {
                 }
               }
             }
-            // 1. Calcular valor proporcional bruto de cada item
-            const totalOriginal = produtosDose.reduce((sum, p) => sum + p.precoOriginal * p.quantidade, 0);
-            const proporcionais = produtosDose.map(p => ({
-              ...p,
-              valorProporcional: totalOriginal > 0 ? ((p.precoOriginal * p.quantidade) / totalOriginal) * doseToConfigure.price : doseToConfigure.price / produtosDose.length
-            }));
-            // 2. Ordenar do maior para o menor valor proporcional
-            proporcionais.sort((a, b) => b.valorProporcional - a.valorProporcional);
-            // 3. Arredondar cada valor para 2 casas decimais
-            let totaisArredondados = proporcionais.map(p => Math.round(p.valorProporcional * 100) / 100);
-            // 4. Ajustar diferença no primeiro item (maior valor)
-            let soma = totaisArredondados.reduce((a, b) => a + b, 0);
-            let diff = Math.round((doseToConfigure.price - soma) * 100) / 100;
-            if (diff !== 0) {
-              totaisArredondados[0] += diff;
-              totaisArredondados[0] = Math.round(totaisArredondados[0] * 100) / 100;
+            // Distribuição percentual: 40% para o produto mais caro, 60% dividido entre os demais
+            const numItems = produtosDose.length;
+            let totaisArredondados: number[] = [];
+            if (numItems === 1) {
+              totaisArredondados = [doseToConfigure.price];
+            } else {
+              // Ordenar produtos por precoOriginal decrescente
+              const produtosOrdenados = [...produtosDose].sort((a, b) => (b.precoOriginal || 0) - (a.precoOriginal || 0));
+              const maior = produtosOrdenados[0];
+              const outros = produtosOrdenados.slice(1);
+              const valorMaior = Math.round((doseToConfigure.price * 0.4) * 100) / 100;
+              const valorOutros = Math.round(((doseToConfigure.price * 0.6) / outros.length) * 100) / 100;
+              totaisArredondados = produtosDose.map((p) => {
+                if (p.productId === maior.productId) return valorMaior;
+                return valorOutros;
+              });
+              // Ajuste de centavos para garantir soma exata
+              let soma = totaisArredondados.reduce((a, b) => a + b, 0);
+              let diff = Math.round((doseToConfigure.price - soma) * 100) / 100;
+              if (diff !== 0) {
+                const idx = produtosDose.findIndex(p => p.productId === maior.productId);
+                totaisArredondados[idx] += diff;
+              }
             }
-            // 5. Adicionar cada produto ao carrinho do backend
-            for (let idx = 0; idx < proporcionais.length; idx++) {
-              const p = proporcionais[idx];
+            // Adicionar cada produto ao carrinho do backend
+            for (let idx = 0; idx < produtosDose.length; idx++) {
+              const p = produtosDose[idx];
               const produtoInfo = products.find((prod: any) => prod.id === p.productId);
               const isFractioned = produtoInfo?.isFractioned;
               const precoAjustado = Math.round((totaisArredondados[idx] / p.quantidade) * 100) / 100;
