@@ -182,8 +182,6 @@ const ClientCart = () => {
   
   // Calcular subtotal e total
   useEffect(() => {
-    // Para doses, somar apenas o price de cada item (não multiplicar pela quantidade)
-    // Para os demais, multiplicar normalmente
     const calculatedSubtotal = cart.reduce((sum, item) => {
       if (item.isDose) {
         return sum + (item.price ?? item.product.price);
@@ -292,11 +290,18 @@ const ClientCart = () => {
         const nome = item.product?.name || item.productName || '';
         const quantidade = item.quantity || 1;
         const preco = (item.price ?? item.product?.price ?? 0).toFixed(2).replace('.', ',');
-        const totalItem = ((item.price ?? item.product?.price ?? 0) * quantidade).toFixed(2).replace('.', ',');
+        const totalItem = item.isDose
+          ? (item.price ?? item.product?.price ?? 0).toFixed(2).replace('.', ',')
+          : ((item.price ?? item.product?.price ?? 0) * quantidade).toFixed(2).replace('.', ',');
         return `- *${quantidade}x ${nome}* (R$ ${preco} cada) = R$ ${totalItem}`;
       }).join('\n');
 
-      const totalPedido = cart.reduce((sum, item) => sum + ((item.price ?? item.product.price) * item.quantity), 0).toFixed(2).replace('.', ',');
+      const totalPedido = cart.reduce((sum, item) => {
+        if (item.isDose) {
+          return sum + (item.price ?? item.product.price);
+        }
+        return sum + ((item.price ?? item.product.price) * item.quantity);
+      }, 0).toFixed(2).replace('.', ',');
 
       const mensagem =
         `Olá, realizei o pagamento via PIX e segue o comprovante.\n\n` +
@@ -346,10 +351,17 @@ const ClientCart = () => {
           const nome = item.product?.name || item.productName || '';
           const quantidade = item.quantity || 1;
           const preco = (item.price ?? item.product?.price ?? 0).toFixed(2).replace('.', ',');
-          const totalItem = ((item.price ?? item.product?.price ?? 0) * quantidade).toFixed(2).replace('.', ',');
+          const totalItem = item.isDose
+            ? (item.price ?? item.product?.price ?? 0).toFixed(2).replace('.', ',')
+            : ((item.price ?? item.product?.price ?? 0) * quantidade).toFixed(2).replace('.', ',');
           return `- *${quantidade}x ${nome}* (R$ ${preco} cada) = R$ ${totalItem}`;
         }).join('\n');
-        const totalPedido = cart.reduce((sum, item) => sum + ((item.price ?? item.product.price) * item.quantity), 0).toFixed(2).replace('.', ',');
+        const totalPedido = cart.reduce((sum, item) => {
+          if (item.isDose) {
+            return sum + (item.price ?? item.product.price);
+          }
+          return sum + ((item.price ?? item.product.price) * item.quantity);
+        }, 0).toFixed(2).replace('.', ',');
         const mensagem =
           `Olá, acabei de finalizar meu pedido pelo site.\n\n` +
           `Dados do pedido:\n` +
@@ -475,7 +487,7 @@ const ClientCart = () => {
                                     </div>
                                     <div className="p-4 pt-2">
                                       <ul className="text-sm text-gray-700">
-                                        {items.map(i => (
+                                        {items.map( (i: any) => (
                                           <li key={i.id} className="flex items-center gap-2 mb-1">
                                             <img src={i.product.image && !i.product.image.startsWith('http') ? API_URL + i.product.image : i.product.image} alt={i.product.name} className="w-8 h-8 object-cover rounded mr-2" />
                                             <span>{i.product.name}</span>
