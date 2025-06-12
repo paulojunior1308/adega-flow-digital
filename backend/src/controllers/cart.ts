@@ -13,6 +13,7 @@ export const cartController = {
         items: {
           include: {
             product: true,
+            combo: true,
             dose: {
               include: {
                 items: {
