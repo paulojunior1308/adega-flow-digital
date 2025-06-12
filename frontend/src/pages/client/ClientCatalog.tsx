@@ -573,14 +573,26 @@ const ClientCatalog = () => {
                 }
               }
             }
-            // Calcular preço proporcional igual ao PDV
-            const numItems = produtosDose.length;
-            const basePrice = Math.floor((doseToConfigure.price / numItems) * 100) / 100;
-            const remainder = doseToConfigure.price - (basePrice * numItems);
-            const totaisArredondados = produtosDose.map((p, idx) => idx === 0 ? basePrice + remainder : basePrice);
-            // Adicionar cada produto ao carrinho do backend
-            for (let idx = 0; idx < produtosDose.length; idx++) {
-              const p = produtosDose[idx];
+            // 1. Calcular valor proporcional bruto de cada item
+            const totalOriginal = produtosDose.reduce((sum, p) => sum + p.precoOriginal * p.quantidade, 0);
+            const proporcionais = produtosDose.map(p => ({
+              ...p,
+              valorProporcional: totalOriginal > 0 ? ((p.precoOriginal * p.quantidade) / totalOriginal) * doseToConfigure.price : doseToConfigure.price / produtosDose.length
+            }));
+            // 2. Ordenar do maior para o menor valor proporcional
+            proporcionais.sort((a, b) => b.valorProporcional - a.valorProporcional);
+            // 3. Arredondar cada valor para 2 casas decimais
+            let totaisArredondados = proporcionais.map(p => Math.round(p.valorProporcional * 100) / 100);
+            // 4. Ajustar diferença no primeiro item (maior valor)
+            let soma = totaisArredondados.reduce((a, b) => a + b, 0);
+            let diff = Math.round((doseToConfigure.price - soma) * 100) / 100;
+            if (diff !== 0) {
+              totaisArredondados[0] += diff;
+              totaisArredondados[0] = Math.round(totaisArredondados[0] * 100) / 100;
+            }
+            // 5. Adicionar cada produto ao carrinho do backend
+            for (let idx = 0; idx < proporcionais.length; idx++) {
+              const p = proporcionais[idx];
               const produtoInfo = products.find((prod: any) => prod.id === p.productId);
               const isFractioned = produtoInfo?.isFractioned;
               const precoAjustado = Math.round((totaisArredondados[idx] / p.quantidade) * 100) / 100;
