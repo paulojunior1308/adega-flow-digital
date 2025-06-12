@@ -182,6 +182,8 @@ const ClientCart = () => {
   
   // Calcular subtotal e total
   useEffect(() => {
+    // Para doses, somar apenas o price de cada item (não multiplicar pela quantidade)
+    // Para os demais, multiplicar normalmente
     const calculatedSubtotal = cart.reduce((sum, item) => {
       if (item.isDose) {
         return sum + (item.price ?? item.product.price);
