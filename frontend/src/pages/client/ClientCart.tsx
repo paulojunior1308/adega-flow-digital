@@ -453,8 +453,7 @@ const ClientCart = () => {
                             <>
                               {/* Doses agrupadas */}
                               {Object.entries(doses).map(([doseName, items]) => {
-                                // O valor da dose é a soma dos preços proporcionais dos itens (que sempre soma o valor cadastrado)
-                                const doseTotal = items.reduce((sum, i) => sum + ((i.price ?? i.product.price) * i.quantity), 0);
+                                const doseTotal = items.reduce((sum, i) => sum + ((i.price ?? i.product.price)), 0);
                                 return (
                                   <div key={doseName} className="border rounded-md mb-4 bg-gray-50">
                                     <div className="flex items-center justify-between p-4 border-b">
@@ -479,6 +478,7 @@ const ClientCart = () => {
                                             <img src={i.product.image && !i.product.image.startsWith('http') ? API_URL + i.product.image : i.product.image} alt={i.product.name} className="w-8 h-8 object-cover rounded mr-2" />
                                             <span>{i.product.name}</span>
                                             <span className="ml-auto">{i.quantity} {i.product.isFractioned ? 'ml' : 'un'}</span>
+                                            <span className="ml-4 font-bold text-element-blue-dark">R$ {(i.price ?? i.product.price).toFixed(2)}</span>
                                           </li>
                                         ))}
                                       </ul>
@@ -510,25 +510,28 @@ const ClientCart = () => {
                                         )}
                                     </div>
                                       <div className="flex items-center space-x-2">
-                                      <div className="flex items-center border rounded-md">
-                                        <Button 
-                                          variant="ghost" 
-                                          size="icon" 
-                                          className="h-8 w-8"
-                                          onClick={() => decrementQuantity(item.id)}
-                                        >
-                                          <Minus className="h-4 w-4" />
-                                        </Button>
-                                        <span className="w-8 text-center">{item.quantity}</span>
-                                        <Button 
-                                          variant="ghost" 
-                                          size="icon" 
-                                          className="h-8 w-8"
-                                          onClick={() => incrementQuantity(item.id)}
-                                        >
-                                          <Plus className="h-4 w-4" />
-                                        </Button>
-                                      </div>
+                                      {/* Controles de quantidade só para não-dose */}
+                                      {!item.isDose && (
+                                        <div className="flex items-center border rounded-md">
+                                          <Button 
+                                            variant="ghost" 
+                                            size="icon" 
+                                            className="h-8 w-8"
+                                            onClick={() => decrementQuantity(item.id)}
+                                          >
+                                            <Minus className="h-4 w-4" />
+                                          </Button>
+                                          <span className="w-8 text-center">{item.quantity}</span>
+                                          <Button 
+                                            variant="ghost" 
+                                            size="icon" 
+                                            className="h-8 w-8"
+                                            onClick={() => incrementQuantity(item.id)}
+                                          >
+                                            <Plus className="h-4 w-4" />
+                                          </Button>
+                                        </div>
+                                      )}
                                       <Button 
                                         variant="ghost" 
                                         size="sm"
