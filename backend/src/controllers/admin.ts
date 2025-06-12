@@ -326,7 +326,7 @@ export const adminController = {
         unitVolume: produto.unitVolume,
         itemQuantity: item.quantity,
         itemProductId: item.productId
-      });
+        });
       if (produto.isFractioned) {
         const unitVolume = produto.unitVolume || 1;
         const volumeNecessario = item.quantity;
@@ -455,14 +455,14 @@ export const adminController = {
             });
           }
         } else {
-          const quantidadeFinal = (produto?.stock || 0) - item.quantity;
-          if (quantidadeFinal < 0) {
-            return res.status(400).json({ error: `Estoque insuficiente para o produto: ${produto?.name}` });
-          }
-          await prisma.product.update({
-            where: { id: item.productId },
-            data: { stock: { decrement: item.quantity } }
-          });
+        const quantidadeFinal = (produto?.stock || 0) - item.quantity;
+        if (quantidadeFinal < 0) {
+          return res.status(400).json({ error: `Estoque insuficiente para o produto: ${produto?.name}` });
+        }
+        await prisma.product.update({
+          where: { id: item.productId },
+          data: { stock: { decrement: item.quantity } }
+        });
         }
       }
     }

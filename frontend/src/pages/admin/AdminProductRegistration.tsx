@@ -72,7 +72,7 @@ const AdminProductRegistration = () => {
   
   // Novo estado para volume total
   const [calculatedTotalVolume, setCalculatedTotalVolume] = useState<string>('');
-
+  
   const form = useForm<ProductFormValues>({
     defaultValues: {
       name: "",

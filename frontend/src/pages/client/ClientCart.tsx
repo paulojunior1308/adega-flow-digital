@@ -61,6 +61,7 @@ interface Product {
   price: number;
   image: string;
   description: string;
+  isFractioned: boolean;
 }
 
 interface CartItem {
@@ -70,6 +71,7 @@ interface CartItem {
   price?: number;
   isDose?: boolean;
   doseName?: string;
+  sellingByVolume?: boolean;
 }
 
 interface Address {
@@ -186,6 +188,11 @@ const ClientCart = () => {
       if (item.isDose) {
         return sum + (item.price ?? item.product.price);
       }
+      // Se for produto fracionado vendido por volume
+      if (item.product.isFractioned && item.sellingByVolume) {
+        return sum + (item.price ?? item.product.price) * item.quantity;
+      }
+      // Se for produto fracionado vendido por unidade ou produto normal
       return sum + ((item.price ?? item.product.price) * item.quantity);
     }, 0);
     setSubtotal(calculatedSubtotal);
@@ -221,7 +228,13 @@ const ClientCart = () => {
   const incrementQuantity = async (itemId: number) => {
     const item = cart.find(item => item.id === itemId);
     if (item) {
-      await api.put(`/cart/${item.id}`, { quantity: item.quantity + 1 });
+      const isFractioned = item.product.isFractioned;
+      const sellingByVolume = isFractioned && item.quantity > 0;
+      
+      await api.put(`/cart/${item.id}`, { 
+        quantity: item.quantity + 1,
+        sellingByVolume
+      });
       const res = await api.get('/cart');
       setCart(res.data?.items || []);
     }
@@ -231,14 +244,20 @@ const ClientCart = () => {
   const decrementQuantity = async (itemId: number) => {
     const item = cart.find(item => item.id === itemId);
     if (item && item.quantity > 1) {
-      await api.put(`/cart/${item.id}`, { quantity: item.quantity - 1 });
+      const isFractioned = item.product.isFractioned;
+      const sellingByVolume = isFractioned && item.quantity > 1;
+      
+      await api.put(`/cart/${item.id}`, { 
+        quantity: item.quantity - 1,
+        sellingByVolume
+      });
       const res = await api.get('/cart');
       setCart(res.data?.items || []);
-    toast({
-      title: "Item removido",
-      description: "Produto removido do carrinho",
-      duration: 2000,
-    });
+      toast({
+        title: "Item removido",
+        description: "Produto removido do carrinho",
+        duration: 2000,
+      });
     }
   };
 
