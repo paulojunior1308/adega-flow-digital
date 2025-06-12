@@ -595,7 +595,7 @@ const ClientCatalog = () => {
                   name: `Dose de ${doseToConfigure.name} - ${d.nome}`,
                   isDose: true,
                   doseName: doseToConfigure.name,
-                  ...(isFractioned ? { sellingByVolume: true } : {})
+                  ...(isFractioned ? { sellingByVolume: true, fractionedVolume: d.quantidade } : {})
                 });
               } catch (err) {
                 console.error('[CLIENTE-CATALOGO] Erro ao adicionar ao carrinho:', err);

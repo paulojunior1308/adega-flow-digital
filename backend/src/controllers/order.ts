@@ -216,11 +216,20 @@ export const orderController = {
       if (order.items && Array.isArray(order.items)) {
         for (const item of order.items) {
           if (item.productId) {
-            // Produto normal
-            await prisma.product.update({
-              where: { id: item.productId },
-              data: { stock: { decrement: item.quantity } }
-            });
+            const produto = await prisma.product.findUnique({ where: { id: item.productId } });
+            if (produto?.isFractioned && item.fractionedVolume) {
+              // Produto fracionado: descontar do totalVolume
+              await prisma.product.update({
+                where: { id: item.productId },
+                data: { totalVolume: { decrement: item.fractionedVolume } }
+              });
+            } else {
+              // Produto normal: descontar do stock
+              await prisma.product.update({
+                where: { id: item.productId },
+                data: { stock: { decrement: item.quantity } }
+              });
+            }
           }
         }
       }
