@@ -72,6 +72,7 @@ interface CartItem {
   isDose?: boolean;
   doseName?: string;
   sellingByVolume?: boolean;
+  isCombo?: boolean;
 }
 
 interface Address {
@@ -185,12 +186,13 @@ const ClientCart = () => {
   // Calcular subtotal e total
   useEffect(() => {
     const calculatedSubtotal = cart.reduce((sum, item) => {
-      if (item.isDose) {
+      if (item.isDose || item.isCombo) {
+        // Para doses/combos, usa apenas o preço balanceado
         return sum + (item.price ?? item.product.price);
       }
       // Se for produto fracionado vendido por volume
       if (item.product.isFractioned && item.sellingByVolume) {
-        return sum + (item.price ?? item.product.price) * item.quantity;
+        return sum + (item.price ?? item.product.price);
       }
       // Se for produto fracionado vendido por unidade ou produto normal
       return sum + ((item.price ?? item.product.price) * item.quantity);
@@ -338,14 +340,24 @@ const ClientCart = () => {
 
   const sendOrder = async () => {
     try {
-      const payload = {
+      const orderData = {
+        items: cart.map(item => ({
+          productId: item.product.id,
+          quantity: item.quantity,
+          price: item.price ?? item.product.price,
+          isDose: item.isDose || false,
+          isCombo: item.isCombo || false,
+          sellingByVolume: item.product.isFractioned && (item.sellingByVolume || item.isDose || item.isCombo)
+        })),
         addressId: selectedAddress,
         paymentMethodId: paymentMethod,
-        instructions,
-        discountCode: discountCode || undefined
+        ...(changeAmount ? { changeAmount: parseFloat(changeAmount) } : {}),
+        ...(instructions ? { instructions } : {}),
+        ...(discount > 0 ? { discount } : {})
       };
-      const res = await api.post('/orders', payload);
-      const { id: orderId, items, total } = res.data;
+
+      const response = await api.post('/orders', orderData);
+      const { id: orderId, items, total } = response.data;
       setCurrentOrderId(orderId);
       setOrderStatus({
         status: "pending",
@@ -533,14 +545,20 @@ const ClientCart = () => {
                                       <h3 className="font-medium mb-1">{item.product.name}</h3>
                                       <p className="text-sm text-gray-500 mb-3">{item.product.description}</p>
                                       <p className="font-bold text-element-blue-dark">
-                                          R$ {(item.isDose ? (item.price ?? item.product.price) : (item.price ?? item.product.price) * item.quantity).toFixed(2)}
+                                        R$ {(
+                                          item.isDose || item.isCombo || (item.product.isFractioned && item.sellingByVolume)
+                                            ? (item.price ?? item.product.price)
+                                            : (item.price ?? item.product.price) * item.quantity
+                                        ).toFixed(2)}
+                                      </p>
+                                      {descontoCombo && descontoCombo.desconto > 0 && (
+                                        <p className="text-xs text-green-700 mt-1">
+                                          <span className="line-through text-red-500 mr-1">
+                                            R$ {descontoCombo.precoOriginal.toFixed(2)}
+                                          </span>
+                                          <span>Desconto combo: -R$ {descontoCombo.desconto.toFixed(2)}</span>
                                         </p>
-                                        {descontoCombo && descontoCombo.desconto > 0 && (
-                                          <p className="text-xs text-green-700 mt-1">
-                                            <span className="line-through text-red-500 mr-1">R$ {descontoCombo.precoOriginal.toFixed(2)}</span>
-                                            <span>Desconto combo: -R$ {descontoCombo.desconto.toFixed(2)}</span>
-                                          </p>
-                                        )}
+                                      )}
                                     </div>
                                       <div className="flex items-center space-x-2">
                                       {/* Controles de quantidade só para não-dose */}
