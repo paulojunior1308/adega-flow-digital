@@ -590,8 +590,8 @@ const ClientCatalog = () => {
               try {
                 await api.post('/cart', {
                   productId: d.productId,
-                  quantity: 1, // Sempre 1 para doses!
-                  price: d.precoAjustado,
+                  quantity: d.quantidade, // em ml para fracionados!
+                  price: d.precoAjustado, // já proporcional, soma igual ao preço da dose
                   name: `Dose de ${doseToConfigure.name} - ${d.nome}`,
                   isDose: true,
                   doseName: doseToConfigure.name,
