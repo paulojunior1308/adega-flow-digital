@@ -61,6 +61,7 @@ interface Product {
   price: number;
   image: string;
   description: string;
+  isFractioned?: boolean;
 }
 
 interface CartItem {
@@ -323,7 +324,18 @@ const ClientCart = () => {
         addressId: selectedAddress,
         paymentMethodId: paymentMethod,
         instructions,
-        discountCode: discountCode || undefined
+        discountCode: discountCode || undefined,
+        items: cart.map(item => {
+          const isFractioned = item.product?.isFractioned;
+          return {
+            productId: item.product.id,
+            quantity: isFractioned ? item.quantity : item.quantity, // Para fracionados, quantity já é ml
+            price: item.price ?? item.product.price,
+            name: item.product.name,
+            isDose: item.isDose,
+            doseName: item.doseName
+          };
+        })
       };
       const res = await api.post('/orders', payload);
       const { id: orderId, items, total } = res.data;
