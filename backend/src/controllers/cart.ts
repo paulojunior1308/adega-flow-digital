@@ -129,33 +129,60 @@ export const cartController = {
     const totalQuantity = (existing?.quantity || 0) + quantity;
     // Ajuste para produtos fracionáveis: comparar/descontar em ml
     if (product.isFractioned) {
+      const soldVolume = quantity; // Aqui quantity já representa o volume em ml
       if (totalQuantity > (product.totalVolume || 0)) {
         throw new AppError(`Estoque insuficiente. Só temos ${product.totalVolume} ml de ${product.name}.`, 400);
+      }
+      if (existing) {
+        const updated = await prisma.cartItem.update({
+          where: { id: existing.id },
+          data: { 
+            quantity: totalQuantity,
+            soldVolume: (existing.soldVolume || 0) + soldVolume
+          },
+          include: { product: true },
+        });
+        console.log(`[CARRINHO] Produto fracionado atualizado:`, updated);
+        return res.status(201).json(updated);
+      } else {
+        const item = await prisma.cartItem.create({
+          data: {
+            cartId: cart.id,
+            productId,
+            quantity,
+            soldVolume,
+            comboId: null,
+            ...(price !== undefined ? { price } : {}),
+          },
+          include: { product: true },
+        });
+        console.log(`[CARRINHO] Produto fracionado adicionado:`, item);
+        return res.status(201).json(item);
       }
     } else {
       if (totalQuantity > product.stock) {
         throw new AppError(`Estoque insuficiente. Só temos ${product.stock} unidade(s) de ${product.name}.`, 400);
       }
-    }
-    if (existing) {
-      const updated = await prisma.cartItem.update({
-        where: { id: existing.id },
-        data: { quantity: totalQuantity },
-        include: { product: true },
-      });
-      return res.status(201).json(updated);
-    } else {
-      const item = await prisma.cartItem.create({
-        data: {
-          cartId: cart.id,
-          productId,
-          quantity,
-          comboId: null,
-          ...(price !== undefined ? { price } : {}),
-        },
-        include: { product: true },
-      });
-      return res.status(201).json(item);
+      if (existing) {
+        const updated = await prisma.cartItem.update({
+          where: { id: existing.id },
+          data: { quantity: totalQuantity },
+          include: { product: true },
+        });
+        return res.status(201).json(updated);
+      } else {
+        const item = await prisma.cartItem.create({
+          data: {
+            cartId: cart.id,
+            productId,
+            quantity,
+            comboId: null,
+            ...(price !== undefined ? { price } : {}),
+          },
+          include: { product: true },
+        });
+        return res.status(201).json(item);
+      }
     }
   },
 
