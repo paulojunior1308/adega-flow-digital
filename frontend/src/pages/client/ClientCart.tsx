@@ -61,7 +61,6 @@ interface Product {
   price: number;
   image: string;
   description: string;
-  isFractioned: boolean;
 }
 
 interface CartItem {
@@ -71,8 +70,6 @@ interface CartItem {
   price?: number;
   isDose?: boolean;
   doseName?: string;
-  sellingByVolume?: boolean;
-  isCombo?: boolean;
 }
 
 interface Address {
@@ -186,15 +183,9 @@ const ClientCart = () => {
   // Calcular subtotal e total
   useEffect(() => {
     const calculatedSubtotal = cart.reduce((sum, item) => {
-      if (item.isDose || item.isCombo) {
-        // Para doses/combos, usa apenas o preço balanceado
+      if (item.isDose) {
         return sum + (item.price ?? item.product.price);
       }
-      // Se for produto fracionado vendido por volume
-      if (item.product.isFractioned && item.sellingByVolume) {
-        return sum + (item.price ?? item.product.price);
-      }
-      // Se for produto fracionado vendido por unidade ou produto normal
       return sum + ((item.price ?? item.product.price) * item.quantity);
     }, 0);
     setSubtotal(calculatedSubtotal);
@@ -230,13 +221,7 @@ const ClientCart = () => {
   const incrementQuantity = async (itemId: number) => {
     const item = cart.find(item => item.id === itemId);
     if (item) {
-      const isFractioned = item.product.isFractioned;
-      const sellingByVolume = isFractioned && item.quantity > 0;
-      
-      await api.put(`/cart/${item.id}`, { 
-        quantity: item.quantity + 1,
-        sellingByVolume
-      });
+      await api.put(`/cart/${item.id}`, { quantity: item.quantity + 1 });
       const res = await api.get('/cart');
       setCart(res.data?.items || []);
     }
@@ -246,20 +231,14 @@ const ClientCart = () => {
   const decrementQuantity = async (itemId: number) => {
     const item = cart.find(item => item.id === itemId);
     if (item && item.quantity > 1) {
-      const isFractioned = item.product.isFractioned;
-      const sellingByVolume = isFractioned && item.quantity > 1;
-      
-      await api.put(`/cart/${item.id}`, { 
-        quantity: item.quantity - 1,
-        sellingByVolume
-      });
+      await api.put(`/cart/${item.id}`, { quantity: item.quantity - 1 });
       const res = await api.get('/cart');
       setCart(res.data?.items || []);
-      toast({
-        title: "Item removido",
-        description: "Produto removido do carrinho",
-        duration: 2000,
-      });
+    toast({
+      title: "Item removido",
+      description: "Produto removido do carrinho",
+      duration: 2000,
+    });
     }
   };
 
@@ -311,18 +290,11 @@ const ClientCart = () => {
         const nome = item.product?.name || item.productName || '';
         const quantidade = item.quantity || 1;
         const preco = (item.price ?? item.product?.price ?? 0).toFixed(2).replace('.', ',');
-        const totalItem = item.isDose
-          ? (item.price ?? item.product?.price ?? 0).toFixed(2).replace('.', ',')
-          : ((item.price ?? item.product?.price ?? 0) * quantidade).toFixed(2).replace('.', ',');
+        const totalItem = ((item.price ?? item.product?.price ?? 0) * quantidade).toFixed(2).replace('.', ',');
         return `- *${quantidade}x ${nome}* (R$ ${preco} cada) = R$ ${totalItem}`;
       }).join('\n');
 
-      const totalPedido = cart.reduce((sum, item) => {
-        if (item.isDose) {
-          return sum + (item.price ?? item.product.price);
-        }
-        return sum + ((item.price ?? item.product.price) * item.quantity);
-      }, 0).toFixed(2).replace('.', ',');
+      const totalPedido = cart.reduce((sum, item) => sum + ((item.price ?? item.product.price) * item.quantity), 0).toFixed(2).replace('.', ',');
 
       const mensagem =
         `Olá, realizei o pagamento via PIX e segue o comprovante.\n\n` +
@@ -340,24 +312,14 @@ const ClientCart = () => {
 
   const sendOrder = async () => {
     try {
-      const orderData = {
-        items: cart.map(item => ({
-          productId: item.product.id,
-          quantity: item.quantity,
-          price: item.price ?? item.product.price,
-          isDose: item.isDose || false,
-          isCombo: item.isCombo || false,
-          sellingByVolume: item.product.isFractioned && (item.sellingByVolume || item.isDose || item.isCombo)
-        })),
+      const payload = {
         addressId: selectedAddress,
         paymentMethodId: paymentMethod,
-        ...(changeAmount ? { changeAmount: parseFloat(changeAmount) } : {}),
-        ...(instructions ? { instructions } : {}),
-        ...(discount > 0 ? { discount } : {})
+        instructions,
+        discountCode: discountCode || undefined
       };
-
-      const response = await api.post('/orders', orderData);
-      const { id: orderId, items, total } = response.data;
+      const res = await api.post('/orders', payload);
+      const { id: orderId, items, total } = res.data;
       setCurrentOrderId(orderId);
       setOrderStatus({
         status: "pending",
@@ -382,17 +344,10 @@ const ClientCart = () => {
           const nome = item.product?.name || item.productName || '';
           const quantidade = item.quantity || 1;
           const preco = (item.price ?? item.product?.price ?? 0).toFixed(2).replace('.', ',');
-          const totalItem = item.isDose
-            ? (item.price ?? item.product?.price ?? 0).toFixed(2).replace('.', ',')
-            : ((item.price ?? item.product?.price ?? 0) * quantidade).toFixed(2).replace('.', ',');
+          const totalItem = ((item.price ?? item.product?.price ?? 0) * quantidade).toFixed(2).replace('.', ',');
           return `- *${quantidade}x ${nome}* (R$ ${preco} cada) = R$ ${totalItem}`;
         }).join('\n');
-        const totalPedido = cart.reduce((sum, item) => {
-          if (item.isDose) {
-            return sum + (item.price ?? item.product.price);
-          }
-          return sum + ((item.price ?? item.product.price) * item.quantity);
-        }, 0).toFixed(2).replace('.', ',');
+        const totalPedido = cart.reduce((sum, item) => sum + ((item.price ?? item.product.price) * item.quantity), 0).toFixed(2).replace('.', ',');
         const mensagem =
           `Olá, acabei de finalizar meu pedido pelo site.\n\n` +
           `Dados do pedido:\n` +
@@ -451,9 +406,9 @@ const ClientCart = () => {
     const doses: Record<string, any> = {};
     const outros: any[] = [];
     for (const item of cart) {
-      if (item.isDose && item.doseName) {
-        if (!doses[item.doseName]) doses[item.doseName] = [];
-        doses[item.doseName].push(item);
+      if (item.dose) {
+        if (!doses[item.dose.id]) doses[item.dose.id] = [];
+        doses[item.dose.id].push(item);
       } else {
         outros.push(item);
       }
@@ -497,17 +452,19 @@ const ClientCart = () => {
                           return (
                             <>
                               {/* Doses agrupadas */}
-                              {Object.entries(doses).map(([doseName, items]) => {
+                              {Object.entries(doses).map(([doseId, items]) => {
+                                const doseInfo = items[0]?.dose;
+                                if (!doseInfo) return null;
                                 const doseTotal = items.reduce((sum, i) => sum + ((i.price ?? i.product.price)), 0);
                                 return (
-                                  <div key={doseName} className="border rounded-md mb-4 bg-gray-50">
+                                  <div key={doseId} className="border rounded-md mb-4 bg-gray-50">
                                     <div className="flex items-center justify-between p-4 border-b">
                                       <div>
-                                        <h3 className="font-bold text-element-blue-dark">{doseName}</h3>
+                                        <h3 className="font-bold text-element-blue-dark">{doseInfo.name}</h3>
                                         <span className="text-xs text-gray-500">Dose personalizada</span>
                                       </div>
                                       <div className="flex items-center gap-2">
-                                        <span className="font-bold text-lg text-element-blue-dark">R$ {doseTotal.toFixed(2)}</span>
+                                        <span className="font-bold text-lg text-element-blue-dark">R$ {doseInfo.price.toFixed(2)}</span>
                                         <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700 hover:bg-red-50" onClick={() => {
                                           // Remove todos os itens da dose
                                           items.forEach(i => removeFromCart(i.id));
@@ -518,12 +475,11 @@ const ClientCart = () => {
                                     </div>
                                     <div className="p-4 pt-2">
                                       <ul className="text-sm text-gray-700">
-                                        {items.map( (i: any) => (
-                                          <li key={i.id} className="flex items-center gap-2 mb-1">
-                                            <img src={i.product.image && !i.product.image.startsWith('http') ? API_URL + i.product.image : i.product.image} alt={i.product.name} className="w-8 h-8 object-cover rounded mr-2" />
-                                            <span>{i.product.name}</span>
-                                            <span className="ml-auto">{i.quantity} {i.product.isFractioned ? 'ml' : 'un'}</span>
-                                            <span className="ml-4 font-bold text-element-blue-dark">R$ {(i.price ?? i.product.price).toFixed(2)}</span>
+                                        {doseInfo.items.map((doseItem: any, idx: number) => (
+                                          <li key={doseItem.productId + '-' + idx} className="flex items-center gap-2 mb-1">
+                                            <img src={doseItem.product.image && !doseItem.product.image.startsWith('http') ? API_URL + doseItem.product.image : doseItem.product.image} alt={doseItem.product.name} className="w-8 h-8 object-cover rounded mr-2" />
+                                            <span>{doseItem.product.name}</span>
+                                            <span className="ml-auto">{doseItem.quantity} {doseItem.discountBy === 'volume' || (doseItem.product.isFractioned) ? 'ml' : 'un'}</span>
                                           </li>
                                         ))}
                                       </ul>
@@ -545,20 +501,14 @@ const ClientCart = () => {
                                       <h3 className="font-medium mb-1">{item.product.name}</h3>
                                       <p className="text-sm text-gray-500 mb-3">{item.product.description}</p>
                                       <p className="font-bold text-element-blue-dark">
-                                        R$ {(
-                                          item.isDose || item.isCombo || (item.product.isFractioned && item.sellingByVolume)
-                                            ? (item.price ?? item.product.price)
-                                            : (item.price ?? item.product.price) * item.quantity
-                                        ).toFixed(2)}
-                                      </p>
-                                      {descontoCombo && descontoCombo.desconto > 0 && (
-                                        <p className="text-xs text-green-700 mt-1">
-                                          <span className="line-through text-red-500 mr-1">
-                                            R$ {descontoCombo.precoOriginal.toFixed(2)}
-                                          </span>
-                                          <span>Desconto combo: -R$ {descontoCombo.desconto.toFixed(2)}</span>
+                                          R$ {(item.isDose ? (item.price ?? item.product.price) : (item.price ?? item.product.price) * item.quantity).toFixed(2)}
                                         </p>
-                                      )}
+                                        {descontoCombo && descontoCombo.desconto > 0 && (
+                                          <p className="text-xs text-green-700 mt-1">
+                                            <span className="line-through text-red-500 mr-1">R$ {descontoCombo.precoOriginal.toFixed(2)}</span>
+                                            <span>Desconto combo: -R$ {descontoCombo.desconto.toFixed(2)}</span>
+                                          </p>
+                                        )}
                                     </div>
                                       <div className="flex items-center space-x-2">
                                       {/* Controles de quantidade só para não-dose */}

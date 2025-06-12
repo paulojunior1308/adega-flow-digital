@@ -13,6 +13,15 @@ export const cartController = {
         items: {
           include: {
             product: true,
+            dose: {
+              include: {
+                items: {
+                  include: {
+                    product: true
+                  }
+                }
+              }
+            }
           },
         },
       },
@@ -28,12 +37,51 @@ export const cartController = {
   addItem: async (req: Request, res: Response) => {
     // @ts-ignore
     const userId = req.user.id;
-    let { productId, comboId, quantity, price, soldVolume } = req.body;
-    console.log('[BACKEND-CART] Payload recebido em /cart:', req.body);
+    let { productId, comboId, doseId, quantity, price, choosableSelections } = req.body;
     quantity = quantity || 1;
     let cart = await prisma.cart.findUnique({ where: { userId } });
     if (!cart) {
       cart = await prisma.cart.create({ data: { userId } });
+    }
+    // NOVO: Adicionar dose ao carrinho
+    if (doseId) {
+      // Buscar dose
+      const dose = await prisma.dose.findUnique({
+        where: { id: doseId },
+        include: { items: { include: { product: true } } }
+      });
+      if (!dose) {
+        throw new AppError('Dose não encontrada', 404);
+      }
+      // Verificar se já existe essa dose no carrinho (mesmo doseId e mesmas escolhas, se houver)
+      // Para simplificar, não agrupa doses com escolhas diferentes
+      const existing = await prisma.cartItem.findFirst({
+        where: { cartId: cart.id, doseId },
+      });
+      if (existing) {
+        // Atualiza quantidade
+        const updated = await prisma.cartItem.update({
+          where: { id: existing.id },
+          data: { quantity: existing.quantity + quantity },
+          include: { product: true, dose: { include: { items: { include: { product: true } } } } },
+        });
+        return res.status(201).json(updated);
+      } else {
+        // Cria item de dose no carrinho
+        const item = await prisma.cartItem.create({
+          data: {
+            cartId: cart.id,
+            productId: dose.items[0]?.productId || '', // Só para não ser nulo, mas não é usado
+            quantity,
+            doseId,
+            // Salvar escolhas do cliente se houver (pode ser serializado em um campo extra futuramente)
+            // choosableSelections: JSON.stringify(choosableSelections) // se quiser persistir
+            ...(price !== undefined ? { price } : {}),
+          },
+          include: { product: true, dose: { include: { items: { include: { product: true } } } } },
+        });
+        return res.status(201).json(item);
+      }
     }
     if (comboId) {
       // Adiciona todos os produtos do combo ao carrinho
@@ -130,60 +178,33 @@ export const cartController = {
     const totalQuantity = (existing?.quantity || 0) + quantity;
     // Ajuste para produtos fracionáveis: comparar/descontar em ml
     if (product.isFractioned) {
-      const soldVolumeFinal = soldVolume || quantity;
       if (totalQuantity > (product.totalVolume || 0)) {
         throw new AppError(`Estoque insuficiente. Só temos ${product.totalVolume} ml de ${product.name}.`, 400);
-      }
-      if (existing) {
-        const updated = await prisma.cartItem.update({
-          where: { id: existing.id },
-          data: { 
-            quantity: totalQuantity,
-            soldVolume: (existing.soldVolume || 0) + soldVolumeFinal
-          },
-          include: { product: true },
-        });
-        console.log(`[CARRINHO] Produto fracionado atualizado:`, updated);
-        return res.status(201).json(updated);
-      } else {
-        const item = await prisma.cartItem.create({
-          data: {
-            cartId: cart.id,
-            productId,
-            quantity,
-            soldVolume: soldVolumeFinal,
-            comboId: null,
-            ...(price !== undefined ? { price } : {}),
-          },
-          include: { product: true },
-        });
-        console.log(`[CARRINHO] Produto fracionado adicionado:`, item);
-        return res.status(201).json(item);
       }
     } else {
       if (totalQuantity > product.stock) {
         throw new AppError(`Estoque insuficiente. Só temos ${product.stock} unidade(s) de ${product.name}.`, 400);
       }
-      if (existing) {
-        const updated = await prisma.cartItem.update({
-          where: { id: existing.id },
-          data: { quantity: totalQuantity },
-          include: { product: true },
-        });
-        return res.status(201).json(updated);
-      } else {
-        const item = await prisma.cartItem.create({
-          data: {
-            cartId: cart.id,
-            productId,
-            quantity,
-            comboId: null,
-            ...(price !== undefined ? { price } : {}),
-          },
-          include: { product: true },
-        });
-        return res.status(201).json(item);
-      }
+    }
+    if (existing) {
+      const updated = await prisma.cartItem.update({
+        where: { id: existing.id },
+        data: { quantity: totalQuantity },
+        include: { product: true },
+      });
+      return res.status(201).json(updated);
+    } else {
+      const item = await prisma.cartItem.create({
+        data: {
+          cartId: cart.id,
+          productId,
+          quantity,
+          comboId: null,
+          ...(price !== undefined ? { price } : {}),
+        },
+        include: { product: true },
+      });
+      return res.status(201).json(item);
     }
   },
 

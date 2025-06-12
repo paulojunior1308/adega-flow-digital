@@ -97,12 +97,7 @@ export const orderController = {
     }
 
     // Calcula total usando o preço ajustado do cartItem
-    const totalProdutos = cart.items.reduce((sum: number, item: any) => {
-      if (item.product.isFractioned) {
-        return sum + (item.price ?? item.product.price);
-      }
-      return sum + ((item.price ?? item.product.price) * item.quantity);
-    }, 0);
+    const totalProdutos = cart.items.reduce((sum: number, item: any) => sum + (item.price ?? item.product.price) * item.quantity, 0);
     const total = totalProdutos + deliveryFee;
 
     // Cria o pedido
@@ -123,7 +118,6 @@ export const orderController = {
             productId: item.productId,
             quantity: item.quantity,
             price: item.price ?? item.product.price,
-            soldVolume: item.soldVolume ?? (item.product.isFractioned ? item.quantity : null),
           })),
         },
       } as any,
@@ -143,7 +137,6 @@ export const orderController = {
         }
       },
     });
-    console.log('[PEDIDO] Pedido criado com soldVolume nos itens:', order.items);
 
     // Limpa o carrinho
     await prisma.cartItem.deleteMany({ where: { cartId: cart.id } });
@@ -216,39 +209,18 @@ export const orderController = {
     const order = await prisma.order.update({
       where: { id },
       data: { status: statusEnum as OrderStatus },
-      include: { items: true, address: true },
+      include: { items: { include: { product: true } }, address: true },
     });
     // Subtrair estoque se status for DELIVERED
     if (statusEnum === 'DELIVERED') {
       if (order.items && Array.isArray(order.items)) {
         for (const item of order.items) {
           if (item.productId) {
-            const produto = await prisma.product.findUnique({ where: { id: item.productId } });
-            if (produto?.isFractioned && (item as any).soldVolume) {
-              // Produto fracionado: descontar do totalVolume
-              console.log(`[ESTOQUE] Descontando soldVolume do produto fracionado:`, {
-                produtoId: item.productId,
-                nome: produto.name,
-                soldVolume: (item as any).soldVolume,
-                totalVolumeAntes: produto.totalVolume
-              });
-              await prisma.product.update({
-                where: { id: item.productId },
-                data: { totalVolume: { decrement: (item as any).soldVolume } }
-              });
-            } else {
-              // Produto normal: descontar do stock
-              console.log(`[ESTOQUE] Descontando quantidade do produto normal:`, {
-                produtoId: item.productId,
-                nome: produto?.name,
-                quantity: item.quantity,
-                stockAntes: produto?.stock
-              });
-              await prisma.product.update({
-                where: { id: item.productId },
-                data: { stock: { decrement: item.quantity } }
-              });
-            }
+            // Produto normal
+            await prisma.product.update({
+              where: { id: item.productId },
+              data: { stock: { decrement: item.quantity } }
+            });
           }
         }
       }
