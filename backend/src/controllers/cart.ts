@@ -28,7 +28,8 @@ export const cartController = {
   addItem: async (req: Request, res: Response) => {
     // @ts-ignore
     const userId = req.user.id;
-    let { productId, comboId, quantity, price } = req.body;
+    let { productId, comboId, quantity, price, soldVolume } = req.body;
+    console.log('[BACKEND-CART] Payload recebido em /cart:', req.body);
     quantity = quantity || 1;
     let cart = await prisma.cart.findUnique({ where: { userId } });
     if (!cart) {

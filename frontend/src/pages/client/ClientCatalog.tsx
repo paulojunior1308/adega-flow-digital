@@ -588,7 +588,7 @@ const ClientCatalog = () => {
               const produtoInfo = products.find((prod: any) => prod.id === d.productId);
               const isFractioned = produtoInfo?.isFractioned;
               try {
-                await api.post('/cart', {
+                const payload = {
                   productId: d.productId,
                   quantity: d.quantidade, // em ml para fracionados!
                   price: d.precoAjustado, // já proporcional, soma igual ao preço da dose
@@ -596,7 +596,9 @@ const ClientCatalog = () => {
                   isDose: true,
                   doseName: doseToConfigure.name,
                   ...(isFractioned ? { soldVolume: d.quantidade } : {})
-                });
+                };
+                console.log('[CLIENTE-CATALOGO] Enviando payload para /cart:', payload);
+                await api.post('/cart', payload);
               } catch (err) {
                 console.error('[CLIENTE-CATALOGO] Erro ao adicionar ao carrinho:', err);
                 // Se o backend não aceitar name/isDose/doseName, ignore o erro
