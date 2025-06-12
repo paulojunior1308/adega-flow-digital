@@ -505,7 +505,7 @@ const ClientCart = () => {
                               {Object.entries(combos).map(([comboId, items]) => {
                                 const comboInfo = items[0]?.combo || items[0]?.product; // fallback para product
                                 const comboName = comboInfo?.name || 'Combo';
-                                const comboPrice = items.reduce((sum, i) => sum + ((i.price ?? i.product.price) * i.quantity), 0);
+                                const comboPrice = items[0]?.combo?.price || items[0]?.product?.comboPrice || items[0]?.priceCombo || items[0]?.price || items.reduce((sum, i) => sum + ((i.price ?? i.product.price) * i.quantity), 0);
                                 return (
                                   <div key={comboId} className="border rounded-md mb-4 bg-gray-50">
                                     <div className="flex items-center justify-between p-4 border-b">
