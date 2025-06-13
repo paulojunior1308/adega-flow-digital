@@ -261,37 +261,98 @@ export const orderController = {
                 // Buscar produto para saber se é fracionado
                 const produto = await prisma.product.findUnique({ where: { id: productId } });
                 if (produto?.isFractioned) {
-                  const novoVolume = (produto.totalVolume || 0) - quantidadeFinal;
-                  console.log(`[DESCONTO ESTOQUE][DOSE] Descontando ${quantidadeFinal}ml do produto fracionado ${produto.name}`);
-                  await prisma.product.update({
-                    where: { id: productId },
-                    data: { totalVolume: novoVolume }
-                  });
+                  if (doseItem.discountBy === 'unit') {
+                    const unitVolume = produto.unitVolume || 1;
+                    const novoVolume = (produto.totalVolume || 0) - (unitVolume * quantidadeFinal);
+                    const novoEstoque = (produto.stock || 0) - quantidadeFinal;
+                    if (novoVolume < 0 || novoEstoque < 0) {
+                      return res.status(400).json({ error: `Estoque insuficiente para o produto: ${produto.name}` });
+                    }
+                    await prisma.product.update({
+                      where: { id: productId },
+                      data: {
+                        stock: novoEstoque,
+                        totalVolume: novoVolume
+                      }
+                    });
+                  } else if (doseItem.discountBy === 'volume') {
+                    const novoVolume = (produto.totalVolume || 0) - (doseItem.quantity * quantidadeFinal);
+                    const unitVolume = produto.unitVolume || 1;
+                    const novoStock = Math.floor(novoVolume / unitVolume);
+                    if (novoVolume < 0) {
+                      return res.status(400).json({ error: `Estoque insuficiente (volume) para o produto: ${produto.name}` });
+                    }
+                    await prisma.product.update({
+                      where: { id: productId },
+                      data: {
+                        totalVolume: novoVolume,
+                        stock: novoStock
+                      }
+                    });
+                  }
                 } else {
-                  console.log(`[DESCONTO ESTOQUE][DOSE] Descontando ${quantidadeFinal} unidades do produto ${produto?.name}`);
-                  await prisma.product.update({
-                    where: { id: productId },
-                    data: { stock: { decrement: quantidadeFinal } }
-                  });
+                  if (produto) {
+                    // Produto não fracionado: desconta unidade
+                    const novoEstoque = (produto.stock || 0) - quantidadeFinal;
+                    if (novoEstoque < 0) {
+                      return res.status(400).json({ error: `Estoque insuficiente para o produto: ${produto.name}` });
+                    }
+                    await prisma.product.update({
+                      where: { id: productId },
+                      data: { stock: novoEstoque }
+                    });
+                  }
                 }
               }
             } else {
-              // Se não for escolhível, desconta o produto da dose
-              const quantidadeFinal = Number(doseItem.quantity) * item.quantity;
+              // Produto fixo da dose
               const produto = await prisma.product.findUnique({ where: { id: doseItem.productId } });
-              if (produto?.isFractioned) {
-                const novoVolume = (produto.totalVolume || 0) - quantidadeFinal;
-                console.log(`[DESCONTO ESTOQUE][DOSE] Descontando ${quantidadeFinal}ml do produto fracionado ${produto.name}`);
-                await prisma.product.update({
-                  where: { id: doseItem.productId },
-                  data: { totalVolume: novoVolume }
-                });
+              if (!produto) {
+                console.error('Produto da dose não encontrado:', doseItem.productId);
+                return res.status(400).json({ error: `Produto da dose não encontrado: ${doseItem.productId}` });
+              }
+              if (produto.isFractioned) {
+                if (doseItem.discountBy === 'unit') {
+                  const unitVolume = produto.unitVolume || 1;
+                  const novoVolume = (produto.totalVolume || 0) - (unitVolume * item.quantity * doseItem.quantity);
+                  const novoEstoque = (produto.stock || 0) - (item.quantity * doseItem.quantity);
+                  if (novoVolume < 0 || novoEstoque < 0) {
+                    return res.status(400).json({ error: `Estoque insuficiente para o produto: ${produto.name}` });
+                  }
+                  await prisma.product.update({
+                    where: { id: doseItem.productId },
+                    data: {
+                      stock: novoEstoque,
+                      totalVolume: novoVolume
+                    }
+                  });
+                } else if (doseItem.discountBy === 'volume') {
+                  const novoVolume = (produto.totalVolume || 0) - (doseItem.quantity * item.quantity);
+                  const unitVolume = produto.unitVolume || 1;
+                  const novoStock = Math.floor(novoVolume / unitVolume);
+                  if (novoVolume < 0) {
+                    return res.status(400).json({ error: `Estoque insuficiente (volume) para o produto: ${produto.name}` });
+                  }
+                  await prisma.product.update({
+                    where: { id: doseItem.productId },
+                    data: {
+                      totalVolume: novoVolume,
+                      stock: novoStock
+                    }
+                  });
+                }
               } else {
-                console.log(`[DESCONTO ESTOQUE][DOSE] Descontando ${quantidadeFinal} unidades do produto ${produto?.name}`);
-                await prisma.product.update({
-                  where: { id: doseItem.productId },
-                  data: { stock: { decrement: quantidadeFinal } }
-                });
+                if (produto) {
+                  // Produto não fracionado: desconta unidade
+                  const novoEstoque = (produto.stock || 0) - (doseItem.quantity * item.quantity);
+                  if (novoEstoque < 0) {
+                    return res.status(400).json({ error: `Estoque insuficiente para o produto: ${produto.name}` });
+                  }
+                  await prisma.product.update({
+                    where: { id: doseItem.productId },
+                    data: { stock: novoEstoque }
+                  });
+                }
               }
             }
           }
