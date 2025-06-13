@@ -182,8 +182,16 @@ const ClientCart = () => {
   
   // Calcular subtotal e total
   useEffect(() => {
-    // Subtotal correto considerando todos os itens do carrinho
-    const subtotal = cart.reduce((acc, item) => acc + (item.price ?? item.product.price) * (item.quantity ?? 1), 0);
+    // Subtotal correto considerando combos, doses e produtos avulsos
+    const subtotal = cart.reduce((acc, item: any) => {
+      if (item?.comboId && item?.combo?.price) {
+        return acc + item.combo.price;
+      }
+      if (item?.doseId && item?.dose?.price) {
+        return acc + item.dose.price;
+      }
+      return acc + (item.price ?? item.product.price) * (item.quantity ?? 1);
+    }, 0);
     setSubtotal(subtotal);
     setTotal(subtotal - discount + deliveryFee);
   }, [cart, discount, deliveryFee]);
