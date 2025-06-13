@@ -415,7 +415,7 @@ export const adminController = {
         if (produto?.isFractioned) {
           // Se a venda for de unidade inteira (ex: 1 garrafa)
           if (item.quantity === 1 && !item.sellingByVolume) {
-            // Venda de unidade inteira
+            // Venda de unidade inteira: desconta 1 do estoque e o volume equivalente
             const unitVolume = produto.unitVolume || 1;
             console.log('[DESCONTO ESTOQUE] Produto fracionado - venda de unidade:', {
               id: produto.id,
@@ -432,7 +432,7 @@ export const adminController = {
               }
             });
           } else {
-            // Venda fracionada (por volume)
+            // Venda fracionada (por volume): desconta só do volume e recalcula o estoque
             const unitVolume = produto.unitVolume || 1;
             const volumeNecessario = item.quantity;
             const novoTotalVolume = (produto.totalVolume || 0) - volumeNecessario;

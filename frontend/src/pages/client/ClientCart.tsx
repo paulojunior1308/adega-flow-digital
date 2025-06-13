@@ -420,9 +420,14 @@ const ClientCart = () => {
     const doses: Record<string, any> = {};
     const outros: any[] = [];
     for (const item of cart) {
-      if (item.isDose) {
-        if (!doses[item.dose.id]) doses[item.dose.id] = [];
-        doses[item.dose.id].push(item);
+      if (item.doseId || item.dose) {
+        const key = item.doseId || (item.dose && item.dose.id);
+        if (key) {
+          if (!doses[key]) doses[key] = [];
+          doses[key].push(item);
+        } else {
+          outros.push(item);
+        }
       } else {
         outros.push(item);
       }

@@ -277,18 +277,13 @@ export const orderController = {
             } else {
               // Se não for escolhível, desconta o produto da dose
               const quantidadeFinal = Number(doseItem.quantity) * item.quantity;
-              // Buscar produto para saber se é fracionado
               const produto = await prisma.product.findUnique({ where: { id: doseItem.productId } });
-              if (produto?.isFractioned && quantidadeFinal === 1) {
-                // Venda de unidade inteira: desconta unidade e volume total
-                const unitVolume = produto.unitVolume || 1;
-                console.log(`[DESCONTO ESTOQUE][DOSE] Produto fracionado - venda de unidade: descontando 1 unidade e ${unitVolume}ml do produto ${produto.name}`);
+              if (produto?.isFractioned) {
+                const novoVolume = (produto.totalVolume || 0) - quantidadeFinal;
+                console.log(`[DESCONTO ESTOQUE][DOSE] Descontando ${quantidadeFinal}ml do produto fracionado ${produto.name}`);
                 await prisma.product.update({
                   where: { id: doseItem.productId },
-                  data: {
-                    stock: { decrement: 1 },
-                    totalVolume: { decrement: unitVolume }
-                  }
+                  data: { totalVolume: novoVolume }
                 });
               } else {
                 console.log(`[DESCONTO ESTOQUE][DOSE] Descontando ${quantidadeFinal} unidades do produto ${produto?.name}`);
@@ -301,27 +296,11 @@ export const orderController = {
           }
         } else {
           // Se não for dose, desconta normalmente
-          // Buscar produto para saber se é fracionado
-          const produto = await prisma.product.findUnique({ where: { id: item.productId } });
-          if (produto?.isFractioned && item.quantity === 1) {
-            // Venda de unidade inteira: desconta unidade e volume total
-            const unitVolume = produto.unitVolume || 1;
-            console.log(`[DESCONTO ESTOQUE] Produto fracionado - venda de unidade: descontando 1 unidade e ${unitVolume}ml do produto ${produto.name}`);
-            await prisma.product.update({
-              where: { id: item.productId },
-              data: {
-                stock: { decrement: 1 },
-                totalVolume: { decrement: unitVolume }
-              }
-            });
-          } else {
-            // Produto normal ou venda fracionada
-            console.log(`[DESCONTO ESTOQUE] Descontando ${item.quantity} unidades do produto ${item.productId}`);
-            await prisma.product.update({
-              where: { id: item.productId },
-              data: { stock: { decrement: item.quantity } }
-            });
-          }
+          console.log(`[DESCONTO ESTOQUE] Descontando ${item.quantity} unidades do produto ${item.productId}`);
+          await prisma.product.update({
+            where: { id: item.productId },
+            data: { stock: { decrement: item.quantity } }
+          });
         }
       }
     }
