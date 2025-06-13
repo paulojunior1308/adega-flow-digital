@@ -235,9 +235,10 @@ export const orderController = {
     });
     // Subtrair estoque se status for DELIVERED
     if (statusEnum === 'DELIVERED') {
+      console.log('[ORDER][LOG] Pedido marcado como entregue. Itens:', JSON.stringify(order.items, null, 2));
       for (const item of order.items as OrderItemWithDose[]) {
         if (item.doseId) {
-          console.log('[DESCONTO ESTOQUE][DOSE] Payload recebido:', JSON.stringify(item, null, 2));
+          console.log('[ORDER][LOG] Descontando estoque de dose:', item.doseId);
           // Buscar a composição da dose
           const dose = await prisma.dose.findUnique({
             where: { id: item.doseId },

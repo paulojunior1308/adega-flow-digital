@@ -46,54 +46,51 @@ export const cartController = {
     }
     // NOVO: Adicionar dose ao carrinho
     if (doseId) {
-      console.log('[CART] Payload recebido para dose:', req.body);
+      console.log('[CART][LOG] Adicionando dose ao carrinho. Payload:', req.body);
       // Buscar dose
       const dose = await prisma.dose.findUnique({
         where: { id: doseId },
         include: { items: { include: { product: true } } }
       });
-      console.log('[CART] Dose encontrada:', JSON.stringify(dose, null, 2));
+      console.log('[CART][LOG] Dose encontrada:', JSON.stringify(dose, null, 2));
       if (!dose) {
         throw new AppError('Dose não encontrada', 404);
       }
       // Verificar se já existe essa dose no carrinho (mesmo doseId e mesmas escolhas, se houver)
-      // Para simplificar, não agrupa doses com escolhas diferentes
       const existing = await prisma.cartItem.findFirst({
         where: { cartId: cart.id, doseId },
       });
       if (existing) {
-        // Atualiza quantidade
         const updated = await prisma.cartItem.update({
           where: { id: existing.id },
           data: { quantity: existing.quantity + quantity },
           include: { product: true, dose: { include: { items: { include: { product: true } } } } },
         });
-        console.log('[CART] CartItem de dose atualizado:', JSON.stringify(updated, null, 2));
+        console.log('[CART][LOG] CartItem de dose atualizado:', JSON.stringify(updated, null, 2));
+        const cartAfter = await prisma.cart.findUnique({ where: { userId }, include: { items: { include: { product: true, dose: true, combo: true } } } });
+        console.log('[CART][LOG] Carrinho após adicionar dose:', JSON.stringify(cartAfter, null, 2));
         return res.status(201).json(updated);
       } else {
-        // Cria item de dose no carrinho
         const item = await prisma.cartItem.create({
           data: {
             cartId: cart.id,
-            productId: dose.items[0]?.productId || '', // Só para não ser nulo, mas não é usado
+            productId: dose.items[0]?.productId || '',
             quantity,
             doseId,
-            price: dose.price, // Corrigido: valor total da dose
-            // Salvar escolhas do cliente se houver (pode ser serializado em um campo extra futuramente)
-            // choosableSelections: JSON.stringify(choosableSelections) // se quiser persistir
+            price: dose.price,
           },
           include: { product: true, dose: { include: { items: { include: { product: true } } } } },
         });
-        console.log('[CART] CartItem de dose criado:', JSON.stringify(item, null, 2));
+        console.log('[CART][LOG] CartItem de dose criado:', JSON.stringify(item, null, 2));
+        const cartAfter = await prisma.cart.findUnique({ where: { userId }, include: { items: { include: { product: true, dose: true, combo: true } } } });
+        console.log('[CART][LOG] Carrinho após adicionar dose:', JSON.stringify(cartAfter, null, 2));
         return res.status(201).json(item);
       }
     }
     if (comboId) {
-      // Adiciona todos os produtos do combo ao carrinho
-      const combo = await prisma.combo.findUnique({
-        where: { id: comboId },
-        include: { items: true }
-      });
+      console.log('[CART][LOG] Adicionando combo ao carrinho. Payload:', req.body);
+      const combo = await prisma.combo.findUnique({ where: { id: comboId }, include: { items: { include: { product: true } } } });
+      console.log('[CART][LOG] Combo encontrado:', JSON.stringify(combo, null, 2));
       if (!combo) {
         throw new AppError('Combo não encontrado', 404);
       }
