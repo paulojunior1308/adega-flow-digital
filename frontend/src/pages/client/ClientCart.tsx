@@ -185,10 +185,10 @@ const ClientCart = () => {
     // Subtotal correto considerando combos, doses e produtos avulsos
     const subtotal = cart.reduce((acc, item: any) => {
       if (item?.comboId && item?.combo?.price) {
-        return acc + item.combo.price;
+        return acc + item.combo.price * (item.quantity ?? 1);
       }
       if (item?.doseId && item?.dose?.price) {
-        return acc + item.dose.price;
+        return acc + item.dose.price * (item.quantity ?? 1);
       }
       return acc + (item.price ?? item.product.price) * (item.quantity ?? 1);
     }, 0);
