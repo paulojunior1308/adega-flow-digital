@@ -91,7 +91,7 @@ const Promocoes = () => {
           id: promo.id,
           title: promo.name,
           description: promo.description,
-          image: promo.image ? `https://adega-flow-digital.onrender.com${promo.image}` : '',
+          image: promo.image ? (promo.image.startsWith('http') ? promo.image : `https://adega-flow-digital.onrender.com${promo.image}`) : '',
           price: `R$ ${promo.price.toFixed(2)}`,
           originalPrice: promo.originalPrice ? `R$ ${promo.originalPrice.toFixed(2)}` : undefined,
           discountPercentage: promo.originalPrice ? Math.round(((promo.originalPrice - promo.price) / promo.originalPrice) * 100) : undefined,

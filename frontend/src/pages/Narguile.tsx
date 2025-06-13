@@ -63,7 +63,7 @@ const Narguile = () => {
       .then(res => res.json())
       .then(categories => {
         // Pega as categorias de interesse
-        const nomes = ['essência', 'essencia', 'carvão', 'carvao', 'alumínio', 'aluminio'];
+        const nomes = ['Essências', 'Essencia', 'Carvão', 'Carvao', 'Alumínio', 'Aluminio'];
         const categoriasSelecionadas = categories.filter((cat: any) =>
           nomes.some(nome => cat.name.toLowerCase().includes(nome))
         );
