@@ -70,10 +70,6 @@ interface CartItem {
   price?: number;
   isDose?: boolean;
   doseName?: string;
-  doseId?: string;
-  comboId?: string;
-  dose?: any;
-  combo?: any;
 }
 
 interface Address {
@@ -186,12 +182,10 @@ const ClientCart = () => {
   
   // Calcular subtotal e total
   useEffect(() => {
-    let calculatedSubtotal = 0;
-    for (const item of cart) {
-      calculatedSubtotal += (item.price ?? item.product.price) * item.quantity;
-    }
-    setSubtotal(calculatedSubtotal);
-    setTotal(calculatedSubtotal - discount + deliveryFee);
+    // Subtotal correto considerando todos os itens do carrinho
+    const subtotal = cart.reduce((acc, item) => acc + (item.price ?? item.product.price) * (item.quantity ?? 1), 0);
+    setSubtotal(subtotal);
+    setTotal(subtotal - discount + deliveryFee);
   }, [cart, discount, deliveryFee]);
   
   // Buscar carrinho real do backend ao carregar a página
@@ -402,6 +396,41 @@ const ClientCart = () => {
     }
     await sendOrder();
   };
+  
+  // Função utilitária para agrupar itens de dose
+  function agruparDoses(cart) {
+    const doses: Record<string, any> = {};
+    const outros: any[] = [];
+    for (const item of cart) {
+      if (item.doseId || item.dose) {
+        const key = item.doseId || (item.dose && item.dose.id);
+        if (key) {
+          if (!doses[key]) doses[key] = [];
+          doses[key].push(item);
+        } else {
+          outros.push(item);
+        }
+      } else {
+        outros.push(item);
+      }
+    }
+    return { doses, outros };
+  }
+
+  // Função utilitária para agrupar combos
+  function agruparCombos(cart) {
+    const combos: Record<string, any> = {};
+    const outros: any[] = [];
+    for (const item of cart) {
+      if (item.comboId) {
+        if (!combos[item.comboId]) combos[item.comboId] = [];
+        combos[item.comboId].push(item);
+      } else if (!item.isDose) {
+        outros.push(item);
+      }
+    }
+    return { combos, outros };
+  }
 
   return (
     <div className="min-h-screen bg-element-gray-light pt-16 md:pt-0">
@@ -434,124 +463,145 @@ const ClientCart = () => {
                       <h2 className="text-xl font-semibold mb-4">Itens do Carrinho</h2>
                       
                       <div className="space-y-4">
-                        {cart.map((item) => {
-                          if (item?.comboId && item?.combo?.items) {
-                            // Card de combo agrupado
-                            const comboInfo = item.combo;
-                            return (
-                              <div key={item.id} className="border rounded-md mb-4 bg-gray-50">
-                                <div className="flex items-center justify-between p-4 border-b">
-                                  <div>
-                                    <h3 className="font-bold text-element-blue-dark">{comboInfo.name}</h3>
-                                    <span className="text-xs text-gray-500">Combo personalizado</span>
+                        {(() => {
+                          const { doses, outros: semDoses } = agruparDoses(cart);
+                          const { combos, outros } = agruparCombos(semDoses);
+                          return (
+                            <>
+                              {/* Doses agrupadas */}
+                              {Object.entries(doses).map(([doseId, items]) => {
+                                const doseInfo = items[0]?.dose;
+                                if (!doseInfo) return null;
+                                return (
+                                  <div key={doseId} className="border rounded-md mb-4 bg-gray-50">
+                                    <div className="flex items-center justify-between p-4 border-b">
+                                      <div>
+                                        <h3 className="font-bold text-element-blue-dark">{doseInfo.name}</h3>
+                                        <span className="text-xs text-gray-500">Dose personalizada</span>
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        <span className="font-bold text-lg text-element-blue-dark">R$ {doseInfo.price.toFixed(2)}</span>
+                                        <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700 hover:bg-red-50" onClick={() => {
+                                          items.forEach(i => removeFromCart(i.id));
+                                        }}>
+                                          <Trash2 className="h-4 w-4 mr-1" /> Remover
+                                        </Button>
+                                      </div>
+                                    </div>
+                                    <div className="p-4 pt-2">
+                                      <ul className="text-sm text-gray-700">
+                                        {doseInfo.items.map((doseItem: any, idx: number) => (
+                                          <li key={doseItem.productId + '-' + idx} className="flex items-center gap-2 mb-1">
+                                            <img src={doseItem.product.image && !doseItem.product.image.startsWith('http') ? API_URL + doseItem.product.image : doseItem.product.image} alt={doseItem.product.name} className="w-8 h-8 object-cover rounded mr-2" />
+                                            <span>{doseItem.product.name}</span>
+                                            <span className="ml-auto">{doseItem.quantity} {doseItem.discountBy === 'volume' || (doseItem.product.isFractioned) ? 'ml' : 'un'}</span>
+                                          </li>
+                                        ))}
+                                      </ul>
+                                    </div>
                                   </div>
-                                  <div className="flex items-center gap-2">
-                                    <span className="font-bold text-lg text-element-blue-dark">R$ {comboInfo.price.toFixed(2)}</span>
-                                    <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700 hover:bg-red-50" onClick={() => removeFromCart(item.id)}>
-                                      <Trash2 className="h-4 w-4 mr-1" /> Remover
-                                    </Button>
+                                );
+                              })}
+                              {/* Combos agrupados */}
+                              {Object.entries(combos).map(([comboId, items]) => {
+                                const comboInfo = items[0]?.combo || items[0]?.product; // fallback para product
+                                const comboName = comboInfo?.name || 'Combo';
+                                const comboPrice = items[0]?.combo?.price || items[0]?.product?.comboPrice || items[0]?.priceCombo || items[0]?.price || items.reduce((sum, i) => sum + ((i.price ?? i.product.price) * i.quantity), 0);
+                                return (
+                                  <div key={comboId} className="border rounded-md mb-4 bg-gray-50">
+                                    <div className="flex items-center justify-between p-4 border-b">
+                                      <div>
+                                        <h3 className="font-bold text-element-blue-dark">{comboName}</h3>
+                                        <span className="text-xs text-gray-500">Combo personalizado</span>
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        <span className="font-bold text-lg text-element-blue-dark">R$ {comboPrice.toFixed(2)}</span>
+                                        <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700 hover:bg-red-50" onClick={() => {
+                                          items.forEach(i => removeFromCart(i.id));
+                                        }}>
+                                          <Trash2 className="h-4 w-4 mr-1" /> Remover
+                                        </Button>
+                                      </div>
+                                    </div>
+                                    <div className="p-4 pt-2">
+                                      <ul className="text-sm text-gray-700">
+                                        {items.map((comboItem: any, idx: number) => (
+                                          <li key={comboItem.product.id + '-' + idx} className="flex items-center gap-2 mb-1">
+                                            <img src={comboItem.product.image && !comboItem.product.image.startsWith('http') ? API_URL + comboItem.product.image : comboItem.product.image} alt={comboItem.product.name} className="w-8 h-8 object-cover rounded mr-2" />
+                                            <span>{comboItem.product.name}</span>
+                                            <span className="ml-auto">{comboItem.quantity} un</span>
+                                          </li>
+                                        ))}
+                                      </ul>
+                                    </div>
                                   </div>
-                                </div>
-                                <div className="p-4 pt-2">
-                                  <ul className="text-sm text-gray-700">
-                                    {comboInfo.items.map((comboItem: any, idx: number) => (
-                                      <li key={comboItem.product.id + '-' + idx} className="flex items-center gap-2 mb-1">
-                                        <img src={comboItem.product.image && !comboItem.product.image.startsWith('http') ? API_URL + comboItem.product.image : comboItem.product.image} alt={comboItem.product.name} className="w-8 h-8 object-cover rounded mr-2" />
-                                        <span>{comboItem.product.name}</span>
-                                        <span className="ml-auto">{comboItem.quantity} un</span>
-                                      </li>
-                                    ))}
-                                  </ul>
-                                </div>
-                              </div>
-                            );
-                          } else if (item?.doseId && item?.dose?.items) {
-                            // Card de dose agrupado
-                            const doseInfo = item.dose;
-                            return (
-                              <div key={item.id} className="border rounded-md mb-4 bg-gray-50">
-                                <div className="flex items-center justify-between p-4 border-b">
-                                  <div>
-                                    <h3 className="font-bold text-element-blue-dark">{doseInfo.name}</h3>
-                                    <span className="text-xs text-gray-500">Dose personalizada</span>
+                                );
+                              })}
+                              {/* Itens avulsos */}
+                              {outros.map((item) => {
+                                const descontoCombo = comboDescontos.find((d) => d.productId === item.product.id);
+                                return (
+                                  <div key={item.id} className="flex items-center py-4 border-b last:border-b-0">
+                                    <img 
+                                        src={item.product.image && !item.product.image.startsWith('http') ? API_URL + item.product.image : item.product.image} 
+                                      alt={item.product.name} 
+                                      className="w-24 h-24 object-cover rounded-md mr-4"
+                                    />
+                                    <div className="flex-1">
+                                      <h3 className="font-medium mb-1">{item.product.name}</h3>
+                                      <p className="text-sm text-gray-500 mb-3">{item.product.description}</p>
+                                      <p className="font-bold text-element-blue-dark">
+                                          R$ {(item.isDose ? (item.price ?? item.product.price) : (item.price ?? item.product.price) * item.quantity).toFixed(2)}
+                                        </p>
+                                        {descontoCombo && descontoCombo.desconto > 0 && (
+                                          <p className="text-xs text-green-700 mt-1">
+                                            <span className="line-through text-red-500 mr-1">R$ {descontoCombo.precoOriginal.toFixed(2)}</span>
+                                            <span>Desconto combo: -R$ {descontoCombo.desconto.toFixed(2)}</span>
+                                          </p>
+                                        )}
+                                    </div>
+                                      <div className="flex items-center space-x-2">
+                                      {/* Controles de quantidade só para não-dose */}
+                                      {!item.isDose && (
+                                        <div className="flex items-center border rounded-md">
+                                          <Button 
+                                            variant="ghost" 
+                                            size="icon" 
+                                            className="h-8 w-8"
+                                            onClick={() => decrementQuantity(item.id)}
+                                          >
+                                            <Minus className="h-4 w-4" />
+                                          </Button>
+                                          <span className="w-8 text-center">{item.quantity}</span>
+                                          <Button 
+                                            variant="ghost" 
+                                            size="icon" 
+                                            className="h-8 w-8"
+                                            onClick={() => incrementQuantity(item.id)}
+                                          >
+                                            <Plus className="h-4 w-4" />
+                                          </Button>
+                                        </div>
+                                      )}
+                                      <Button 
+                                        variant="ghost" 
+                                        size="sm"
+                                        className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                                        onClick={() => {
+                                          console.log('Remover item:', item);
+                                          removeFromCart(item.id);
+                                        }}
+                                      >
+                                        <Trash2 className="h-4 w-4 mr-1" />
+                                        Remover
+                                      </Button>
+                                    </div>
                                   </div>
-                                  <div className="flex items-center gap-2">
-                                    <span className="font-bold text-lg text-element-blue-dark">R$ {doseInfo.price.toFixed(2)}</span>
-                                    <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700 hover:bg-red-50" onClick={() => removeFromCart(item.id)}>
-                                      <Trash2 className="h-4 w-4 mr-1" /> Remover
-                                    </Button>
-                                  </div>
-                                </div>
-                                <div className="p-4 pt-2">
-                                  <ul className="text-sm text-gray-700">
-                                    {doseInfo.items.map((doseItem: any, idx: number) => (
-                                      <li key={doseItem.productId + '-' + idx} className="flex items-center gap-2 mb-1">
-                                        <img src={doseItem.product.image && !doseItem.product.image.startsWith('http') ? API_URL + doseItem.product.image : doseItem.product.image} alt={doseItem.product.name} className="w-8 h-8 object-cover rounded mr-2" />
-                                        <span>{doseItem.product.name}</span>
-                                        <span className="ml-auto">{doseItem.quantity} {doseItem.discountBy === 'volume' || (doseItem.product.isFractioned) ? 'ml' : 'un'}</span>
-                                      </li>
-                                    ))}
-                                  </ul>
-                                </div>
-                              </div>
-                            );
-                          } else {
-                            // Produto avulso
-                            const descontoCombo = comboDescontos.find((d) => d.productId === item.product.id);
-                            return (
-                              <div key={item.id} className="flex items-center py-4 border-b last:border-b-0">
-                                <img 
-                                    src={item.product.image && !item.product.image.startsWith('http') ? API_URL + item.product.image : item.product.image} 
-                                  alt={item.product.name} 
-                                  className="w-24 h-24 object-cover rounded-md mr-4"
-                                />
-                                <div className="flex-1">
-                                  <h3 className="font-medium mb-1">{item.product.name}</h3>
-                                  <p className="text-sm text-gray-500 mb-3">{item.product.description}</p>
-                                  <p className="font-bold text-element-blue-dark">
-                                      R$ {(item.price ?? item.product.price) * item.quantity}
-                                    </p>
-                                    {descontoCombo && descontoCombo.desconto > 0 && (
-                                      <p className="text-xs text-green-700 mt-1">
-                                        <span className="line-through text-red-500 mr-1">R$ {descontoCombo.precoOriginal.toFixed(2)}</span>
-                                        <span>Desconto combo: -R$ {descontoCombo.desconto.toFixed(2)}</span>
-                                      </p>
-                                    )}
-                                </div>
-                                <div className="flex items-center space-x-2">
-                                  <div className="flex items-center border rounded-md">
-                                    <Button 
-                                      variant="ghost" 
-                                      size="icon" 
-                                      className="h-8 w-8"
-                                      onClick={() => decrementQuantity(item.id)}
-                                    >
-                                      <Minus className="h-4 w-4" />
-                                    </Button>
-                                    <span className="w-8 text-center">{item.quantity}</span>
-                                    <Button 
-                                      variant="ghost" 
-                                      size="icon" 
-                                      className="h-8 w-8"
-                                      onClick={() => incrementQuantity(item.id)}
-                                    >
-                                      <Plus className="h-4 w-4" />
-                                    </Button>
-                                  </div>
-                                  <Button 
-                                    variant="ghost" 
-                                    size="sm"
-                                    className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                                    onClick={() => removeFromCart(item.id)}
-                                  >
-                                    <Trash2 className="h-4 w-4 mr-1" />
-                                    Remover
-                                  </Button>
-                                </div>
-                              </div>
-                            );
-                          }
-                        })}
+                                );
+                              })}
+                            </>
+                          );
+                        })()}
                       </div>
                     </CardContent>
                   </Card>
