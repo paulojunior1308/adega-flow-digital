@@ -433,8 +433,8 @@ const ClientCart = () => {
     const outros: any[] = [];
     for (const item of cart) {
       if (item.comboId) {
-        if (!combos[item.comboId]) combos[item.comboId] = [];
-        combos[item.comboId].push(item);
+        // Agrupar por id único do cartItem
+        combos[item.id] = [item];
       } else if (!item.isDose) {
         outros.push(item);
       }
