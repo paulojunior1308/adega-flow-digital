@@ -262,31 +262,28 @@ export const orderController = {
                 const produto = await prisma.product.findUnique({ where: { id: productId } });
                 if (produto?.isFractioned) {
                   if (doseItem.discountBy === 'unit') {
-                    const unitVolume = produto.unitVolume || 1;
+                    // Descontar apenas unidade
                     const quantidadeDescontada = Math.abs(Number(quantidadeFinal));
                     const estoqueAtual = produto.stock || 0;
-                    const volumeAtual = produto.totalVolume || 0;
-                    const novoVolume = volumeAtual - (unitVolume * quantidadeDescontada);
                     const novoEstoque = estoqueAtual - quantidadeDescontada;
-                    console.log(`[DOSE][FRACIONADO][UNIT] Produto: ${produto.name} | Estoque atual: ${estoqueAtual} | Volume atual: ${volumeAtual} | Descontar: ${quantidadeDescontada} un e ${unitVolume * quantidadeDescontada} ml | Novo estoque: ${novoEstoque} | Novo volume: ${novoVolume}`);
-                    if (novoVolume < 0 || novoEstoque < 0) {
+                    console.log(`[DOSE][FRACIONADO][UNIT] Produto: ${produto.name} | Estoque atual: ${estoqueAtual} | Descontar: ${quantidadeDescontada} un | Novo estoque: ${novoEstoque}`);
+                    if (novoEstoque < 0) {
                       return res.status(400).json({ error: `Estoque insuficiente para o produto: ${produto.name}` });
                     }
                     await prisma.product.update({
                       where: { id: productId },
                       data: {
-                        stock: novoEstoque,
-                        totalVolume: novoVolume
+                        stock: novoEstoque
                       }
                     });
                   } else if (doseItem.discountBy === 'volume') {
+                    // Descontar apenas volume
                     const quantidadeDescontada = Math.abs(Number(doseItem.quantity) * Number(quantidadeFinal));
-                    const estoqueAtual = produto.stock || 0;
                     const volumeAtual = produto.totalVolume || 0;
-                    const novoVolume = volumeAtual - quantidadeDescontada;
                     const unitVolume = produto.unitVolume || 1;
+                    const novoVolume = volumeAtual - quantidadeDescontada;
                     const novoEstoque = Math.floor(novoVolume / unitVolume);
-                    console.log(`[DOSE][FRACIONADO][VOLUME] Produto: ${produto.name} | Estoque atual: ${estoqueAtual} | Volume atual: ${volumeAtual} | Descontar: ${quantidadeDescontada} ml | Novo estoque: ${novoEstoque} | Novo volume: ${novoVolume}`);
+                    console.log(`[DOSE][FRACIONADO][VOLUME] Produto: ${produto.name} | Volume atual: ${volumeAtual} | Descontar: ${quantidadeDescontada} ml | Novo estoque: ${novoEstoque} | Novo volume: ${novoVolume}`);
                     if (novoVolume < 0) {
                       return res.status(400).json({ error: `Estoque insuficiente (volume) para o produto: ${produto.name}` });
                     }
@@ -323,31 +320,28 @@ export const orderController = {
               }
               if (produto.isFractioned) {
                 if (doseItem.discountBy === 'unit') {
-                  const unitVolume = produto.unitVolume || 1;
+                  // Descontar apenas unidade
                   const quantidadeDescontada = Math.abs(Number(item.quantity) * Number(doseItem.quantity));
                   const estoqueAtual = produto.stock || 0;
-                  const volumeAtual = produto.totalVolume || 0;
-                  const novoVolume = volumeAtual - (unitVolume * quantidadeDescontada);
                   const novoEstoque = estoqueAtual - quantidadeDescontada;
-                  console.log(`[DOSE][FRACIONADO][UNIT][FIXO] Produto: ${produto.name} | Estoque atual: ${estoqueAtual} | Volume atual: ${volumeAtual} | Descontar: ${quantidadeDescontada} un e ${unitVolume * quantidadeDescontada} ml | Novo estoque: ${novoEstoque} | Novo volume: ${novoVolume}`);
-                  if (novoVolume < 0 || novoEstoque < 0) {
+                  console.log(`[DOSE][FRACIONADO][UNIT][FIXO] Produto: ${produto.name} | Estoque atual: ${estoqueAtual} | Descontar: ${quantidadeDescontada} un | Novo estoque: ${novoEstoque}`);
+                  if (novoEstoque < 0) {
                     return res.status(400).json({ error: `Estoque insuficiente para o produto: ${produto.name}` });
                   }
                   await prisma.product.update({
                     where: { id: doseItem.productId },
                     data: {
-                      stock: novoEstoque,
-                      totalVolume: novoVolume
+                      stock: novoEstoque
                     }
                   });
                 } else if (doseItem.discountBy === 'volume') {
+                  // Descontar apenas volume
                   const quantidadeDescontada = Math.abs(Number(doseItem.quantity) * Number(item.quantity));
-                  const estoqueAtual = produto.stock || 0;
                   const volumeAtual = produto.totalVolume || 0;
-                  const novoVolume = volumeAtual - quantidadeDescontada;
                   const unitVolume = produto.unitVolume || 1;
+                  const novoVolume = volumeAtual - quantidadeDescontada;
                   const novoEstoque = Math.floor(novoVolume / unitVolume);
-                  console.log(`[DOSE][FRACIONADO][VOLUME][FIXO] Produto: ${produto.name} | Estoque atual: ${estoqueAtual} | Volume atual: ${volumeAtual} | Descontar: ${quantidadeDescontada} ml | Novo estoque: ${novoEstoque} | Novo volume: ${novoVolume}`);
+                  console.log(`[DOSE][FRACIONADO][VOLUME][FIXO] Produto: ${produto.name} | Volume atual: ${volumeAtual} | Descontar: ${quantidadeDescontada} ml | Novo estoque: ${novoEstoque} | Novo volume: ${novoVolume}`);
                   if (novoVolume < 0) {
                     return res.status(400).json({ error: `Estoque insuficiente (volume) para o produto: ${produto.name}` });
                   }
