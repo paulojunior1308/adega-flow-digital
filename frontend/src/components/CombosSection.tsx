@@ -15,7 +15,8 @@ const API_URL = 'https://adega-flow-digital.onrender.com'; // URL base do backen
 const getImageUrl = (image?: string) => {
   if (!image) return '';
   if (image.startsWith('http')) return image;
-  return `${API_URL}${image}`;
+  if (image.startsWith('/uploads')) return `${API_URL}${image}`;
+  return image;
 };
 
 const ComboCard = ({ title, items, price, bgColor, image }: any) => {

@@ -40,11 +40,12 @@ interface Combo {
 }
 
 const API_URL = 'https://adega-flow-digital.onrender.com';
-const getImageUrl = (image?: string) => {
+function getImageUrl(image?: string) {
   if (!image) return '';
   if (image.startsWith('http')) return image;
-  return `${API_URL}${image}`;
-};
+  if (image.startsWith('/uploads')) return `https://adega-flow-digital.onrender.com${image}`;
+  return image;
+}
 
 export function ComboCarousel() {
   const [combos, setCombos] = React.useState<Combo[]>([]);
