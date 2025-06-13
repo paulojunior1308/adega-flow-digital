@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { v4 as uuidv4 } from 'uuid';
 
 interface CartItem {
   id: string;
@@ -36,18 +37,23 @@ export const useCart = create<CartStore>()(
       items: [],
       addToCart: (item) => {
         const items = get().items;
-        const existingItem = items.find(i => i.id === item.id);
+        let newItem = { ...item };
+        // Se for combo, sempre gera um id único
+        if (item.type === 'combo') {
+          newItem.id = uuidv4();
+        }
+        const existingItem = items.find(i => i.id === newItem.id);
 
         if (existingItem) {
           set({
             items: items.map(i =>
-              i.id === item.id
+              i.id === newItem.id
                 ? { ...i, quantity: i.quantity + 1 }
                 : i
             )
           });
         } else {
-          set({ items: [...items, item] });
+          set({ items: [...items, newItem] });
         }
       },
       removeFromCart: (itemId) => {
