@@ -182,20 +182,28 @@ const ClientCart = () => {
   
   // Calcular subtotal e total
   useEffect(() => {
-    // Subtotal correto usando o mesmo agrupamento dos cards
-    const { combos, outros } = agruparCombos(cart);
-    let subtotal = 0;
+    // Agrupar doses e combos
+    const { doses, outros: semDoses } = agruparDoses(cart);
+    const { combos, outros } = agruparCombos(semDoses);
+    let calculatedSubtotal = 0;
+    // Somar valor das doses agrupadas
+    for (const items of Object.values(doses)) {
+      const doseInfo = items[0]?.dose;
+      if (doseInfo) {
+        calculatedSubtotal += doseInfo.price;
+      }
+    }
     // Somar valor dos combos agrupados
     for (const items of Object.values(combos)) {
       const comboPrice = items[0]?.combo?.price || items[0]?.product?.comboPrice || items[0]?.priceCombo || items[0]?.price || items.reduce((sum, i) => sum + ((i.price ?? i.product.price) * i.quantity), 0);
-      subtotal += comboPrice;
+      calculatedSubtotal += comboPrice;
     }
     // Somar valor dos itens avulsos
     for (const item of outros) {
-      subtotal += (item.price ?? item.product.price) * item.quantity;
+      calculatedSubtotal += (item.price ?? item.product.price) * item.quantity;
     }
-    setSubtotal(subtotal);
-    setTotal(subtotal - discount + deliveryFee);
+    setSubtotal(calculatedSubtotal);
+    setTotal(calculatedSubtotal - discount + deliveryFee);
   }, [cart, discount, deliveryFee]);
   
   // Buscar carrinho real do backend ao carregar a página
@@ -433,8 +441,8 @@ const ClientCart = () => {
     const outros: any[] = [];
     for (const item of cart) {
       if (item.comboId) {
-        // Agrupar por id único do cartItem
-        combos[item.id] = [item];
+        if (!combos[item.comboId]) combos[item.comboId] = [];
+        combos[item.comboId].push(item);
       } else if (!item.isDose) {
         outros.push(item);
       }
