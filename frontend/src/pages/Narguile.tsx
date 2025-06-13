@@ -62,10 +62,13 @@ const Narguile = () => {
     fetch('https://adega-flow-digital.onrender.com/api/products/categories')
       .then(res => res.json())
       .then(categories => {
-        const nomes = ['essência', 'essencia', 'carvão', 'carvao'];
-        const ids = categories.filter((cat: any) => 
+        // Pega as categorias de interesse
+        const nomes = ['essência', 'essencia', 'carvão', 'carvao', 'alumínio', 'aluminio'];
+        const categoriasSelecionadas = categories.filter((cat: any) =>
           nomes.some(nome => cat.name.toLowerCase().includes(nome))
-        ).map((cat: any) => cat.id);
+        );
+        setCategoriasNarguile(categoriasSelecionadas);
+        const ids = categoriasSelecionadas.map((cat: any) => cat.id);
         if (ids.length === 0) return setLoading(false);
         Promise.all(ids.map(id => fetch(`https://adega-flow-digital.onrender.com/api/products?categoryId=${id}`).then(res => res.json())))
           .then(results => {
@@ -75,6 +78,9 @@ const Narguile = () => {
           .catch(() => setLoading(false));
       });
   }, []);
+
+  // Estado para categorias dinâmicas
+  const [categoriasNarguile, setCategoriasNarguile] = useState<any[]>([]);
 
   // Featured products
   const featuredProducts = products.filter(product => product.isFeatured);
@@ -127,26 +133,22 @@ const Narguile = () => {
   const [priceRange, setPriceRange] = useState([0, 300]);
   const [showFilters, setShowFilters] = useState(false);
   
-  // Filtros por categoria (botões)
+  // Filtros por categoria (botões dinâmicos)
   const categoriasFiltro = [
     { label: 'Todos', value: 'todos' },
-    { label: 'Essências', value: 'Essências' },
-    { label: 'Carvão', value: 'Carvão' }
+    ...categoriasNarguile.map((cat: any) => ({ label: cat.name, value: cat.name }))
   ];
-  
-  // IDs das categorias
-  const CATEGORIA_ESSENCIAS = '38b881e9-853a-4cbc-b37b-53e4fa96c553';
-  const CATEGORIA_CARVAO = 'e1415b1d-c6fc-475c-befb-67f5b27bcf27';
   
   // Filtro de produtos corrigido por nome da categoria
   const filteredProducts = products.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
       (product.description && product.description.toLowerCase().includes(searchTerm.toLowerCase()));
     const categoryName = (product.category && product.category.name ? product.category.name : product.category || '').toLowerCase();
-    if (activeCategory === 'todos') return matchesSearch;
-    if (activeCategory === 'Essências') return matchesSearch && categoryName.includes('essênc');
-    if (activeCategory === 'Carvão') return matchesSearch && categoryName.includes('carv');
-    return matchesSearch;
+    if (activeCategory === 'todos') {
+      // Mostrar apenas produtos das categorias Essências, Carvão e Alumínio
+      return matchesSearch && categoriasNarguile.some(cat => categoryName === cat.name.toLowerCase());
+    }
+    return matchesSearch && categoryName === activeCategory.toLowerCase();
   });
   
   // Após o filtro de produtos
