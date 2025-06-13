@@ -186,8 +186,24 @@ const ClientCart = () => {
   
   // Calcular subtotal e total
   useEffect(() => {
+    // Agrupar doses e combos
+    const { doses, outros: semDoses } = agruparDoses(cart);
+    const { combos, outros } = agruparCombos(semDoses);
     let calculatedSubtotal = 0;
-    for (const item of cart) {
+    // Somar valor das doses agrupadas
+    for (const items of Object.values(doses)) {
+      const doseInfo = items[0]?.dose;
+      if (doseInfo) {
+        calculatedSubtotal += doseInfo.price;
+      }
+    }
+    // Somar valor dos combos agrupados
+    for (const items of Object.values(combos)) {
+      const comboPrice = items[0]?.combo?.price || items[0]?.product?.comboPrice || items[0]?.priceCombo || items[0]?.price || items.reduce((sum, i) => sum + ((i.price ?? i.product.price) * i.quantity), 0);
+      calculatedSubtotal += comboPrice;
+    }
+    // Somar valor dos itens avulsos
+    for (const item of outros) {
       calculatedSubtotal += (item.price ?? item.product.price) * item.quantity;
     }
     setSubtotal(calculatedSubtotal);
@@ -402,6 +418,41 @@ const ClientCart = () => {
     }
     await sendOrder();
   };
+  
+  // Função utilitária para agrupar itens de dose
+  function agruparDoses(cart) {
+    const doses: Record<string, any> = {};
+    const outros: any[] = [];
+    for (const item of cart) {
+      if (item.doseId || item.dose) {
+        const key = item.doseId || (item.dose && item.dose.id);
+        if (key) {
+          if (!doses[key]) doses[key] = [];
+          doses[key].push(item);
+        } else {
+          outros.push(item);
+        }
+      } else {
+        outros.push(item);
+      }
+    }
+    return { doses, outros };
+  }
+
+  // Função utilitária para agrupar combos
+  function agruparCombos(cart) {
+    const combos: Record<string, any> = {};
+    const outros: any[] = [];
+    for (const item of cart) {
+      if (item.comboId) {
+        if (!combos[item.comboId]) combos[item.comboId] = [];
+        combos[item.comboId].push(item);
+      } else if (!item.isDose) {
+        outros.push(item);
+      }
+    }
+    return { combos, outros };
+  }
 
   return (
     <div className="min-h-screen bg-element-gray-light pt-16 md:pt-0">
