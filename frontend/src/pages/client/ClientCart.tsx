@@ -182,26 +182,18 @@ const ClientCart = () => {
   
   // Calcular subtotal e total
   useEffect(() => {
-    // Subtotal correto considerando combos/doses apenas uma vez por comboId/doseId
-    const combosSomados = new Set();
-    const dosesSomadas = new Set();
-    const subtotal = cart.reduce((acc, item: any) => {
-      if (item.comboId && item.combo?.price) {
-        if (!combosSomados.has(item.comboId)) {
-          combosSomados.add(item.comboId);
-          return acc + item.combo.price * (item.quantity ?? 1);
-        }
-        return acc;
-      }
-      if (item.doseId && item.dose?.price) {
-        if (!dosesSomadas.has(item.doseId)) {
-          dosesSomadas.add(item.doseId);
-          return acc + item.dose.price * (item.quantity ?? 1);
-        }
-        return acc;
-      }
-      return acc + (item.price ?? item.product.price) * (item.quantity ?? 1);
-    }, 0);
+    // Subtotal correto usando o mesmo agrupamento dos cards
+    const { combos, outros } = agruparCombos(cart);
+    let subtotal = 0;
+    // Somar valor dos combos agrupados
+    for (const items of Object.values(combos)) {
+      const comboPrice = items[0]?.combo?.price || items[0]?.product?.comboPrice || items[0]?.priceCombo || items[0]?.price || items.reduce((sum, i) => sum + ((i.price ?? i.product.price) * i.quantity), 0);
+      subtotal += comboPrice;
+    }
+    // Somar valor dos itens avulsos
+    for (const item of outros) {
+      subtotal += (item.price ?? item.product.price) * item.quantity;
+    }
     setSubtotal(subtotal);
     setTotal(subtotal - discount + deliveryFee);
   }, [cart, discount, deliveryFee]);
