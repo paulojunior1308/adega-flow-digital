@@ -182,12 +182,26 @@ const ClientCart = () => {
   
   // Calcular subtotal e total
   useEffect(() => {
-    const calculatedSubtotal = cart.reduce((sum, item) => {
-      if (item.isDose) {
-        return sum + (item.price ?? item.product.price);
+    // Agrupar doses e combos
+    const { doses, outros: semDoses } = agruparDoses(cart);
+    const { combos, outros } = agruparCombos(semDoses);
+    let calculatedSubtotal = 0;
+    // Somar valor das doses agrupadas
+    for (const items of Object.values(doses)) {
+      const doseInfo = items[0]?.dose;
+      if (doseInfo) {
+        calculatedSubtotal += doseInfo.price;
       }
-      return sum + ((item.price ?? item.product.price) * item.quantity);
-    }, 0);
+    }
+    // Somar valor dos combos agrupados
+    for (const items of Object.values(combos)) {
+      const comboPrice = items[0]?.combo?.price || items[0]?.product?.comboPrice || items[0]?.priceCombo || items[0]?.price || items.reduce((sum, i) => sum + ((i.price ?? i.product.price) * i.quantity), 0);
+      calculatedSubtotal += comboPrice;
+    }
+    // Somar valor dos itens avulsos
+    for (const item of outros) {
+      calculatedSubtotal += (item.price ?? item.product.price) * item.quantity;
+    }
     setSubtotal(calculatedSubtotal);
     setTotal(calculatedSubtotal - discount + deliveryFee);
   }, [cart, discount, deliveryFee]);
@@ -406,7 +420,7 @@ const ClientCart = () => {
     const doses: Record<string, any> = {};
     const outros: any[] = [];
     for (const item of cart) {
-      if (item.dose) {
+      if (item.isDose) {
         if (!doses[item.dose.id]) doses[item.dose.id] = [];
         doses[item.dose.id].push(item);
       } else {
@@ -424,7 +438,7 @@ const ClientCart = () => {
       if (item.comboId) {
         if (!combos[item.comboId]) combos[item.comboId] = [];
         combos[item.comboId].push(item);
-      } else if (!item.dose) {
+      } else if (!item.isDose) {
         outros.push(item);
       }
     }
