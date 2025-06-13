@@ -182,13 +182,23 @@ const ClientCart = () => {
   
   // Calcular subtotal e total
   useEffect(() => {
-    // Subtotal correto considerando combos, doses e produtos avulsos
+    // Subtotal correto considerando combos/doses apenas uma vez por comboId/doseId
+    const combosSomados = new Set();
+    const dosesSomadas = new Set();
     const subtotal = cart.reduce((acc, item: any) => {
-      if (item?.comboId && item?.combo?.price) {
-        return acc + item.combo.price * (item.quantity ?? 1);
+      if (item.comboId && item.combo?.price) {
+        if (!combosSomados.has(item.comboId)) {
+          combosSomados.add(item.comboId);
+          return acc + item.combo.price * (item.quantity ?? 1);
+        }
+        return acc;
       }
-      if (item?.doseId && item?.dose?.price) {
-        return acc + item.dose.price * (item.quantity ?? 1);
+      if (item.doseId && item.dose?.price) {
+        if (!dosesSomadas.has(item.doseId)) {
+          dosesSomadas.add(item.doseId);
+          return acc + item.dose.price * (item.quantity ?? 1);
+        }
+        return acc;
       }
       return acc + (item.price ?? item.product.price) * (item.quantity ?? 1);
     }, 0);
