@@ -46,6 +46,13 @@ const getImageUrl = (image?: string) => {
   return `${API_URL}${image}`;
 };
 
+const generateUniqueId = () => {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  return Math.random().toString(36).substr(2, 9) + Date.now();
+};
+
 export function ComboCarousel() {
   const [combos, setCombos] = React.useState<Combo[]>([]);
   const [loading, setLoading] = React.useState(true);
@@ -70,7 +77,7 @@ export function ComboCarousel() {
       setModalOpen(true);
     } else {
       addToCart({
-        id: combo.id,
+        id: generateUniqueId(),
         type: 'combo',
         name: combo.name,
         price: combo.price,
@@ -160,7 +167,8 @@ export function ComboCarousel() {
             api.post('/cart', {
               comboId: selectedCombo.id,
               quantity: 1,
-              choosableSelections
+              choosableSelections,
+              uniqueCartId: generateUniqueId()
             }).then(() => {
               setModalOpen(false);
             });
