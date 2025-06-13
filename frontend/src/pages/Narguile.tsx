@@ -62,10 +62,10 @@ const Narguile = () => {
     fetch('https://adega-flow-digital.onrender.com/api/products/categories')
       .then(res => res.json())
       .then(categories => {
-        // Pega as categorias de interesse
-        const nomes = ['Essências', 'Essencia', 'Carvão', 'Carvao', 'Alumínio', 'Aluminio'];
+        // Filtrar apenas as categorias exatamente com os nomes desejados
+        const nomesExatos = ['Essências', 'Carvão', 'Alumínio'];
         const categoriasSelecionadas = categories.filter((cat: any) =>
-          nomes.some(nome => cat.name.toLowerCase().includes(nome))
+          nomesExatos.includes(cat.name)
         );
         setCategoriasNarguile(categoriasSelecionadas);
         const ids = categoriasSelecionadas.map((cat: any) => cat.id);
@@ -143,12 +143,12 @@ const Narguile = () => {
   const filteredProducts = products.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
       (product.description && product.description.toLowerCase().includes(searchTerm.toLowerCase()));
-    const categoryName = (product.category && product.category.name ? product.category.name : product.category || '').toLowerCase();
+    const categoryName = (product.category && product.category.name ? product.category.name : product.category || '');
     if (activeCategory === 'todos') {
-      // Mostrar apenas produtos das categorias Essências, Carvão e Alumínio
-      return matchesSearch && categoriasNarguile.some(cat => categoryName === cat.name.toLowerCase());
+      // Mostrar apenas produtos das categorias exatas
+      return matchesSearch && categoriasNarguile.some(cat => categoryName === cat.name);
     }
-    return matchesSearch && categoryName === activeCategory.toLowerCase();
+    return matchesSearch && categoryName === activeCategory;
   });
   
   // Após o filtro de produtos
