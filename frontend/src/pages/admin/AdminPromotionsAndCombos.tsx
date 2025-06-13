@@ -860,7 +860,7 @@ export default function AdminPromotionsAndCombos() {
                           <Button
                             variant="outline"
                             size="icon"
-                            onClick={() => setEditingDose(dose)}
+                            onClick={() => { setEditingDose(dose); setIsDoseDialogOpen(true); }}
                           >
                             <Edit className="w-4 h-4" />
                           </Button>
