@@ -399,16 +399,35 @@ export const adminController = {
         if (combo) {
           for (const comboItem of combo.items) {
             const produto = await prisma.product.findUnique({ where: { id: comboItem.productId } });
-            const quantidadeFinal = (produto?.stock || 0) - item.quantity;
-            if (quantidadeFinal < 0) {
-              return res.status(400).json({ error: `Estoque insuficiente para o produto do combo: ${produto?.name}` });
+            if (!produto) continue;
+            // Lógica para fracionados
+            if (produto.isFractioned) {
+              // Sempre venda por unidade no combo (quantidade do comboItem)
+              const unitVolume = produto.unitVolume || 1;
+              const quantidadeUnidade = comboItem.quantity * item.quantity;
+              const novoVolume = (produto.totalVolume || 0) - (unitVolume * quantidadeUnidade);
+              const novoEstoque = (produto.stock || 0) - quantidadeUnidade;
+              if (novoVolume < 0 || novoEstoque < 0) {
+                return res.status(400).json({ error: `Estoque insuficiente para o produto do combo: ${produto.name}` });
+              }
+              await prisma.product.update({
+                where: { id: comboItem.productId },
+                data: {
+                  stock: novoEstoque,
+                  totalVolume: novoVolume
+                }
+              });
+            } else {
+              // Produto não fracionado: desconta unidade normalmente
+              const quantidadeFinal = (produto?.stock || 0) - (comboItem.quantity * item.quantity);
+              if (quantidadeFinal < 0) {
+                return res.status(400).json({ error: `Estoque insuficiente para o produto do combo: ${produto?.name}` });
+              }
+              await prisma.product.update({
+                where: { id: comboItem.productId },
+                data: { stock: { decrement: comboItem.quantity * item.quantity } }
+              });
             }
-          }
-          for (const comboItem of combo.items) {
-            await prisma.product.update({
-              where: { id: comboItem.productId },
-              data: { stock: { decrement: item.quantity } }
-            });
           }
         }
       } else if (item.productId) {
