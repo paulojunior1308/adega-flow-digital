@@ -420,7 +420,11 @@ const ClientCart = () => {
     const doses: Record<string, any> = {};
     const outros: any[] = [];
     for (const item of cart) {
-      if (item.doseId || item.dose) {
+      if (item.doseInstanceId) {
+        if (!doses[item.doseInstanceId]) doses[item.doseInstanceId] = [];
+        doses[item.doseInstanceId].push(item);
+      } else if (item.doseId || item.dose) {
+        // fallback para doses antigas sem o novo campo
         const key = item.doseId || (item.dose && item.dose.id);
         if (key) {
           if (!doses[key]) doses[key] = [];
