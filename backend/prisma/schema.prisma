@@ -232,6 +232,8 @@ model OrderItem {
   productId String
   quantity  Int     @default(1)
   price     Float
+  comboInstanceId String? // Novo campo para identificar instância única do combo
+  doseInstanceId String? // Novo campo para identificar instância única da dose
   doseId    String?  // Novo campo para referenciar doses
   choosableSelections Json?  // Novo campo para armazenar seleções de itens escolhíveis
   order     Order   @relation(fields: [orderId], references: [id])

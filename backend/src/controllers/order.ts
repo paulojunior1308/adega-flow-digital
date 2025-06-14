@@ -174,6 +174,8 @@ export const orderController = {
             price: item.price ?? item.product.price,
             doseId: item.doseId || null,
             choosableSelections: item.choosableSelections || null,
+            comboInstanceId: item.comboInstanceId || null,
+            doseInstanceId: item.doseInstanceId || null,
           })),
         },
       } as any,
