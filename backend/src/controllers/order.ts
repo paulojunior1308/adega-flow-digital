@@ -100,25 +100,39 @@ export const orderController = {
       }
     }
 
-    // Calcula total usando o preço ajustado do cartItem
-    console.log('Itens do carrinho para cálculo do pedido:');
-    cart.items.forEach((item: any) => {
-      console.log({
-        id: item.id,
-        productId: item.productId,
-        comboId: item.comboId,
-        comboInstanceId: item.comboInstanceId,
-        name: item.product?.name,
-        price: item.price,
-        productPrice: item.product?.price,
-        quantity: item.quantity
-      });
-    });
-    const totalProdutos = cart.items.reduce((sum: number, item: any) => {
+    // Separar combos por comboInstanceId e produtos avulsos
+    const combosMap: Record<string, any[]> = {};
+    const avulsos: any[] = [];
+    for (const item of cart.items) {
+      const comboInstanceId = (item as any).comboInstanceId;
+      if (comboInstanceId) {
+        if (!combosMap[comboInstanceId]) combosMap[comboInstanceId] = [];
+        combosMap[comboInstanceId].push(item);
+      } else {
+        avulsos.push(item);
+      }
+    }
+
+    // Buscar o valor de cada combo cadastrado
+    let totalCombos = 0;
+    for (const comboItems of Object.values(combosMap)) {
+      const comboId = comboItems[0].comboId;
+      const combo = await prisma.combo.findUnique({ where: { id: comboId } });
+      if (combo) {
+        totalCombos += combo.price;
+      }
+    }
+
+    // Somar produtos avulsos normalmente
+    const totalAvulsos = avulsos.reduce((sum, item) => {
       const valor = (item.price ?? item.product.price) * item.quantity;
-      console.log(`Item ${item.id} (${item.product?.name}): (price: ${item.price ?? item.product.price}) x (qtd: ${item.quantity}) = ${valor}`);
+      console.log(`[AVULSO] Item ${item.id} (${item.product?.name}): (price: ${item.price ?? item.product.price}) x (qtd: ${item.quantity}) = ${valor}`);
       return sum + valor;
     }, 0);
+
+    const totalProdutos = totalCombos + totalAvulsos;
+    console.log('Subtotal dos combos:', totalCombos);
+    console.log('Subtotal dos avulsos:', totalAvulsos);
     console.log('Subtotal dos produtos:', totalProdutos);
     console.log('Taxa de entrega:', deliveryFee);
     const total = totalProdutos + deliveryFee;
