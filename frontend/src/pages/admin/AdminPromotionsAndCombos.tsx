@@ -629,7 +629,7 @@ export default function AdminPromotionsAndCombos() {
                         Adicionar Promoção
                       </Button>
                     </DialogTrigger>
-                    <DialogContent className="max-w-3xl">
+                    <DialogContent className="w-full max-w-[95vw] sm:max-w-3xl p-2 sm:p-6 max-h-[90vh] overflow-y-auto">
                       <DialogHeader>
                         <DialogTitle>Criar Nova Promoção</DialogTitle>
                       </DialogHeader>
@@ -637,11 +637,11 @@ export default function AdminPromotionsAndCombos() {
                         <div className="grid gap-4">
                           <div>
                             <Label htmlFor="name">Nome da Promoção</Label>
-                            <Input id="name" name="name" required />
+                            <Input id="name" name="name" required className="w-full" />
                           </div>
                           <div>
                             <Label htmlFor="description">Descrição</Label>
-                            <Textarea id="description" name="description" />
+                            <Textarea id="description" name="description" className="w-full" />
                           </div>
                           <div>
                             <Label htmlFor="price">Preço Promocional</Label>
@@ -651,6 +651,7 @@ export default function AdminPromotionsAndCombos() {
                               type="number"
                               step="0.01"
                               required
+                              className="w-full"
                             />
                           </div>
                           <div>
@@ -661,6 +662,7 @@ export default function AdminPromotionsAndCombos() {
                               type="number"
                               step="0.01"
                               required
+                              className="w-full"
                             />
                           </div>
                           <div>
@@ -670,6 +672,7 @@ export default function AdminPromotionsAndCombos() {
                               name="image"
                               type="file"
                               accept="image/*"
+                              className="w-full"
                             />
                           </div>
                           <div>
@@ -680,7 +683,7 @@ export default function AdminPromotionsAndCombos() {
                                 placeholder="Buscar produtos..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                className="flex-1"
+                                className="flex-1 w-full"
                               />
                             </div>
                             <ScrollArea className="h-[350px] border rounded-md p-4">
@@ -918,7 +921,7 @@ export default function AdminPromotionsAndCombos() {
       </div>
       {/* Modal de edição de combo */}
       <Dialog open={!!editingCombo} onOpenChange={(open) => { if (!open) resetForm(); }}>
-        <DialogContent className="max-w-3xl w-full p-2 sm:p-6">
+        <DialogContent className="w-full max-w-[95vw] sm:max-w-3xl p-2 sm:p-6 max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Editar Combo</DialogTitle>
           </DialogHeader>
@@ -931,11 +934,11 @@ export default function AdminPromotionsAndCombos() {
               <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
                 <div>
                   <Label htmlFor="name">Nome do Combo</Label>
-                  <Input id="name" name="name" defaultValue={editingCombo.name} required />
+                  <Input id="name" name="name" defaultValue={editingCombo.name} required className="w-full" />
                 </div>
                 <div>
                   <Label htmlFor="description">Descrição</Label>
-                  <Textarea id="description" name="description" defaultValue={editingCombo.description} />
+                  <Textarea id="description" name="description" defaultValue={editingCombo.description} className="w-full" />
                 </div>
                 <div>
                   <Label htmlFor="price">Preço</Label>
@@ -946,6 +949,7 @@ export default function AdminPromotionsAndCombos() {
                     step="0.01"
                     defaultValue={editingCombo.price}
                     required
+                    className="w-full"
                   />
                 </div>
                 <div>
@@ -955,16 +959,17 @@ export default function AdminPromotionsAndCombos() {
                     name="image"
                     type="file"
                     accept="image/*"
+                    className="w-full"
                   />
                 </div>
                 <div>
                   <Label htmlFor="combo-category-edit">Categoria</Label>
                   <Select
-                    value={comboCategoryId || editingCombo?.categoryId || (editingCombo?.category && editingCombo.category.id) || ''}
+                    value={comboCategoryId}
                     onValueChange={setComboCategoryId}
                     required
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="w-full">
                       <SelectValue placeholder="Selecione a categoria" />
                     </SelectTrigger>
                     <SelectContent>
@@ -982,7 +987,7 @@ export default function AdminPromotionsAndCombos() {
                       placeholder="Buscar produtos..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
-                      className="flex-1"
+                      className="flex-1 w-full"
                     />
                   </div>
                   <ScrollArea className="h-[350px] border rounded-md p-4">
@@ -1073,7 +1078,7 @@ export default function AdminPromotionsAndCombos() {
       </Dialog>
       {/* Modal de criação de combo */}
       <Dialog open={isComboDialogOpen} onOpenChange={setIsComboDialogOpen}>
-        <DialogContent className="max-w-3xl w-full p-2 sm:p-6">
+        <DialogContent className="w-full max-w-[95vw] sm:max-w-3xl p-2 sm:p-6 max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Criar Novo Combo</DialogTitle>
           </DialogHeader>
@@ -1085,11 +1090,11 @@ export default function AdminPromotionsAndCombos() {
             <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
               <div>
                 <Label htmlFor="name">Nome do Combo</Label>
-                <Input id="name" name="name" required />
+                <Input id="name" name="name" required className="w-full" />
               </div>
               <div>
                 <Label htmlFor="description">Descrição</Label>
-                <Textarea id="description" name="description" />
+                <Textarea id="description" name="description" className="w-full" />
               </div>
               <div>
                 <Label htmlFor="price">Preço</Label>
@@ -1099,6 +1104,7 @@ export default function AdminPromotionsAndCombos() {
                   type="number"
                   step="0.01"
                   required
+                  className="w-full"
                 />
               </div>
               <div>
@@ -1108,12 +1114,13 @@ export default function AdminPromotionsAndCombos() {
                   name="image"
                   type="file"
                   accept="image/*"
+                  className="w-full"
                 />
               </div>
               <div>
                 <Label htmlFor="combo-category">Categoria</Label>
-                <Select id="combo-category" value={comboCategoryId} onValueChange={setComboCategoryId} required>
-                  <SelectTrigger>
+                <Select value={comboCategoryId} onValueChange={setComboCategoryId} required>
+                  <SelectTrigger className="w-full">
                     <SelectValue placeholder="Selecione a categoria" />
                   </SelectTrigger>
                   <SelectContent>
@@ -1131,7 +1138,7 @@ export default function AdminPromotionsAndCombos() {
                     placeholder="Buscar produtos..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="flex-1"
+                    className="flex-1 w-full"
                   />
                 </div>
                 <ScrollArea className="h-[350px] border rounded-md p-4">
@@ -1221,7 +1228,7 @@ export default function AdminPromotionsAndCombos() {
       </Dialog>
       {/* Modal de edição de promoção */}
       <Dialog open={!!editingPromotion} onOpenChange={(open) => { if (!open) resetForm(); }}>
-        <DialogContent className="max-w-3xl w-full p-2 sm:p-6">
+        <DialogContent className="w-full max-w-[95vw] sm:max-w-3xl p-2 sm:p-6 max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Editar Promoção</DialogTitle>
           </DialogHeader>
@@ -1234,11 +1241,11 @@ export default function AdminPromotionsAndCombos() {
               <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
                 <div>
                   <Label htmlFor="name">Nome da Promoção</Label>
-                  <Input id="name" name="name" defaultValue={editingPromotion.name} required />
+                  <Input id="name" name="name" defaultValue={editingPromotion.name} required className="w-full" />
                 </div>
                 <div>
                   <Label htmlFor="description">Descrição</Label>
-                  <Textarea id="description" name="description" defaultValue={editingPromotion.description} />
+                  <Textarea id="description" name="description" defaultValue={editingPromotion.description} className="w-full" />
                 </div>
                 <div>
                   <Label htmlFor="price">Preço Promocional</Label>
@@ -1249,6 +1256,7 @@ export default function AdminPromotionsAndCombos() {
                     step="0.01"
                     defaultValue={editingPromotion.price}
                     required
+                    className="w-full"
                   />
                 </div>
                 <div>
@@ -1260,6 +1268,7 @@ export default function AdminPromotionsAndCombos() {
                     step="0.01"
                     defaultValue={editingPromotion.originalPrice}
                     required
+                    className="w-full"
                   />
                 </div>
                 <div>
@@ -1269,6 +1278,7 @@ export default function AdminPromotionsAndCombos() {
                     name="image"
                     type="file"
                     accept="image/*"
+                    className="w-full"
                   />
                 </div>
                 <div>
@@ -1279,7 +1289,7 @@ export default function AdminPromotionsAndCombos() {
                       placeholder="Buscar produtos..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
-                      className="flex-1"
+                      className="flex-1 w-full"
                     />
                   </div>
                   <ScrollArea className="h-[350px] border rounded-md p-4">
@@ -1316,15 +1326,15 @@ export default function AdminPromotionsAndCombos() {
       </Dialog>
       {/* Modal de criação de dose */}
       <Dialog open={isDoseDialogOpen} onOpenChange={handleOpenDoseDialog}>
-        <DialogContent className="max-w-lg w-full">
+        <DialogContent className="w-full max-w-[95vw] sm:max-w-lg p-2 sm:p-6 max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingDose ? 'Editar Dose' : 'Adicionar Dose'}</DialogTitle>
           </DialogHeader>
           <form onSubmit={editingDose ? handleUpdateDose : handleCreateDose} className="space-y-4">
-            <Input name="name" placeholder="Nome da Dose" defaultValue={editingDose?.name || ''} required />
-            <Textarea name="description" placeholder="Descrição" defaultValue={editingDose?.description || ''} />
-            <Input name="price" placeholder="Preço (R$)" type="number" step="0.01" defaultValue={editingDose?.price || ''} required />
-            <Input name="image" type="file" accept="image/*" />
+            <Input name="name" placeholder="Nome da Dose" defaultValue={editingDose?.name || ''} required className="w-full" />
+            <Textarea name="description" placeholder="Descrição" defaultValue={editingDose?.description || ''} className="w-full" />
+            <Input name="price" placeholder="Preço (R$)" type="number" step="0.01" defaultValue={editingDose?.price || ''} required className="w-full" />
+            <Input name="image" type="file" accept="image/*" className="w-full" />
             <div>
               <Label htmlFor="dose-category-edit">Categoria</Label>
               <Select
