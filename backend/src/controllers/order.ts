@@ -95,8 +95,35 @@ export const orderController = {
       if (!produto) {
         return res.status(400).json({ error: `Produto não encontrado: ${item.productId}` });
       }
-      if ((produto.stock || 0) < item.quantity) {
-        return res.status(400).json({ error: `Estoque insuficiente para o produto '${produto.name}'.` });
+      // Verificação especial para produtos fracionados em doses
+      if (produto.isFractioned) {
+        // Se o produto for fracionado, tentar identificar se é desconto por volume
+        // Busca doseItem correspondente, se existir
+        let descontoPorVolume = false;
+        if (item.doseId) {
+          const dose = await prisma.dose.findUnique({ where: { id: item.doseId }, include: { items: true } });
+          if (dose) {
+            const doseItem = dose.items.find(di => di.productId === item.productId);
+            if (doseItem && doseItem.discountBy === 'volume') {
+              descontoPorVolume = true;
+            }
+          }
+        }
+        if (descontoPorVolume) {
+          // Verifica pelo totalVolume
+          if ((produto.totalVolume || 0) < item.quantity) {
+            return res.status(400).json({ error: `Estoque insuficiente (volume) para o produto '${produto.name}'.` });
+          }
+        } else {
+          // Verifica pelo stock (unidade)
+          if ((produto.stock || 0) < item.quantity) {
+            return res.status(400).json({ error: `Estoque insuficiente para o produto '${produto.name}'.` });
+          }
+        }
+      } else {
+        if ((produto.stock || 0) < item.quantity) {
+          return res.status(400).json({ error: `Estoque insuficiente para o produto '${produto.name}'.` });
+        }
       }
     }
 
