@@ -61,7 +61,6 @@ interface Product {
   price: number;
   image: string;
   description: string;
-  comboPrice?: number;
 }
 
 interface CartItem {
@@ -71,11 +70,6 @@ interface CartItem {
   price?: number;
   isDose?: boolean;
   doseName?: string;
-  comboId?: number | string;
-  combo?: any;
-  priceCombo?: number;
-  uniqueId?: string;
-  items?: any[];
 }
 
 interface Address {
@@ -188,20 +182,29 @@ const ClientCart = () => {
   
   // Calcular subtotal e total
   useEffect(() => {
+    // Agrupar doses e combos
+    const { doses, outros: semDoses } = agruparDoses(cart);
+    const { combos, outros } = agruparCombos(semDoses);
     let calculatedSubtotal = 0;
-    // Somar todos os combos individualmente
-    cart.forEach(item => {
-      if (item.comboId) {
-        calculatedSubtotal += (item.combo?.price || item.product?.comboPrice || item.priceCombo || item.price || (item.price ?? item.product.price)) * (item.quantity || 1);
-      } else if (!item.isDose) {
-        calculatedSubtotal += (item.price ?? item.product.price) * (item.quantity || 1);
-      } else {
-        calculatedSubtotal += (item.price ?? item.product.price);
+    // Somar valor das doses agrupadas
+    for (const items of Object.values(doses)) {
+      const doseInfo = items[0]?.dose;
+      if (doseInfo) {
+        calculatedSubtotal += doseInfo.price;
       }
-    });
+    }
+    // Somar valor dos combos agrupados
+    for (const items of Object.values(combos)) {
+      const comboPrice = items[0]?.combo?.price || items[0]?.product?.comboPrice || items[0]?.priceCombo || items[0]?.price || items.reduce((sum, i) => sum + ((i.price ?? i.product.price) * i.quantity), 0);
+      calculatedSubtotal += comboPrice;
+    }
+    // Somar valor dos itens avulsos
+    for (const item of outros) {
+      calculatedSubtotal += (item.price ?? item.product.price) * item.quantity;
+    }
     setSubtotal(calculatedSubtotal);
-    setTotal(calculatedSubtotal + deliveryFee - discount);
-  }, [cart, deliveryFee, discount]);
+    setTotal(calculatedSubtotal - discount + deliveryFee);
+  }, [cart, discount, deliveryFee]);
   
   // Buscar carrinho real do backend ao carregar a página
   useEffect(() => {
@@ -437,7 +440,11 @@ const ClientCart = () => {
     const combos: Record<string, any> = {};
     const outros: any[] = [];
     for (const item of cart) {
-      if (item.comboId) {
+      if (item.comboInstanceId) {
+        if (!combos[item.comboInstanceId]) combos[item.comboInstanceId] = [];
+        combos[item.comboInstanceId].push(item);
+      } else if (item.comboId) {
+        // fallback para combos antigos sem o novo campo
         if (!combos[item.comboId]) combos[item.comboId] = [];
         combos[item.comboId].push(item);
       } else if (!item.isDose) {
@@ -480,9 +487,7 @@ const ClientCart = () => {
                       <div className="space-y-4">
                         {(() => {
                           const { doses, outros: semDoses } = agruparDoses(cart);
-                          // Exibir combos individualmente
-                          const combosIndividuais = semDoses.filter(item => item.comboId);
-                          const outros = semDoses.filter(item => !item.comboId);
+                          const { combos, outros } = agruparCombos(semDoses);
                           return (
                             <>
                               {/* Doses agrupadas */}
@@ -519,13 +524,13 @@ const ClientCart = () => {
                                   </div>
                                 );
                               })}
-                              {/* Combos individuais */}
-                              {combosIndividuais.map((item) => {
-                                const comboInfo = item.combo || item.product;
+                              {/* Combos agrupados */}
+                              {Object.entries(combos).map(([comboId, items]) => {
+                                const comboInfo = items[0]?.combo || items[0]?.product; // fallback para product
                                 const comboName = comboInfo?.name || 'Combo';
-                                const comboPrice = comboInfo?.price || item.price || (item.price ?? item.product.price);
+                                const comboPrice = items[0]?.combo?.price || items[0]?.product?.comboPrice || items[0]?.priceCombo || items[0]?.price || items.reduce((sum, i) => sum + ((i.price ?? i.product.price) * i.quantity), 0);
                                 return (
-                                  <div key={item.uniqueId || item.id} className="border rounded-md mb-4 bg-gray-50">
+                                  <div key={comboId} className="border rounded-md mb-4 bg-gray-50">
                                     <div className="flex items-center justify-between p-4 border-b">
                                       <div>
                                         <h3 className="font-bold text-element-blue-dark">{comboName}</h3>
@@ -533,20 +538,20 @@ const ClientCart = () => {
                                       </div>
                                       <div className="flex items-center gap-2">
                                         <span className="font-bold text-lg text-element-blue-dark">R$ {comboPrice.toFixed(2)}</span>
-                                        <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700 hover:bg-red-50" onClick={() => removeFromCart(item.id)}>
+                                        <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700 hover:bg-red-50" onClick={() => {
+                                          items.forEach(i => removeFromCart(i.id));
+                                        }}>
                                           <Trash2 className="h-4 w-4 mr-1" /> Remover
                                         </Button>
                                       </div>
                                     </div>
                                     <div className="p-4 pt-2">
                                       <ul className="text-sm text-gray-700">
-                                        {item.items && item.items.map((comboItem: any, idx: number) => (
-                                          <li key={comboItem.productId + '-' + idx} className="flex items-center gap-2 mb-1">
-                                            {comboItem.product && comboItem.product.image && (
-                                              <img src={comboItem.product.image && !comboItem.product.image.startsWith('http') ? API_URL + comboItem.product.image : comboItem.product.image} alt={comboItem.product.name} className="w-8 h-8 object-cover rounded mr-2" />
-                                            )}
-                                            <span>{comboItem.product?.name || comboItem.nome}</span>
-                                            <span className="ml-auto">{comboItem.quantidade || comboItem.quantity} {comboItem.discountBy === 'volume' || (comboItem.product?.isFractioned) ? 'ml' : 'un'}</span>
+                                        {items.map((comboItem: any, idx: number) => (
+                                          <li key={comboItem.product.id + '-' + idx} className="flex items-center gap-2 mb-1">
+                                            <img src={comboItem.product.image && !comboItem.product.image.startsWith('http') ? API_URL + comboItem.product.image : comboItem.product.image} alt={comboItem.product.name} className="w-8 h-8 object-cover rounded mr-2" />
+                                            <span>{comboItem.product.name}</span>
+                                            <span className="ml-auto">{comboItem.quantity} un</span>
                                           </li>
                                         ))}
                                       </ul>

@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import prisma from '../config/prisma';
 import { AppError } from '../config/errorHandler';
+import { v4 as uuidv4 } from 'uuid';
 
 export const cartController = {
   // Listar itens do carrinho do usuário logado
@@ -97,6 +98,8 @@ export const cartController = {
       const createdItems = [];
       const choosableSelections = req.body.choosableSelections || {};
       console.log('Recebido choosableSelections:', JSON.stringify(choosableSelections));
+      // Gerar um id único para esta instância do combo
+      const comboInstanceId = uuidv4();
       for (const comboItem of combo.items) {
         if (comboItem.allowFlavorSelection && comboItem.categoryId) {
           // Adicionar os escolhidos pelo cliente para esta categoria
@@ -105,63 +108,37 @@ export const cartController = {
             const quantityNumber = Number(qty);
             if (quantityNumber > 0) {
               console.log('Buscando produto', productId);
-              // Busca por produto + comboId
-              const existing = await prisma.cartItem.findFirst({
-                where: { cartId: cart.id, productId, comboId },
-              });
+              // Não agrupar combos iguais, sempre criar novo cartItem com comboInstanceId
               const customPrice = req.body.priceByProduct && req.body.priceByProduct[productId];
-              if (existing) {
-                const updated = await prisma.cartItem.update({
-                  where: { id: existing.id },
-                  data: {
-                    quantity: existing.quantity + quantityNumber * quantity,
-                    ...(customPrice !== undefined ? { price: customPrice } : {}),
-                  },
-                });
-                createdItems.push(updated);
-              } else {
-                const item = await prisma.cartItem.create({
-                  data: {
-                    cartId: cart.id,
-                    productId,
-                    quantity: quantityNumber * quantity,
-                    comboId,
-                    ...(customPrice !== undefined ? { price: customPrice } : {}),
-                  },
-                  include: { product: true },
-                });
-                createdItems.push(item);
-              }
+              const item = await prisma.cartItem.create({
+                data: {
+                  cartId: cart.id,
+                  productId,
+                  quantity: quantityNumber * quantity,
+                  comboId,
+                  comboInstanceId,
+                  ...(customPrice !== undefined ? { price: customPrice } : {}),
+                },
+                include: { product: true },
+              });
+              createdItems.push(item);
             }
           }
         } else {
-          // Item fixo: adicionar normalmente
-          const existing = await prisma.cartItem.findFirst({
-            where: { cartId: cart.id, productId: comboItem.productId, comboId },
-          });
+          // Item fixo: adicionar normalmente, sempre com novo comboInstanceId
           const customPrice = req.body.priceByProduct && req.body.priceByProduct[comboItem.productId];
-          if (existing) {
-            const updated = await prisma.cartItem.update({
-              where: { id: existing.id },
-              data: {
-                quantity: existing.quantity + comboItem.quantity * quantity,
-                ...(customPrice !== undefined ? { price: customPrice } : {}),
-              },
-            });
-            createdItems.push(updated);
-          } else {
-            const item = await prisma.cartItem.create({
-              data: {
-                cartId: cart.id,
-                productId: comboItem.productId,
-                quantity: comboItem.quantity * quantity,
-                comboId,
-                ...(customPrice !== undefined ? { price: customPrice } : {}),
-              },
-              include: { product: true },
-            });
-            createdItems.push(item);
-          }
+          const item = await prisma.cartItem.create({
+            data: {
+              cartId: cart.id,
+              productId: comboItem.productId,
+              quantity: comboItem.quantity * quantity,
+              comboId,
+              comboInstanceId,
+              ...(customPrice !== undefined ? { price: customPrice } : {}),
+            },
+            include: { product: true },
+          });
+          createdItems.push(item);
         }
       }
       return res.status(201).json(createdItems);

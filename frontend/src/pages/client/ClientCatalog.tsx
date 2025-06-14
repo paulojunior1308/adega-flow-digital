@@ -517,27 +517,14 @@ const ClientCatalog = () => {
             // 8. Salvar descontos no localStorage
             localStorage.setItem('comboDescontos', JSON.stringify(descontos));
             // 9. Enviar apenas UM POST para o backend com comboId, quantity, choosableSelections e priceByProduct
-            const uniqueId = Date.now().toString() + Math.random().toString(36).substring(2, 8);
             await api.post('/cart', {
               comboId: comboToConfigure.id,
               quantity: 1,
               choosableSelections,
-              priceByProduct: descontos.reduce((acc, d) => ({ ...acc, [d.productId]: d.precoAjustado }), {}),
-              uniqueId
+              priceByProduct: descontos.reduce((acc, d) => ({ ...acc, [d.productId]: d.precoAjustado }), {})
             });
             const res = await api.get('/cart');
-            // Adiciona o uniqueId e os produtos do combo ao item do carrinho local
-            if (res.data?.items) {
-              const items = res.data.items.map((item: any) => {
-                if (item.comboId === comboToConfigure.id && !item.uniqueId) {
-                  return { ...item, uniqueId, items: produtosCombo };
-                }
-                return item;
-              });
-              setCart(items);
-            } else {
-              setCart([]);
-            }
+            setCart(res.data?.items || []);
             toast({
               title: 'Combo adicionado',
               description: `${comboToConfigure.name} adicionado ao carrinho`,
