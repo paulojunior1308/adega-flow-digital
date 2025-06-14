@@ -100,14 +100,19 @@ export const orderController = {
       }
     }
 
-    // Separar combos por comboInstanceId e produtos avulsos
+    // Separar combos, doses e produtos avulsos
     const combosMap: Record<string, any[]> = {};
+    const dosesMap: Record<string, any[]> = {};
     const avulsos: any[] = [];
     for (const item of cart.items) {
       const comboInstanceId = (item as any).comboInstanceId;
+      const doseInstanceId = (item as any).doseInstanceId;
       if (comboInstanceId) {
         if (!combosMap[comboInstanceId]) combosMap[comboInstanceId] = [];
         combosMap[comboInstanceId].push(item);
+      } else if (doseInstanceId) {
+        if (!dosesMap[doseInstanceId]) dosesMap[doseInstanceId] = [];
+        dosesMap[doseInstanceId].push(item);
       } else {
         avulsos.push(item);
       }
@@ -123,6 +128,16 @@ export const orderController = {
       }
     }
 
+    // Buscar o valor de cada dose cadastrada
+    let totalDoses = 0;
+    for (const doseItems of Object.values(dosesMap)) {
+      const doseId = doseItems[0].doseId;
+      const dose = await prisma.dose.findUnique({ where: { id: doseId } });
+      if (dose) {
+        totalDoses += dose.price;
+      }
+    }
+
     // Somar produtos avulsos normalmente
     const totalAvulsos = avulsos.reduce((sum, item) => {
       const valor = (item.price ?? item.product.price) * item.quantity;
@@ -130,8 +145,9 @@ export const orderController = {
       return sum + valor;
     }, 0);
 
-    const totalProdutos = totalCombos + totalAvulsos;
+    const totalProdutos = totalCombos + totalDoses + totalAvulsos;
     console.log('Subtotal dos combos:', totalCombos);
+    console.log('Subtotal das doses:', totalDoses);
     console.log('Subtotal dos avulsos:', totalAvulsos);
     console.log('Subtotal dos produtos:', totalProdutos);
     console.log('Taxa de entrega:', deliveryFee);

@@ -194,6 +194,7 @@ model CartItem {
   comboId   String?
   comboInstanceId String?
   doseId    String?  // Novo campo para referenciar doses
+  doseInstanceId String? // Novo campo para identificar instância única da dose
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   cart      Cart     @relation(fields: [cartId], references: [id])

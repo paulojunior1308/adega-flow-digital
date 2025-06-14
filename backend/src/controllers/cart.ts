@@ -57,36 +57,25 @@ export const cartController = {
       if (!dose) {
         throw new AppError('Dose não encontrada', 404);
       }
-      // Verificar se já existe essa dose no carrinho (mesmo doseId e mesmas escolhas, se houver)
-      const existing = await prisma.cartItem.findFirst({
-        where: { cartId: cart.id, doseId },
-      });
-      if (existing) {
-        const updated = await prisma.cartItem.update({
-          where: { id: existing.id },
-          data: { quantity: existing.quantity + quantity },
-          include: { product: true, dose: { include: { items: { include: { product: true } } } } },
-        });
-        console.log('[CART][LOG] CartItem de dose atualizado:', JSON.stringify(updated, null, 2));
-        const cartAfter = await prisma.cart.findUnique({ where: { userId }, include: { items: { include: { product: true, dose: true, combo: true } } } });
-        console.log('[CART][LOG] Carrinho após adicionar dose:', JSON.stringify(cartAfter, null, 2));
-        return res.status(201).json(updated);
-      } else {
+      // Gerar um id único para esta instância da dose
+      const doseInstanceId = uuidv4();
+      // Adicionar todos os produtos da dose como cartItems com o mesmo doseInstanceId
+      const createdItems = [];
+      for (const doseItem of dose.items) {
         const item = await prisma.cartItem.create({
           data: {
             cartId: cart.id,
-            productId: dose.items[0]?.productId || '',
-            quantity,
+            productId: doseItem.productId,
+            quantity: doseItem.quantity * quantity,
             doseId,
-            price: dose.price,
+            doseInstanceId,
+            price: dose.price, // garantir que o preço da dose seja usado
           },
-          include: { product: true, dose: { include: { items: { include: { product: true } } } } },
+          include: { product: true },
         });
-        console.log('[CART][LOG] CartItem de dose criado:', JSON.stringify(item, null, 2));
-        const cartAfter = await prisma.cart.findUnique({ where: { userId }, include: { items: { include: { product: true, dose: true, combo: true } } } });
-        console.log('[CART][LOG] Carrinho após adicionar dose:', JSON.stringify(cartAfter, null, 2));
-        return res.status(201).json(item);
+        createdItems.push(item);
       }
+      return res.status(201).json(createdItems);
     }
     if (comboId) {
       console.log('[CART][LOG] Adicionando combo ao carrinho. Payload:', req.body);
