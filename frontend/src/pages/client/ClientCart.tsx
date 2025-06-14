@@ -483,7 +483,9 @@ const ClientCart = () => {
                       <div className="space-y-4">
                         {(() => {
                           const { doses, outros: semDoses } = agruparDoses(cart);
-                          const { combos, outros } = agruparCombos(semDoses);
+                          // Exibir combos individualmente
+                          const combosIndividuais = semDoses.filter(item => item.comboId);
+                          const outros = semDoses.filter(item => !item.comboId);
                           return (
                             <>
                               {/* Doses agrupadas */}
@@ -520,13 +522,13 @@ const ClientCart = () => {
                                   </div>
                                 );
                               })}
-                              {/* Combos agrupados */}
-                              {Object.entries(combos).map(([comboId, items]) => {
-                                const comboInfo = items[0]?.combo || items[0]?.product; // fallback para product
+                              {/* Combos individuais */}
+                              {combosIndividuais.map((item) => {
+                                const comboInfo = item.combo || item.product;
                                 const comboName = comboInfo?.name || 'Combo';
-                                const comboPrice = items[0]?.combo?.price || items[0]?.product?.comboPrice || items[0]?.priceCombo || items[0]?.price || items.reduce((sum, i) => sum + ((i.price ?? i.product.price) * i.quantity), 0);
+                                const comboPrice = item.combo?.price || item.product?.comboPrice || item.priceCombo || item.price || (item.price ?? item.product.price) * item.quantity;
                                 return (
-                                  <div key={comboId} className="border rounded-md mb-4 bg-gray-50">
+                                  <div key={item.uniqueId || item.id} className="border rounded-md mb-4 bg-gray-50">
                                     <div className="flex items-center justify-between p-4 border-b">
                                       <div>
                                         <h3 className="font-bold text-element-blue-dark">{comboName}</h3>
@@ -534,16 +536,14 @@ const ClientCart = () => {
                                       </div>
                                       <div className="flex items-center gap-2">
                                         <span className="font-bold text-lg text-element-blue-dark">R$ {comboPrice.toFixed(2)}</span>
-                                        <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700 hover:bg-red-50" onClick={() => {
-                                          items.forEach(i => removeFromCart(i.id));
-                                        }}>
+                                        <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700 hover:bg-red-50" onClick={() => removeFromCart(item.id)}>
                                           <Trash2 className="h-4 w-4 mr-1" /> Remover
                                         </Button>
                                       </div>
                                     </div>
                                     <div className="p-4 pt-2">
                                       <ul className="text-sm text-gray-700">
-                                        {items.map((comboItem: any, idx: number) => (
+                                        {item.items?.map((comboItem: any, idx: number) => (
                                           <li key={comboItem.product.id + '-' + idx} className="flex items-center gap-2 mb-1">
                                             <img src={comboItem.product.image && !comboItem.product.image.startsWith('http') ? API_URL + comboItem.product.image : comboItem.product.image} alt={comboItem.product.name} className="w-8 h-8 object-cover rounded mr-2" />
                                             <span>{comboItem.product.name}</span>
