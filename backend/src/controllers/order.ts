@@ -101,8 +101,28 @@ export const orderController = {
     }
 
     // Calcula total usando o preço ajustado do cartItem
-    const totalProdutos = cart.items.reduce((sum: number, item: any) => sum + (item.price ?? item.product.price) * item.quantity, 0);
+    console.log('Itens do carrinho para cálculo do pedido:');
+    cart.items.forEach((item: any) => {
+      console.log({
+        id: item.id,
+        productId: item.productId,
+        comboId: item.comboId,
+        comboInstanceId: item.comboInstanceId,
+        name: item.product?.name,
+        price: item.price,
+        productPrice: item.product?.price,
+        quantity: item.quantity
+      });
+    });
+    const totalProdutos = cart.items.reduce((sum: number, item: any) => {
+      const valor = (item.price ?? item.product.price) * item.quantity;
+      console.log(`Item ${item.id} (${item.product?.name}): (price: ${item.price ?? item.product.price}) x (qtd: ${item.quantity}) = ${valor}`);
+      return sum + valor;
+    }, 0);
+    console.log('Subtotal dos produtos:', totalProdutos);
+    console.log('Taxa de entrega:', deliveryFee);
     const total = totalProdutos + deliveryFee;
+    console.log('Total final do pedido:', total);
 
     // Cria o pedido
     const isPix = paymentMethod.name && paymentMethod.name.toLowerCase().includes('pix');
