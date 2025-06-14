@@ -301,6 +301,7 @@ export const orderController = {
       // Processar cada dose única
       for (const doseItems of Object.values(dosesMap)) {
         const item = doseItems[0];
+        console.log('[DEBUG][DOSE] Processando doseInstanceId:', (item as any).doseInstanceId, 'doseId:', item.doseId);
         if (item.doseId) {
           console.log('[ORDER][LOG] Descontando estoque de dose:', item.doseId);
           // Buscar a composição da dose
@@ -321,6 +322,7 @@ export const orderController = {
               return res.status(400).json({ error: `Produto da dose não encontrado: ${doseItem.productId}` });
             }
             const quantidadeDescontada = Math.abs(Number(doseItem.quantity));
+            console.log(`[DEBUG][DOSE] Produto: ${produto.name}, isFractioned: ${produto.isFractioned}, discountBy: ${doseItem.discountBy}, quantidadeDescontada: ${quantidadeDescontada}`);
             if (produto.isFractioned && doseItem.discountBy === 'volume') {
               // Descontar volume
               const volumeAtual = produto.totalVolume || 0;
@@ -329,6 +331,7 @@ export const orderController = {
               const novoEstoque = Math.floor(novoVolume / unitVolume);
               console.log(`[DOSE][FRACIONADO][VOLUME][INSTANCIA] Produto: ${produto.name} | Volume atual: ${volumeAtual} | Descontar: ${quantidadeDescontada} ml | Novo estoque: ${novoEstoque} | Novo volume: ${novoVolume}`);
               if (novoVolume < 0) {
+                console.error(`[ERRO][DOSE][FRACIONADO][VOLUME] Estoque insuficiente para o produto: ${produto.name}`);
                 return res.status(400).json({ error: `Estoque insuficiente (volume) para o produto: ${produto.name}` });
               }
               await prisma.product.update({
@@ -344,6 +347,7 @@ export const orderController = {
               const novoEstoque = estoqueAtual - quantidadeDescontada;
               console.log(`[DOSE][NAO FRACIONADO][INSTANCIA] Produto: ${produto.name} | Estoque atual: ${estoqueAtual} | Descontar: ${quantidadeDescontada} un | Novo estoque: ${novoEstoque}`);
               if (novoEstoque < 0) {
+                console.error(`[ERRO][DOSE][NAO FRACIONADO] Estoque insuficiente para o produto: ${produto.name}`);
                 return res.status(400).json({ error: `Estoque insuficiente para o produto: ${produto.name}` });
               }
               await prisma.product.update({
