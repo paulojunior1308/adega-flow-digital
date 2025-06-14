@@ -61,6 +61,7 @@ interface Product {
   price: number;
   image: string;
   description: string;
+  comboPrice?: number;
 }
 
 interface CartItem {
@@ -70,6 +71,11 @@ interface CartItem {
   price?: number;
   isDose?: boolean;
   doseName?: string;
+  comboId?: number | string;
+  combo?: any;
+  priceCombo?: number;
+  uniqueId?: string;
+  items?: any[];
 }
 
 interface Address {
@@ -182,29 +188,20 @@ const ClientCart = () => {
   
   // Calcular subtotal e total
   useEffect(() => {
-    // Agrupar doses e combos
-    const { doses, outros: semDoses } = agruparDoses(cart);
-    const { combos, outros } = agruparCombos(semDoses);
     let calculatedSubtotal = 0;
-    // Somar valor das doses agrupadas
-    for (const items of Object.values(doses)) {
-      const doseInfo = items[0]?.dose;
-      if (doseInfo) {
-        calculatedSubtotal += doseInfo.price;
+    // Somar todos os combos individualmente
+    cart.forEach(item => {
+      if (item.comboId) {
+        calculatedSubtotal += (item.combo?.price || item.product?.comboPrice || item.priceCombo || item.price || (item.price ?? item.product.price)) * (item.quantity || 1);
+      } else if (!item.isDose) {
+        calculatedSubtotal += (item.price ?? item.product.price) * (item.quantity || 1);
+      } else {
+        calculatedSubtotal += (item.price ?? item.product.price);
       }
-    }
-    // Somar valor dos combos agrupados
-    for (const items of Object.values(combos)) {
-      const comboPrice = items[0]?.combo?.price || items[0]?.product?.comboPrice || items[0]?.priceCombo || items[0]?.price || items.reduce((sum, i) => sum + ((i.price ?? i.product.price) * i.quantity), 0);
-      calculatedSubtotal += comboPrice;
-    }
-    // Somar valor dos itens avulsos
-    for (const item of outros) {
-      calculatedSubtotal += (item.price ?? item.product.price) * item.quantity;
-    }
+    });
     setSubtotal(calculatedSubtotal);
-    setTotal(calculatedSubtotal - discount + deliveryFee);
-  }, [cart, discount, deliveryFee]);
+    setTotal(calculatedSubtotal + deliveryFee - discount);
+  }, [cart, deliveryFee, discount]);
   
   // Buscar carrinho real do backend ao carregar a página
   useEffect(() => {

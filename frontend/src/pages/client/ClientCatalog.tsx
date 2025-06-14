@@ -526,11 +526,11 @@ const ClientCatalog = () => {
               uniqueId
             });
             const res = await api.get('/cart');
-            // Adiciona o uniqueId ao item do carrinho local
+            // Adiciona o uniqueId e os produtos do combo ao item do carrinho local
             if (res.data?.items) {
               const items = res.data.items.map((item: any) => {
                 if (item.comboId === comboToConfigure.id && !item.uniqueId) {
-                  return { ...item, uniqueId };
+                  return { ...item, uniqueId, items: produtosCombo };
                 }
                 return item;
               });
