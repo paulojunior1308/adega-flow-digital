@@ -523,7 +523,7 @@ const ClientCart = () => {
                               {combosIndividuais.map((item) => {
                                 const comboInfo = item.combo || item.product;
                                 const comboName = comboInfo?.name || 'Combo';
-                                const comboPrice = item.combo?.price || item.product?.comboPrice || item.priceCombo || item.price || (item.price ?? item.product.price) * item.quantity;
+                                const comboPrice = comboInfo?.price || item.price || (item.price ?? item.product.price);
                                 return (
                                   <div key={item.uniqueId || item.id} className="border rounded-md mb-4 bg-gray-50">
                                     <div className="flex items-center justify-between p-4 border-b">
@@ -540,11 +540,13 @@ const ClientCart = () => {
                                     </div>
                                     <div className="p-4 pt-2">
                                       <ul className="text-sm text-gray-700">
-                                        {item.items?.map((comboItem: any, idx: number) => (
-                                          <li key={comboItem.product.id + '-' + idx} className="flex items-center gap-2 mb-1">
-                                            <img src={comboItem.product.image && !comboItem.product.image.startsWith('http') ? API_URL + comboItem.product.image : comboItem.product.image} alt={comboItem.product.name} className="w-8 h-8 object-cover rounded mr-2" />
-                                            <span>{comboItem.product.name}</span>
-                                            <span className="ml-auto">{comboItem.quantity} un</span>
+                                        {item.items && item.items.map((comboItem: any, idx: number) => (
+                                          <li key={comboItem.productId + '-' + idx} className="flex items-center gap-2 mb-1">
+                                            {comboItem.product && comboItem.product.image && (
+                                              <img src={comboItem.product.image && !comboItem.product.image.startsWith('http') ? API_URL + comboItem.product.image : comboItem.product.image} alt={comboItem.product.name} className="w-8 h-8 object-cover rounded mr-2" />
+                                            )}
+                                            <span>{comboItem.product?.name || comboItem.nome}</span>
+                                            <span className="ml-auto">{comboItem.quantidade || comboItem.quantity} un</span>
                                           </li>
                                         ))}
                                       </ul>
