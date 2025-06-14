@@ -195,6 +195,16 @@ export const orderController = {
         }
       },
     });
+    // LOG dos itens do pedido após criação
+    console.log('[DEBUG][ORDER CREATE] Itens do pedido criados:', order.items.map(i => ({
+      id: i.id,
+      productId: (i as any).productId,
+      doseId: (i as any).doseId,
+      comboInstanceId: (i as any).comboInstanceId,
+      doseInstanceId: (i as any).doseInstanceId,
+      quantity: (i as any).quantity,
+      price: (i as any).price
+    })));
 
     // Limpa o carrinho
     await prisma.cartItem.deleteMany({ where: { cartId: cart.id } });
@@ -288,6 +298,16 @@ export const orderController = {
     // Subtrair estoque se status for DELIVERED
     if (statusEnum === 'DELIVERED') {
       console.log('[ORDER][LOG] Pedido marcado como entregue. Itens:', JSON.stringify(order.items, null, 2));
+      // LOG dos itens do pedido antes do processamento de estoque
+      console.log('[DEBUG][ORDER DELIVERED] Itens do pedido para processamento:', order.items.map(i => ({
+        id: i.id,
+        productId: (i as any).productId,
+        doseId: (i as any).doseId,
+        comboInstanceId: (i as any).comboInstanceId,
+        doseInstanceId: (i as any).doseInstanceId,
+        quantity: (i as any).quantity,
+        price: (i as any).price
+      })));
       // Agrupar doses por doseInstanceId
       const dosesMap: Record<string, any[]> = {};
       const outros: any[] = [];
