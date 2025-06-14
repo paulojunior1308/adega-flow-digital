@@ -546,7 +546,7 @@ const ClientCart = () => {
                                               <img src={comboItem.product.image && !comboItem.product.image.startsWith('http') ? API_URL + comboItem.product.image : comboItem.product.image} alt={comboItem.product.name} className="w-8 h-8 object-cover rounded mr-2" />
                                             )}
                                             <span>{comboItem.product?.name || comboItem.nome}</span>
-                                            <span className="ml-auto">{comboItem.quantidade || comboItem.quantity} un</span>
+                                            <span className="ml-auto">{comboItem.quantidade || comboItem.quantity} {comboItem.discountBy === 'volume' || (comboItem.product?.isFractioned) ? 'ml' : 'un'}</span>
                                           </li>
                                         ))}
                                       </ul>
