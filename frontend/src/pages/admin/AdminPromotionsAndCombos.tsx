@@ -667,6 +667,9 @@ export default function AdminPromotionsAndCombos() {
                           </div>
                           <div>
                             <Label htmlFor="image">Imagem</Label>
+                            {editingPromotion?.image && (
+                              <img src={editingPromotion.image} alt="Imagem atual" className="h-24 mb-2 rounded object-contain border" />
+                            )}
                             <Input
                               id="image"
                               name="image"
@@ -954,6 +957,9 @@ export default function AdminPromotionsAndCombos() {
                 </div>
                 <div>
                   <Label htmlFor="image">Imagem</Label>
+                  {editingCombo?.image && (
+                    <img src={editingCombo.image} alt="Imagem atual" className="h-24 mb-2 rounded object-contain border" />
+                  )}
                   <Input
                     id="image"
                     name="image"
@@ -1273,6 +1279,9 @@ export default function AdminPromotionsAndCombos() {
                 </div>
                 <div>
                   <Label htmlFor="image">Imagem</Label>
+                  {editingPromotion?.image && (
+                    <img src={editingPromotion.image} alt="Imagem atual" className="h-24 mb-2 rounded object-contain border" />
+                  )}
                   <Input
                     id="image"
                     name="image"
@@ -1334,7 +1343,18 @@ export default function AdminPromotionsAndCombos() {
             <Input name="name" placeholder="Nome da Dose" defaultValue={editingDose?.name || ''} required className="w-full" />
             <Textarea name="description" placeholder="Descrição" defaultValue={editingDose?.description || ''} className="w-full" />
             <Input name="price" placeholder="Preço (R$)" type="number" step="0.01" defaultValue={editingDose?.price || ''} required className="w-full" />
-            <Input name="image" type="file" accept="image/*" className="w-full" />
+            <div>
+              <Label htmlFor="image">Imagem</Label>
+              {editingDose?.image && (
+                <img src={editingDose.image} alt="Imagem atual" className="h-24 mb-2 rounded object-contain border" />
+              )}
+              <Input
+                name="image"
+                type="file"
+                accept="image/*"
+                className="w-full"
+              />
+            </div>
             <div>
               <Label htmlFor="dose-category-edit">Categoria</Label>
               <Select

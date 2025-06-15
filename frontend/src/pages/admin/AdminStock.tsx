@@ -639,6 +639,9 @@ const AdminStock = () => {
 
               <div className="space-y-2">
                 <label className="text-sm font-medium">Imagem do Produto</label>
+                {editingProduct?.image && (
+                  <img src={editingProduct.image} alt="Imagem atual" className="h-24 mb-2 rounded object-contain border" />
+                )}
                 <Input
                   type="file"
                   accept="image/*"
