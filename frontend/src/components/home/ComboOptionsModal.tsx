@@ -78,10 +78,9 @@ export function ComboOptionsModal({ open, onOpenChange, combo, onConfirm }: Comb
     choosableByCategory[item.categoryId].items.push(item);
   });
 
-  // Resetar searchTerms ao abrir/fechar o modal
+  // Preencher searchTerms ao abrir o modal OU quando o combo mudar
   React.useEffect(() => {
-    if (open) {
-      // Preencher searchTerms com os filtros do combo atual
+    if (open && combo) {
       const initialSearchTerms: Record<string, string> = {};
       combo.items.forEach(item => {
         if (item.isChoosable && item.categoryId && item.nameFilter) {
@@ -89,12 +88,10 @@ export function ComboOptionsModal({ open, onOpenChange, combo, onConfirm }: Comb
         }
       });
       setSearchTerms(initialSearchTerms);
-    } else {
-      // Limpar searchTerms ao fechar
-      setSearchTerms({});
+      // Se houver outros estados relacionados, resetar aqui também
     }
     // eslint-disable-next-line
-  }, [open, combo.items]);
+  }, [open, combo]);
 
   // Buscar produtos de cada categoria sempre que searchTerms mudar
   React.useEffect(() => {
