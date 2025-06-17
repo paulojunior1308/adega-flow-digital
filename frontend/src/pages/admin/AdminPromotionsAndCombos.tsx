@@ -367,10 +367,28 @@ export default function AdminPromotionsAndCombos() {
   };
 
   const handleProductTypeChange = (productId: string, type: 'fixed' | 'choosable') => {
-    setProductTypes(prev => ({
-      ...prev,
-      [productId]: type
-    }));
+    setProductTypes(prev => ({ ...prev, [productId]: type }));
+    if (type === 'choosable') {
+      setChoosableCategories(prev => ({ ...prev, [productId]: '' }));
+      setChoosableNameFilters(prev => ({ ...prev, [productId]: '' }));
+      setChoosableQuantities(prev => ({ ...prev, [productId]: 1 }));
+    } else {
+      setChoosableCategories(prev => {
+        const copy = { ...prev };
+        delete copy[productId];
+        return copy;
+      });
+      setChoosableNameFilters(prev => {
+        const copy = { ...prev };
+        delete copy[productId];
+        return copy;
+      });
+      setChoosableQuantities(prev => {
+        const copy = { ...prev };
+        delete copy[productId];
+        return copy;
+      });
+    }
   };
 
   const handleCreateCombo = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -516,10 +534,22 @@ export default function AdminPromotionsAndCombos() {
     if (open) {
       resetForm();
       setComboCategoryId('');
+      setSelectedProducts([]);
+      setProductTypes({});
+      setChoosableCategories({});
+      setChoosableQuantities({});
+      setChoosableNameFilters({});
+      setProductQuantities({});
     }
     if (!open) {
       resetForm();
       setComboCategoryId('');
+      setSelectedProducts([]);
+      setProductTypes({});
+      setChoosableCategories({});
+      setChoosableQuantities({});
+      setChoosableNameFilters({});
+      setProductQuantities({});
     }
   };
 
@@ -528,10 +558,22 @@ export default function AdminPromotionsAndCombos() {
     if (open) {
       resetForm();
       setDoseCategoryId('');
+      setSelectedProducts([]);
+      setProductTypes({});
+      setChoosableCategories({});
+      setChoosableQuantities({});
+      setChoosableNameFilters({});
+      setProductQuantities({});
     }
     if (!open) {
       resetForm();
       setDoseCategoryId('');
+      setSelectedProducts([]);
+      setProductTypes({});
+      setChoosableCategories({});
+      setChoosableQuantities({});
+      setChoosableNameFilters({});
+      setProductQuantities({});
     }
   };
 
@@ -726,10 +768,7 @@ export default function AdminPromotionsAndCombos() {
                                       <div className="flex flex-wrap items-center gap-2 mt-2">
                                         <Select
                                           value={productTypes[product.id] || 'fixed'}
-                                          onValueChange={(value) => setProductTypes(prev => ({
-                                            ...prev,
-                                            [product.id]: value as 'fixed' | 'choosable'
-                                          }))}
+                                          onValueChange={(value) => handleProductTypeChange(product.id, value as 'fixed' | 'choosable')}
                                         >
                                           <SelectTrigger className="w-[100px]">
                                             <SelectValue />
@@ -1040,10 +1079,7 @@ export default function AdminPromotionsAndCombos() {
                             <div className="flex flex-wrap items-center gap-2 mt-2">
                               <Select
                                 value={productTypes[product.id] || 'fixed'}
-                                onValueChange={(value) => setProductTypes(prev => ({
-                                  ...prev,
-                                  [product.id]: value as 'fixed' | 'choosable'
-                                }))}
+                                onValueChange={(value) => handleProductTypeChange(product.id, value as 'fixed' | 'choosable')}
                               >
                                 <SelectTrigger className="w-[100px]">
                                   <SelectValue />
@@ -1198,10 +1234,7 @@ export default function AdminPromotionsAndCombos() {
                           <div className="flex flex-wrap items-center gap-2 mt-2">
                             <Select
                               value={productTypes[product.id] || 'fixed'}
-                              onValueChange={(value) => setProductTypes(prev => ({
-                                ...prev,
-                                [product.id]: value as 'fixed' | 'choosable'
-                              }))}
+                              onValueChange={(value) => handleProductTypeChange(product.id, value as 'fixed' | 'choosable')}
                             >
                               <SelectTrigger className="w-[100px]">
                                 <SelectValue />
@@ -1427,7 +1460,7 @@ export default function AdminPromotionsAndCombos() {
                         <>
                           <Select
                             value={productTypes[product.id] || 'fixed'}
-                            onValueChange={value => setProductTypes(prev => ({ ...prev, [product.id]: value as 'fixed' | 'choosable' }))}
+                            onValueChange={(value) => handleProductTypeChange(product.id, value as 'fixed' | 'choosable')}
                           >
                             <SelectTrigger className="w-[100px]">
                               <SelectValue />
