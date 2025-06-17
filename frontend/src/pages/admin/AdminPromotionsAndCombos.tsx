@@ -564,7 +564,7 @@ export default function AdminPromotionsAndCombos() {
                   Doses
                 </TabsTrigger>
               </TabsList>
-              <Button className="flex items-center gap-2" onClick={() => setIsComboDialogOpen(true)}>
+              <Button className="flex items-center gap-2" onClick={() => { resetForm(); setIsComboDialogOpen(true); }}>
                 <Plus className="w-4 h-4" />
                 Adicionar Combo
               </Button>
@@ -874,7 +874,7 @@ export default function AdminPromotionsAndCombos() {
 
             <TabsContent value="doses">
               <div className="flex justify-end mb-4">
-                <Button className="flex items-center gap-2" onClick={() => setIsDoseDialogOpen(true)}>
+                <Button className="flex items-center gap-2" onClick={() => { resetForm(); setIsDoseDialogOpen(true); }}>
                   <Plus className="w-4 h-4" />
                   Adicionar Dose
                 </Button>
