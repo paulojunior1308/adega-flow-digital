@@ -127,6 +127,16 @@ export function ComboOptionsModal({ open, onOpenChange, combo, onConfirm }: Comb
     }
   }, [open, combo.items, searchTerms]);
 
+  // Resetar estados internos ao fechar o modal
+  React.useEffect(() => {
+    if (!open) {
+      setSearchTerms({});
+      setOptions({});
+      setChoosableSelections({});
+      setLoading(true);
+    }
+  }, [open]);
+
   const handleQuantityChange = (itemId: string, optionId: string, value: number) => {
     setChoosableSelections(prev => ({
       ...prev,
