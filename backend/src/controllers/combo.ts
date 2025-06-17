@@ -42,7 +42,8 @@ export const comboController = {
               quantity: item.quantity,
               allowFlavorSelection: item.allowFlavorSelection,
               maxFlavors: item.maxFlavors || 1,
-              categoryId: item.categoryId || null
+              categoryId: item.categoryId || null,
+              nameFilter: item.nameFilter || null
             }))
           }
         },
@@ -89,7 +90,8 @@ export const comboController = {
               quantity: item.quantity,
               allowFlavorSelection: item.allowFlavorSelection,
               maxFlavors: item.maxFlavors || 1,
-              categoryId: item.categoryId || null
+              categoryId: item.categoryId || null,
+              nameFilter: item.nameFilter || null
             }))
           }
         },

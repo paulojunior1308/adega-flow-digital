@@ -106,6 +106,7 @@ export default function AdminPromotionsAndCombos() {
   const [discountBy, setDiscountBy] = React.useState<Record<string, 'unit' | 'volume'>>({});
   const [comboCategoryId, setComboCategoryId] = React.useState<string>('');
   const [doseCategoryId, setDoseCategoryId] = React.useState<string>('');
+  const [choosableNameFilters, setChoosableNameFilters] = React.useState<Record<string, string>>({});
 
   const fetchData = React.useCallback(async () => {
     try {
@@ -217,7 +218,8 @@ export default function AdminPromotionsAndCombos() {
               productId,
               allowFlavorSelection: true,
               categoryId: choosableCategories[productId],
-              quantity: choosableQuantities[productId] || 1
+              quantity: choosableQuantities[productId] || 1,
+              nameFilter: choosableNameFilters[productId] || null
             };
           }
           return {
@@ -398,7 +400,8 @@ export default function AdminPromotionsAndCombos() {
               productId,
               allowFlavorSelection: true,
               categoryId: choosableCategories[productId],
-              quantity: choosableQuantities[productId] || 1
+              quantity: choosableQuantities[productId] || 1,
+              nameFilter: choosableNameFilters[productId] || null
             };
           }
           return {
@@ -736,6 +739,13 @@ export default function AdminPromotionsAndCombos() {
                                               </SelectContent>
                                             </Select>
                                             <Input
+                                              type="text"
+                                              value={choosableNameFilters?.[product.id] || ''}
+                                              onChange={e => setChoosableNameFilters(prev => ({ ...prev, [product.id]: e.target.value }))}
+                                              className="w-32"
+                                              placeholder="Filtro nome (opcional)"
+                                            />
+                                            <Input
                                               type="number"
                                               min={1}
                                               value={choosableQuantities[product.id] || 1}
@@ -1043,6 +1053,13 @@ export default function AdminPromotionsAndCombos() {
                                     </SelectContent>
                                   </Select>
                                   <Input
+                                    type="text"
+                                    value={choosableNameFilters?.[product.id] || ''}
+                                    onChange={e => setChoosableNameFilters(prev => ({ ...prev, [product.id]: e.target.value }))}
+                                    className="w-32"
+                                    placeholder="Filtro nome (opcional)"
+                                  />
+                                  <Input
                                     type="number"
                                     min={1}
                                     value={choosableQuantities[product.id] || 1}
@@ -1193,6 +1210,13 @@ export default function AdminPromotionsAndCombos() {
                                     ))}
                                   </SelectContent>
                                 </Select>
+                                <Input
+                                  type="text"
+                                  value={choosableNameFilters?.[product.id] || ''}
+                                  onChange={e => setChoosableNameFilters(prev => ({ ...prev, [product.id]: e.target.value }))}
+                                  className="w-32"
+                                  placeholder="Filtro nome (opcional)"
+                                />
                                 <Input
                                   type="number"
                                   min={1}

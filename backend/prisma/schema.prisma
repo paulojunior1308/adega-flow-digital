@@ -264,6 +264,7 @@ model ComboItem {
   allowFlavorSelection Boolean @default(false)
   maxFlavors           Int     @default(1)
   categoryId           String?
+  nameFilter           String? // Filtro de nome para produtos escolhíveis
   combo                Combo   @relation(fields: [comboId], references: [id])
   product              Product @relation(fields: [productId], references: [id])
 }

@@ -40,6 +40,7 @@ interface ComboItem {
     category?: { id: string; name: string };
   };
   selectedOption?: string;
+  nameFilter?: string;
 }
 
 interface ComboOptionsModalProps {
@@ -77,7 +78,20 @@ export function ComboOptionsModal({ open, onOpenChange, combo, onConfirm }: Comb
     choosableByCategory[item.categoryId].items.push(item);
   });
 
-  // Buscar produtos de cada categoria
+  // Preencher searchTerms apenas na primeira abertura do modal
+  React.useEffect(() => {
+    if (open) {
+      const initialSearchTerms: Record<string, string> = {};
+      combo.items.forEach(item => {
+        if (item.isChoosable && item.categoryId && item.nameFilter) {
+          initialSearchTerms[item.categoryId] = item.nameFilter;
+        }
+      });
+      setSearchTerms(prev => Object.keys(prev).length === 0 ? initialSearchTerms : prev);
+    }
+  }, [open, combo.items]);
+
+  // Buscar produtos de cada categoria sempre que searchTerms mudar
   React.useEffect(() => {
     if (open) {
       const fetchOptions = async () => {
