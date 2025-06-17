@@ -57,6 +57,7 @@ export function ComboOptionsModal({ open, onOpenChange, combo, onConfirm }: Comb
   const [loading, setLoading] = React.useState(true);
   const [options, setOptions] = React.useState<Record<string, Product[]>>({});
   const [choosableSelections, setChoosableSelections] = React.useState<Record<string, Record<string, number>>>({});
+  const [searchTerms, setSearchTerms] = React.useState<Record<string, string>>({});
   const { updateComboOption } = useCart();
 
   // Agrupar itens escolhíveis por categoriaId
@@ -84,7 +85,8 @@ export function ComboOptionsModal({ open, onOpenChange, combo, onConfirm }: Comb
         try {
           const categoryIds = Object.keys(choosableByCategory);
           const optionsPromises = categoryIds.map(async (categoryId) => {
-            const response = await api.get(`/products?categoryId=${categoryId}`);
+            const searchTerm = searchTerms[categoryId] || '';
+            const response = await api.get(`/products?categoryId=${categoryId}${searchTerm ? `&search=${searchTerm}` : ''}`);
             return { categoryId, options: response.data };
           });
           const results = await Promise.all(optionsPromises);
@@ -107,7 +109,7 @@ export function ComboOptionsModal({ open, onOpenChange, combo, onConfirm }: Comb
       };
       fetchOptions();
     }
-  }, [open, combo.items]);
+  }, [open, combo.items, searchTerms]);
 
   const handleQuantityChange = (itemId: string, optionId: string, value: number) => {
     setChoosableSelections(prev => ({
@@ -119,6 +121,13 @@ export function ComboOptionsModal({ open, onOpenChange, combo, onConfirm }: Comb
     }));
   };
 
+  const handleSearchChange = (categoryId: string, value: string) => {
+    setSearchTerms(prev => ({
+      ...prev,
+      [categoryId]: value
+    }));
+  };
+
   // Ajustar validação: soma das quantidades por categoria
   const allQuantitiesValid = Object.entries(choosableByCategory).every(([categoryId, group]) => {
     const total = Object.values(choosableSelections[categoryId] || {}).reduce((sum, q) => sum + q, 0);
@@ -127,52 +136,65 @@ export function ComboOptionsModal({ open, onOpenChange, combo, onConfirm }: Comb
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Monte seu Combo</DialogTitle>
+          <DialogTitle>Configure seu {combo.name}</DialogTitle>
           <DialogDescription>
-            Selecione os sabores para os itens do combo {combo.name}
+            Escolha os produtos para cada categoria
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
+        <div className="space-y-6">
           {loading ? (
-            <p className="text-center text-muted-foreground">Carregando opções...</p>
+            <div className="text-center py-4">Carregando opções...</div>
           ) : (
             <>
-              {fixedItems.map(item => (
-                <div key={item.id} className="flex items-center gap-2 text-sm text-gray-700">
-                  <span className="font-medium">{item.product.name}</span>
-                  <span className="bg-gray-200 rounded px-2 py-1">Fixo</span>
-                  <span className="ml-2">Qtd: {item.quantity}</span>
-                </div>
-              ))}
               {Object.entries(choosableByCategory).map(([categoryId, group]) => (
-                <div key={categoryId} className="space-y-2">
-                  <label className="text-sm font-medium">
-                    Escolha {group.quantity} para {group.categoryName}
-                  </label>
+                <div key={categoryId} className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-medium">
+                      Escolha {group.quantity} para {group.categoryName}
+                    </label>
+                    <div className="relative w-64">
+                      <input
+                        type="text"
+                        placeholder="Buscar produtos..."
+                        value={searchTerms[categoryId] || ''}
+                        onChange={(e) => handleSearchChange(categoryId, e.target.value)}
+                        className="w-full px-3 py-2 border rounded-md text-sm"
+                      />
+                    </div>
+                  </div>
+                  
                   {options[categoryId]?.length === 0 && (
-                    <div className="text-xs text-red-600">Nenhum produto cadastrado para esta categoria.</div>
+                    <div className="text-xs text-red-600">Nenhum produto encontrado para esta categoria.</div>
                   )}
-                  {options[categoryId]?.map(option => (
-                    option.stock === 0 ? null : (
-                      <div key={option.id} className="flex items-center gap-2">
-                        <span>{option.name}</span>
-                        <input
-                          type="number"
-                          min={0}
-                          max={group.quantity}
-                          value={choosableSelections[categoryId]?.[option.id] || 0}
-                          onChange={e => handleQuantityChange(categoryId, option.id, Number(e.target.value))}
-                          className="w-16 border rounded px-2 py-1"
-                        />
-                      </div>
-                    )
-                  ))}
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {options[categoryId]?.map(option => (
+                      option.stock === 0 ? null : (
+                        <div key={option.id} className="flex items-center justify-between p-3 border rounded-md">
+                          <div className="flex-1">
+                            <span className="font-medium">{option.name}</span>
+                            <p className="text-sm text-gray-500">R$ {option.price.toFixed(2)}</p>
+                          </div>
+                          <input
+                            type="number"
+                            min={0}
+                            max={group.quantity}
+                            value={choosableSelections[categoryId]?.[option.id] || 0}
+                            onChange={e => handleQuantityChange(categoryId, option.id, Number(e.target.value))}
+                            className="w-16 border rounded px-2 py-1"
+                          />
+                        </div>
+                      )
+                    ))}
+                  </div>
+                  
                   <div className="text-xs text-gray-500">
                     Total selecionado: {Object.values(choosableSelections[categoryId] || {}).reduce((sum, q) => sum + q, 0)} / {group.quantity}
                   </div>
+                  
                   {Object.values(choosableSelections[categoryId] || {}).reduce((sum, q) => sum + q, 0) !== group.quantity && (
                     <div className="text-xs text-red-600">Selecione exatamente {group.quantity} opções.</div>
                   )}
@@ -183,18 +205,12 @@ export function ComboOptionsModal({ open, onOpenChange, combo, onConfirm }: Comb
         </div>
 
         <DialogFooter>
-          <Button
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-          >
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
-          <Button
-            onClick={() => {
-              onConfirm(choosableSelections);
-              onOpenChange(false);
-            }}
-            disabled={loading || !allQuantitiesValid}
+          <Button 
+            onClick={() => onConfirm(choosableSelections)}
+            disabled={!allQuantitiesValid}
           >
             Confirmar
           </Button>

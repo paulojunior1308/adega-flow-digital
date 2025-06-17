@@ -130,7 +130,7 @@ const ClientDashboard = () => {
           {/* Header */}
           <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
             <div>
-              <h1 className="text-2xl md:text-3xl font-bold text-element-blue-dark mb-2">Olá, João!</h1>
+              <h1 className="text-2xl md:text-3xl font-bold text-element-blue-dark mb-2">Olá, {user?.name || 'Cliente'}!</h1>
               <p className="text-element-gray-dark">Bem-vindo de volta à Element Adega</p>
             </div>
             

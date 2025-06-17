@@ -35,26 +35,10 @@ console.log('Tabelas apagadas com sucesso!');
       active: true,
     },
   });
-
+*/
   // Adicionar categorias
   const categorias = [
-    'Refrigerantes',
-    'Energéticos',
-    'GIN',
-    'Vinhos',
-    'Drinks',
-    'Gelos',
-    'Cervejas',
-    'Whiskys',
-    'Descartáveis',
-    'Doses',
-    'Combos',
-    'Salgadinhos',
-    'Churrasco',
-    'Essências',
-    'Carvão',
-    'Alumínio',
-    'Cigarros'
+    'Destilados'
     
   ];
   for (const name of categorias) {
@@ -63,7 +47,7 @@ console.log('Tabelas apagadas com sucesso!');
     });
   }
   console.log('Categorias adicionadas com sucesso!'+ prisma.category.findMany());
-*/
+
   }
 
 main()

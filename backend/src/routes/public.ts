@@ -10,9 +10,15 @@ router.get('/payment-methods', async (req: Request, res: Response) => {
 
 router.get('/products', async (req: Request, res: Response) => {
   try {
-    const { categoryId } = req.query;
+    const { categoryId, search } = req.query;
     const where: any = { active: true, stock: { gt: 0 } };
     if (categoryId) where.categoryId = categoryId;
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { description: { contains: search, mode: 'insensitive' } }
+      ];
+    }
     const products = await prisma.product.findMany({
       where,
       include: {
