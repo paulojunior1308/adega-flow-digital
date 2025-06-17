@@ -150,7 +150,7 @@ export function ComboOptionsModal({ open, onOpenChange, combo, onConfirm }: Comb
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Configure seu {combo.name}</DialogTitle>
           <DialogDescription>
@@ -176,6 +176,7 @@ export function ComboOptionsModal({ open, onOpenChange, combo, onConfirm }: Comb
                         value={searchTerms[categoryId] || ''}
                         onChange={(e) => handleSearchChange(categoryId, e.target.value)}
                         className="w-full px-3 py-2 border rounded-md text-sm"
+                        disabled
                       />
                     </div>
                   </div>
