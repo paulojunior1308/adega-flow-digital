@@ -542,7 +542,8 @@ const ClientCatalog = () => {
             ...doseToConfigure,
             items: doseToConfigure.items.map((item: any) => ({
               ...item,
-              isChoosable: item.allowFlavorSelection
+              isChoosable: item.allowFlavorSelection,
+              nameFilter: item.nameFilter
             }))
           }}
           onConfirm={async (choosableSelections) => {

@@ -302,7 +302,8 @@ export default function AdminPromotionsAndCombos() {
           allowFlavorSelection: true,
           categoryId: choosableCategories[productId],
           quantity: productQuantities[productId] || 1,
-          discountBy: discountBy[productId] || (products.find(p => p.id === productId)?.isFractioned ? 'volume' : 'unit')
+          discountBy: discountBy[productId] || (products.find(p => p.id === productId)?.isFractioned ? 'volume' : 'unit'),
+          nameFilter: choosableNameFilters[productId] || null
         };
       }
       return {
@@ -482,7 +483,8 @@ export default function AdminPromotionsAndCombos() {
           allowFlavorSelection: true,
           categoryId: choosableCategories[productId],
           quantity: productQuantities[productId] || 1,
-          discountBy: discountBy[productId] || (products.find(p => p.id === productId)?.isFractioned ? 'volume' : 'unit')
+          discountBy: discountBy[productId] || (products.find(p => p.id === productId)?.isFractioned ? 'volume' : 'unit'),
+          nameFilter: choosableNameFilters[productId] || null
         };
       }
       return {
@@ -1422,19 +1424,36 @@ export default function AdminPromotionsAndCombos() {
                             </SelectContent>
                           </Select>
                           {productTypes[product.id] === 'choosable' && (
-                            <Select
-                              value={choosableCategories[product.id] || ''}
-                              onValueChange={value => setChoosableCategories(prev => ({ ...prev, [product.id]: value }))}
-                            >
-                              <SelectTrigger className="w-[140px]">
-                                <SelectValue placeholder="Categoria" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {categories.map(category => (
-                                  <SelectItem key={category.id} value={category.id}>{category.name}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                            <>
+                              <Select
+                                value={choosableCategories[product.id] || ''}
+                                onValueChange={value => setChoosableCategories(prev => ({ ...prev, [product.id]: value }))}
+                              >
+                                <SelectTrigger className="w-[140px]">
+                                  <SelectValue placeholder="Categoria" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {categories.map(category => (
+                                    <SelectItem key={category.id} value={category.id}>{category.name}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <Input
+                                type="text"
+                                value={choosableNameFilters?.[product.id] || ''}
+                                onChange={e => setChoosableNameFilters(prev => ({ ...prev, [product.id]: e.target.value }))}
+                                className="w-32"
+                                placeholder="Filtro nome (opcional)"
+                              />
+                              <Input
+                                type="number"
+                                min={1}
+                                value={choosableQuantities[product.id] || 1}
+                                onChange={e => setChoosableQuantities(q => ({ ...q, [product.id]: Number(e.target.value) }))}
+                                className="w-16"
+                                placeholder="Qtd"
+                              />
+                            </>
                           )}
                           <Select
                             value={discountBy[product.id] || (product.isFractioned ? 'volume' : 'unit')}
