@@ -511,10 +511,34 @@ export default function AdminPromotionsAndCombos() {
     }
   };
 
+  const handleOpenComboDialog = (open: boolean) => {
+    setIsComboDialogOpen(open);
+    if (open) {
+      setSelectedProducts([]);
+      setProductTypes({});
+      setChoosableCategories({});
+      setChoosableQuantities({});
+      setChoosableNameFilters({});
+      setProductQuantities({});
+      setComboCategoryId('');
+      // ... outros resets necessários
+    }
+    if (!open) {
+      resetForm();
+    }
+  };
+
   const handleOpenDoseDialog = (open: boolean) => {
     setIsDoseDialogOpen(open);
-    if (open && products.length === 0) {
-      fetchData();
+    if (open) {
+      setSelectedProducts([]);
+      setProductTypes({});
+      setChoosableCategories({});
+      setChoosableQuantities({});
+      setChoosableNameFilters({});
+      setProductQuantities({});
+      setDoseCategoryId('');
+      // ... outros resets necessários
     }
     if (!open) {
       resetForm();
@@ -1102,7 +1126,7 @@ export default function AdminPromotionsAndCombos() {
         </DialogContent>
       </Dialog>
       {/* Modal de criação de combo */}
-      <Dialog open={isComboDialogOpen} onOpenChange={setIsComboDialogOpen}>
+      <Dialog open={isComboDialogOpen} onOpenChange={handleOpenComboDialog}>
         <DialogContent className="w-full max-w-[95vw] sm:max-w-3xl p-2 sm:p-6 max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Criar Novo Combo</DialogTitle>
