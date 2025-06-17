@@ -514,34 +514,24 @@ export default function AdminPromotionsAndCombos() {
   const handleOpenComboDialog = (open: boolean) => {
     setIsComboDialogOpen(open);
     if (open) {
-      setSelectedProducts([]);
-      setProductTypes({});
-      setChoosableCategories({});
-      setChoosableQuantities({});
-      setChoosableNameFilters({});
-      setProductQuantities({});
+      resetForm();
       setComboCategoryId('');
-      // ... outros resets necessários
     }
     if (!open) {
       resetForm();
+      setComboCategoryId('');
     }
   };
 
   const handleOpenDoseDialog = (open: boolean) => {
     setIsDoseDialogOpen(open);
     if (open) {
-      setSelectedProducts([]);
-      setProductTypes({});
-      setChoosableCategories({});
-      setChoosableQuantities({});
-      setChoosableNameFilters({});
-      setProductQuantities({});
+      resetForm();
       setDoseCategoryId('');
-      // ... outros resets necessários
     }
     if (!open) {
       resetForm();
+      setDoseCategoryId('');
     }
   };
 
