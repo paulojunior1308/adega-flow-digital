@@ -303,7 +303,7 @@ export default function AdminPromotionsAndCombos() {
           productId,
           allowFlavorSelection: true,
           categoryId: choosableCategories[productId],
-          quantity: product?.isFractioned ? 1 : (choosableQuantities[productId] || 1),
+          quantity: product?.isFractioned ? volumeToDiscount[productId] : (choosableQuantities[productId] || 1),
           discountBy: product?.isFractioned ? 'volume' : 'unit',
           nameFilter: choosableNameFilters[productId] || null,
           volumeToDiscount: product?.isFractioned ? volumeToDiscount[productId] : null
@@ -504,7 +504,7 @@ export default function AdminPromotionsAndCombos() {
           productId,
           allowFlavorSelection: true,
           categoryId: choosableCategories[productId],
-          quantity: product?.isFractioned ? 1 : (choosableQuantities[productId] || 1),
+          quantity: product?.isFractioned ? volumeToDiscount[productId] : (choosableQuantities[productId] || 1),
           discountBy: product?.isFractioned ? 'volume' : 'unit',
           nameFilter: choosableNameFilters[productId] || null,
           volumeToDiscount: product?.isFractioned ? volumeToDiscount[productId] : null
