@@ -1006,7 +1006,7 @@ export default function AdminPromotionsAndCombos() {
       </div>
       {/* Modal de edição de combo */}
       <Dialog open={!!editingCombo} onOpenChange={(open) => { if (!open) resetForm(); }}>
-        <DialogContent className="w-full max-w-[95vw] sm:max-w-3xl p-2 sm:p-6 max-h-[90vh] overflow-y-auto">
+        <DialogContent className="w-full max-w-2xl p-2 sm:p-6 max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Editar Combo</DialogTitle>
           </DialogHeader>
@@ -1181,7 +1181,7 @@ export default function AdminPromotionsAndCombos() {
       </Dialog>
       {/* Modal de criação de combo */}
       <Dialog open={isComboDialogOpen} onOpenChange={handleOpenComboDialog}>
-        <DialogContent className="w-full max-w-[95vw] sm:max-w-3xl p-2 sm:p-6 max-h-[90vh] overflow-y-auto">
+        <DialogContent className="w-full max-w-2xl p-2 sm:p-6 max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Criar Novo Combo</DialogTitle>
           </DialogHeader>
@@ -1346,7 +1346,7 @@ export default function AdminPromotionsAndCombos() {
       </Dialog>
       {/* Modal de edição de promoção */}
       <Dialog open={!!editingPromotion} onOpenChange={(open) => { if (!open) resetForm(); }}>
-        <DialogContent className="w-full max-w-[95vw] sm:max-w-3xl p-2 sm:p-6 max-h-[90vh] overflow-y-auto">
+        <DialogContent className="w-full max-w-2xl p-2 sm:p-6 max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Editar Promoção</DialogTitle>
           </DialogHeader>
@@ -1447,7 +1447,7 @@ export default function AdminPromotionsAndCombos() {
       </Dialog>
       {/* Modal de criação de dose */}
       <Dialog open={isDoseDialogOpen} onOpenChange={handleOpenDoseDialog}>
-        <DialogContent className="w-full max-w-[95vw] sm:max-w-lg p-2 sm:p-6 max-h-[90vh] overflow-y-auto">
+        <DialogContent className="w-full max-w-2xl p-2 sm:p-6 max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingDose ? 'Editar Dose' : 'Adicionar Dose'}</DialogTitle>
           </DialogHeader>
@@ -1486,8 +1486,17 @@ export default function AdminPromotionsAndCombos() {
             </div>
             <div>
               <Label>Produtos e volumes da dose</Label>
+              <div className="flex items-center gap-2 mb-4">
+                <Search className="w-4 h-4 text-gray-500" />
+                <Input
+                  placeholder="Buscar produtos..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="flex-1 w-full"
+                />
+              </div>
               <ScrollArea className="h-40 border rounded p-2 mt-2">
-                {(products || []).map(product => (
+                {(products || []).filter(product => product.name.toLowerCase().includes(searchTerm.toLowerCase())).map(product => (
                   <div key={product.id} className="flex flex-col gap-1 mb-2 border-b pb-2">
                     <div className="flex items-center gap-2">
                       <Checkbox
@@ -1495,86 +1504,86 @@ export default function AdminPromotionsAndCombos() {
                         onCheckedChange={() => handleProductSelect(product.id)}
                       />
                       <span>{product.name}</span>
-                      {selectedProducts.includes(product.id) && (
-                        <>
-                          <Select
-                            value={productTypes[product.id] || 'fixed'}
-                            onValueChange={(value) => handleProductTypeChange(product.id, value as 'fixed' | 'choosable')}
-                          >
-                            <SelectTrigger className="w-[100px]">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="fixed">Fixo</SelectItem>
-                              <SelectItem value="choosable">Escolhível</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          {productTypes[product.id] === 'choosable' && (
-                            <>
-                              <Select
-                                value={choosableCategories[product.id] || ''}
-                                onValueChange={value => setChoosableCategories(prev => ({ ...prev, [product.id]: value }))}
-                              >
-                                <SelectTrigger className="w-[140px]">
-                                  <SelectValue placeholder="Categoria" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {categories.map(category => (
-                                    <SelectItem key={category.id} value={category.id}>{category.name}</SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                              <Input
-                                type="text"
-                                value={choosableNameFilters?.[product.id] || ''}
-                                onChange={e => setChoosableNameFilters(prev => ({ ...prev, [product.id]: e.target.value }))}
-                                className="w-32"
-                                placeholder="Filtro nome (opcional)"
-                              />
-                              {product.isFractioned ? (
-                                <Input
-                                  type="number"
-                                  min={1}
-                                  value={volumeToDiscount?.[product.id] || ''}
-                                  onChange={e => setVolumeToDiscount(prev => ({ ...prev, [product.id]: Number(e.target.value) }))}
-                                  className="w-32"
-                                  placeholder="Volume a descontar (ml)"
-                                />
-                              ) : (
-                                <Input
-                                  type="number"
-                                  min={1}
-                                  value={choosableQuantities[product.id] || 1}
-                                  onChange={e => setChoosableQuantities(q => ({ ...q, [product.id]: Number(e.target.value) }))}
-                                  className="w-16"
-                                  placeholder="Qtd"
-                                />
-                              )}
-                            </>
-                          )}
-                          <Select
-                            value={discountBy[product.id] || (product.isFractioned ? 'volume' : 'unit')}
-                            onValueChange={value => setDiscountBy(prev => ({ ...prev, [product.id]: value as 'unit' | 'volume' }))}
-                          >
-                            <SelectTrigger className="w-[120px]">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="unit">Descontar por unidade</SelectItem>
-                              <SelectItem value="volume">Descontar por volume (ml)</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <Input
-                            type="number"
-                            min={1}
-                            placeholder="Volume (ml ou un)"
-                            value={productQuantities[product.id] || ''}
-                            onChange={e => setProductQuantities(q => ({ ...q, [product.id]: Number(e.target.value) }))}
-                            className="w-24"
-                          />
-                        </>
-                      )}
                     </div>
+                    {selectedProducts.includes(product.id) && (
+                      <>
+                        <Select
+                          value={productTypes[product.id] || 'fixed'}
+                          onValueChange={(value) => handleProductTypeChange(product.id, value as 'fixed' | 'choosable')}
+                        >
+                          <SelectTrigger className="w-[100px]">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="fixed">Fixo</SelectItem>
+                            <SelectItem value="choosable">Escolhível</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        {productTypes[product.id] === 'choosable' && (
+                          <>
+                            <Select
+                              value={choosableCategories[product.id] || ''}
+                              onValueChange={value => setChoosableCategories(prev => ({ ...prev, [product.id]: value }))}
+                            >
+                              <SelectTrigger className="w-[140px]">
+                                <SelectValue placeholder="Categoria" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {categories.map(category => (
+                                  <SelectItem key={category.id} value={category.id}>{category.name}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <Input
+                              type="text"
+                              value={choosableNameFilters?.[product.id] || ''}
+                              onChange={e => setChoosableNameFilters(prev => ({ ...prev, [product.id]: e.target.value }))}
+                              className="w-32"
+                              placeholder="Filtro nome (opcional)"
+                            />
+                            {product.isFractioned ? (
+                              <Input
+                                type="number"
+                                min={1}
+                                value={volumeToDiscount?.[product.id] || ''}
+                                onChange={e => setVolumeToDiscount(prev => ({ ...prev, [product.id]: Number(e.target.value) }))}
+                                className="w-32"
+                                placeholder="Volume a descontar (ml)"
+                              />
+                            ) : (
+                              <Input
+                                type="number"
+                                min={1}
+                                value={choosableQuantities[product.id] || 1}
+                                onChange={e => setChoosableQuantities(q => ({ ...q, [product.id]: Number(e.target.value) }))}
+                                className="w-16"
+                                placeholder="Qtd"
+                              />
+                            )}
+                          </>
+                        )}
+                        <Select
+                          value={discountBy[product.id] || (product.isFractioned ? 'volume' : 'unit')}
+                          onValueChange={value => setDiscountBy(prev => ({ ...prev, [product.id]: value as 'unit' | 'volume' }))}
+                        >
+                          <SelectTrigger className="w-[120px]">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="unit">Descontar por unidade</SelectItem>
+                            <SelectItem value="volume">Descontar por volume (ml)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <Input
+                          type="number"
+                          min={1}
+                          placeholder="Volume (ml ou un)"
+                          value={productQuantities[product.id] || ''}
+                          onChange={e => setProductQuantities(q => ({ ...q, [product.id]: Number(e.target.value) }))}
+                          className="w-24"
+                        />
+                      </>
+                    )}
                   </div>
                 ))}
               </ScrollArea>
