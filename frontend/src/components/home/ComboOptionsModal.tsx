@@ -160,6 +160,11 @@ export function ComboOptionsModal({ open, onOpenChange, combo, onConfirm }: Comb
     return total === group.quantity;
   });
 
+  // Função auxiliar para calcular o total selecionado para categorias não fracionadas
+  function getTotalSelected(categoryId: string) {
+    return Object.values(choosableSelections[categoryId] || {}).reduce((sum, q) => sum + q, 0);
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
@@ -179,11 +184,17 @@ export function ComboOptionsModal({ open, onOpenChange, combo, onConfirm }: Comb
                 const item = choosableItems.find(item => item.categoryId === categoryId);
                 const isFractionedCategory = categoryOptions.some(option => option.isFractioned);
                 const volumeToDiscount = item?.volumeToDiscount;
+                const totalSelecionado = isFractionedCategory
+                  ? Object.values(choosableSelections[categoryId] || {}).reduce((sum, q) => sum + q, 0)
+                  : getTotalSelected(categoryId);
+                const totalEsperado = isFractionedCategory ? (volumeToDiscount || 1) : (item?.quantity || 1);
 
                 return (
                   <div key={categoryId} className="space-y-4">
                     <h3 className="font-semibold">
-                      Escolha {isFractionedCategory ? '1' : (item?.quantity || 1)} para {choosableByCategory[categoryId]?.categoryName}
+                      {isFractionedCategory
+                        ? `Escolha ${volumeToDiscount || 1}ml para ${choosableByCategory[categoryId]?.categoryName}`
+                        : `Escolha ${item?.quantity || 1} para ${choosableByCategory[categoryId]?.categoryName}`}
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {categoryOptions.map(option => (
@@ -200,11 +211,9 @@ export function ComboOptionsModal({ open, onOpenChange, combo, onConfirm }: Comb
                                 onChange={() => {
                                   const newSelections = { ...choosableSelections };
                                   if (!newSelections[categoryId]) newSelections[categoryId] = {};
-                                  // Limpa todas as seleções anteriores desta categoria
                                   Object.keys(newSelections[categoryId]).forEach(key => {
                                     newSelections[categoryId][key] = 0;
                                   });
-                                  // Define o volume para a opção selecionada
                                   newSelections[categoryId][option.id] = volumeToDiscount || 0;
                                   setChoosableSelections(newSelections);
                                 }}
@@ -224,11 +233,11 @@ export function ComboOptionsModal({ open, onOpenChange, combo, onConfirm }: Comb
                       ))}
                     </div>
                     <div className="text-sm text-gray-500">
-                      Total selecionado: {Object.values(choosableSelections[categoryId] || {}).reduce((sum, q) => sum + q, 0)} / {isFractionedCategory ? '1' : (item?.quantity || 1)}
+                      Total selecionado: {totalSelecionado} / {totalEsperado}{isFractionedCategory ? 'ml' : ''}
                     </div>
-                    {Object.values(choosableSelections[categoryId] || {}).reduce((sum, q) => sum + q, 0) !== (isFractionedCategory ? 1 : (item?.quantity || 1)) && (
+                    {totalSelecionado !== totalEsperado && (
                       <div className="text-sm text-red-500">
-                        Selecione exatamente {isFractionedCategory ? '1' : (item?.quantity || 1)} opção(ões).
+                        Selecione exatamente {totalEsperado}{isFractionedCategory ? 'ml' : ''} opção(ões).
                       </div>
                     )}
                   </div>
