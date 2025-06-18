@@ -17,13 +17,16 @@ import {
 } from '@/components/ui/select';
 import { api } from '@/lib/api';
 import { useCart } from '@/hooks/useCart';
+import { Input } from '@/components/ui/input';
 
 interface Product {
   id: string;
   name: string;
   price: number;
   stock: number;
+  isFractioned?: boolean;
   category?: {
+    id: string;
     name: string;
   };
 }
@@ -31,15 +34,12 @@ interface Product {
 interface ComboItem {
   id: string;
   productId: string;
-  isChoosable: boolean;
-  quantity: number;
+  isChoosable?: boolean;
+  allowFlavorSelection?: boolean;
+  product: Product;
+  quantity?: number;
   categoryId?: string;
-  product: {
-    name: string;
-    price: number;
-    category?: { id: string; name: string };
-  };
-  selectedOption?: string;
+  volumeToDiscount?: number;
   nameFilter?: string;
 }
 
@@ -74,7 +74,7 @@ export function ComboOptionsModal({ open, onOpenChange, combo, onConfirm }: Comb
         items: []
       };
     }
-    choosableByCategory[item.categoryId].quantity += item.quantity;
+    choosableByCategory[item.categoryId].quantity += item.quantity || 0;
     choosableByCategory[item.categoryId].items.push(item);
   });
 
@@ -198,24 +198,41 @@ export function ComboOptionsModal({ open, onOpenChange, combo, onConfirm }: Comb
                   )}
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {options[categoryId]?.map(option => (
-                      option.stock === 0 ? null : (
-                        <div key={option.id} className="flex items-center justify-between p-3 border rounded-md">
-                          <div className="flex-1">
-                            <span className="font-medium">{option.name}</span>
-                            <p className="text-sm text-gray-500">R$ {option.price.toFixed(2)}</p>
+                    {options[categoryId]?.map(option => {
+                      const isFractioned = option.isFractioned;
+                      const volumeToDiscount = combo.items.find(item => 
+                        item.categoryId === categoryId && item.volumeToDiscount
+                      )?.volumeToDiscount;
+
+                      return (
+                        <div key={option.id} className="p-4 border rounded-lg">
+                          <div className="flex justify-between items-center">
+                            <span>
+                              {option.name} - R$ {option.price.toFixed(2)}
+                            </span>
+                            {isFractioned && volumeToDiscount ? (
+                              <div className="flex items-center gap-2">
+                                <input
+                                  type="radio"
+                                  name={`option-${categoryId}`}
+                                  checked={choosableSelections[categoryId]?.[option.id] === volumeToDiscount}
+                                  onChange={() => handleQuantityChange(categoryId, option.id, volumeToDiscount)}
+                                  className="w-4 h-4"
+                                />
+                              </div>
+                            ) : (
+                              <Input
+                                type="number"
+                                min={0}
+                                value={choosableSelections[categoryId]?.[option.id] || 0}
+                                onChange={e => handleQuantityChange(categoryId, option.id, Number(e.target.value))}
+                                className="w-16"
+                              />
+                            )}
                           </div>
-                          <input
-                            type="number"
-                            min={0}
-                            max={group.quantity}
-                            value={choosableSelections[categoryId]?.[option.id] || 0}
-                            onChange={e => handleQuantityChange(categoryId, option.id, Number(e.target.value))}
-                            className="w-16 border rounded px-2 py-1"
-                          />
                         </div>
-                      )
-                    ))}
+                      );
+                    })}
                   </div>
                   
                   <div className="text-xs text-gray-500">

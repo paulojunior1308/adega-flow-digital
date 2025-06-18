@@ -340,6 +340,7 @@ model DoseItem {
   categoryId String?
   discountBy String   // 'unit' ou 'volume'
   nameFilter String?  // Filtro de nome para produtos escolhíveis em doses
+  volumeToDiscount Float?  // Volume a ser descontado para produtos fracionados escolhíveis
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   dose      Dose     @relation(fields: [doseId], references: [id])

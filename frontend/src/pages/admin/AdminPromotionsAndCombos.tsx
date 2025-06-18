@@ -107,6 +107,7 @@ export default function AdminPromotionsAndCombos() {
   const [comboCategoryId, setComboCategoryId] = React.useState<string>('');
   const [doseCategoryId, setDoseCategoryId] = React.useState<string>('');
   const [choosableNameFilters, setChoosableNameFilters] = React.useState<Record<string, string>>({});
+  const [volumeToDiscount, setVolumeToDiscount] = React.useState<Record<string, number>>({});
 
   const fetchData = React.useCallback(async () => {
     try {
@@ -495,24 +496,27 @@ export default function AdminPromotionsAndCombos() {
     const formData = new FormData(form);
     // Montar os items da dose
     const doseItems = selectedProducts.map(productId => {
+      const product = products.find(p => p.id === productId);
       if (productTypes[productId] === 'choosable') {
         return {
           productId,
           allowFlavorSelection: true,
           categoryId: choosableCategories[productId],
-          quantity: productQuantities[productId] || 1,
-          discountBy: discountBy[productId] || (products.find(p => p.id === productId)?.isFractioned ? 'volume' : 'unit'),
-          nameFilter: choosableNameFilters[productId] || null
+          quantity: product?.isFractioned ? 1 : (choosableQuantities[productId] || 1),
+          discountBy: product?.isFractioned ? 'volume' : 'unit',
+          nameFilter: choosableNameFilters[productId] || null,
+          volumeToDiscount: product?.isFractioned ? volumeToDiscount[productId] : null
         };
       }
       return {
         productId,
         allowFlavorSelection: false,
         quantity: productQuantities[productId] || 1,
-        discountBy: discountBy[productId] || (products.find(p => p.id === productId)?.isFractioned ? 'volume' : 'unit')
+        discountBy: product?.isFractioned ? 'volume' : 'unit'
       };
     });
     formData.set('items', JSON.stringify(doseItems));
+    formData.set('active', String(editingDose?.active || true));
     formData.set('categoryId', doseCategoryId || '');
     try {
       await api.post('/admin/doses', formData, {
@@ -1492,14 +1496,25 @@ export default function AdminPromotionsAndCombos() {
                                 className="w-32"
                                 placeholder="Filtro nome (opcional)"
                               />
-                              <Input
-                                type="number"
-                                min={1}
-                                value={choosableQuantities[product.id] || 1}
-                                onChange={e => setChoosableQuantities(q => ({ ...q, [product.id]: Number(e.target.value) }))}
-                                className="w-16"
-                                placeholder="Qtd"
-                              />
+                              {product.isFractioned ? (
+                                <Input
+                                  type="number"
+                                  min={1}
+                                  value={volumeToDiscount?.[product.id] || ''}
+                                  onChange={e => setVolumeToDiscount(prev => ({ ...prev, [product.id]: Number(e.target.value) }))}
+                                  className="w-24"
+                                  placeholder="Volume (ml)"
+                                />
+                              ) : (
+                                <Input
+                                  type="number"
+                                  min={1}
+                                  value={choosableQuantities[product.id] || 1}
+                                  onChange={e => setChoosableQuantities(q => ({ ...q, [product.id]: Number(e.target.value) }))}
+                                  className="w-16"
+                                  placeholder="Qtd"
+                                />
+                              )}
                             </>
                           )}
                           <Select
