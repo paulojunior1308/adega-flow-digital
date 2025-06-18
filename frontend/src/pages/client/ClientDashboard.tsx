@@ -70,7 +70,9 @@ const categoryImages = {
   'Alumínio': '/uploads/aluminio.png',
   'Cigarros': '/uploads/cigarros.png',
   'Doses': '/uploads/doses.png',
-  'Drinks': '/uploads/drinks.png'
+  'Drinks': '/uploads/drinks.png',
+  'Combos': '/uploads/combos.png',
+  'Destilados': '/uploads/destilados.png',
 };
 
 const getImageUrl = (image?: string) => {
