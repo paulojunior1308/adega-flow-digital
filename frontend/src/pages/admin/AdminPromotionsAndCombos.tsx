@@ -804,14 +804,25 @@ export default function AdminPromotionsAndCombos() {
                                               className="w-32"
                                               placeholder="Filtro nome (opcional)"
                                             />
-                                            <Input
-                                              type="number"
-                                              min={1}
-                                              value={choosableQuantities[product.id] || 1}
-                                              onChange={e => setChoosableQuantities(q => ({ ...q, [product.id]: Number(e.target.value) }))}
-                                              className="w-16"
-                                              placeholder="Qtd"
-                                            />
+                                            {product.isFractioned ? (
+                                              <Input
+                                                type="number"
+                                                min={1}
+                                                value={volumeToDiscount?.[product.id] || ''}
+                                                onChange={e => setVolumeToDiscount(prev => ({ ...prev, [product.id]: Number(e.target.value) }))}
+                                                className="w-32"
+                                                placeholder="Volume a descontar (ml)"
+                                              />
+                                            ) : (
+                                              <Input
+                                                type="number"
+                                                min={1}
+                                                value={choosableQuantities[product.id] || 1}
+                                                onChange={e => setChoosableQuantities(q => ({ ...q, [product.id]: Number(e.target.value) }))}
+                                                className="w-16"
+                                                placeholder="Qtd"
+                                              />
+                                            )}
                                           </>
                                         )}
                                         {productTypes[product.id] !== 'choosable' && (
@@ -1115,14 +1126,25 @@ export default function AdminPromotionsAndCombos() {
                                     className="w-32"
                                     placeholder="Filtro nome (opcional)"
                                   />
-                                  <Input
-                                    type="number"
-                                    min={1}
-                                    value={choosableQuantities[product.id] || 1}
-                                    onChange={e => setChoosableQuantities(q => ({ ...q, [product.id]: Number(e.target.value) }))}
-                                    className="w-16"
-                                    placeholder="Qtd"
-                                  />
+                                  {product.isFractioned ? (
+                                    <Input
+                                      type="number"
+                                      min={1}
+                                      value={volumeToDiscount?.[product.id] || ''}
+                                      onChange={e => setVolumeToDiscount(prev => ({ ...prev, [product.id]: Number(e.target.value) }))}
+                                      className="w-32"
+                                      placeholder="Volume a descontar (ml)"
+                                    />
+                                  ) : (
+                                    <Input
+                                      type="number"
+                                      min={1}
+                                      value={choosableQuantities[product.id] || 1}
+                                      onChange={e => setChoosableQuantities(q => ({ ...q, [product.id]: Number(e.target.value) }))}
+                                      className="w-16"
+                                      placeholder="Qtd"
+                                    />
+                                  )}
                                 </>
                               )}
                               {productTypes[product.id] !== 'choosable' && (
@@ -1270,14 +1292,25 @@ export default function AdminPromotionsAndCombos() {
                                   className="w-32"
                                   placeholder="Filtro nome (opcional)"
                                 />
-                                <Input
-                                  type="number"
-                                  min={1}
-                                  value={choosableQuantities[product.id] || 1}
-                                  onChange={e => setChoosableQuantities(q => ({ ...q, [product.id]: Number(e.target.value) }))}
-                                  className="w-16"
-                                  placeholder="Qtd"
-                                />
+                                {product.isFractioned ? (
+                                  <Input
+                                    type="number"
+                                    min={1}
+                                    value={volumeToDiscount?.[product.id] || ''}
+                                    onChange={e => setVolumeToDiscount(prev => ({ ...prev, [product.id]: Number(e.target.value) }))}
+                                    className="w-32"
+                                    placeholder="Volume a descontar (ml)"
+                                  />
+                                ) : (
+                                  <Input
+                                    type="number"
+                                    min={1}
+                                    value={choosableQuantities[product.id] || 1}
+                                    onChange={e => setChoosableQuantities(q => ({ ...q, [product.id]: Number(e.target.value) }))}
+                                    className="w-16"
+                                    placeholder="Qtd"
+                                  />
+                                )}
                               </>
                             )}
                             {productTypes[product.id] !== 'choosable' && (
@@ -1502,8 +1535,8 @@ export default function AdminPromotionsAndCombos() {
                                   min={1}
                                   value={volumeToDiscount?.[product.id] || ''}
                                   onChange={e => setVolumeToDiscount(prev => ({ ...prev, [product.id]: Number(e.target.value) }))}
-                                  className="w-24"
-                                  placeholder="Volume (ml)"
+                                  className="w-32"
+                                  placeholder="Volume a descontar (ml)"
                                 />
                               ) : (
                                 <Input

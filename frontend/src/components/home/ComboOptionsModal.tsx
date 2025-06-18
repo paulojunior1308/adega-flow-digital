@@ -175,51 +175,41 @@ export function ComboOptionsModal({ open, onOpenChange, combo, onConfirm }: Comb
             <div className="text-center py-4">Carregando opções...</div>
           ) : (
             <>
-              {Object.entries(choosableByCategory).map(([categoryId, group]) => (
-                <div key={categoryId} className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <label className="text-sm font-medium">
-                      Escolha {group.quantity} para {group.categoryName}
-                    </label>
-                    <div className="relative w-64">
-                      <input
-                        type="text"
-                        placeholder="Buscar produtos..."
-                        value={searchTerms[categoryId] || ''}
-                        onChange={(e) => handleSearchChange(categoryId, e.target.value)}
-                        className="w-full px-3 py-2 border rounded-md text-sm"
-                        disabled
-                      />
-                    </div>
-                  </div>
-                  
-                  {options[categoryId]?.length === 0 && (
-                    <div className="text-xs text-red-600">Nenhum produto encontrado para esta categoria.</div>
-                  )}
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {options[categoryId]?.map(option => {
-                      const isFractioned = option.isFractioned;
-                      const volumeToDiscount = combo.items.find(item => 
-                        item.categoryId === categoryId && item.volumeToDiscount
-                      )?.volumeToDiscount;
+              {Object.entries(options).map(([categoryId, categoryOptions]) => {
+                const item = choosableItems.find(item => item.categoryId === categoryId);
+                const isFractionedCategory = categoryOptions.some(option => option.isFractioned);
+                const volumeToDiscount = item?.volumeToDiscount;
 
-                      return (
+                return (
+                  <div key={categoryId} className="space-y-4">
+                    <h3 className="font-semibold">
+                      Escolha {isFractionedCategory ? '1' : (item?.quantity || 1)} para {choosableByCategory[categoryId]?.categoryName}
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {categoryOptions.map(option => (
                         <div key={option.id} className="p-4 border rounded-lg">
                           <div className="flex justify-between items-center">
                             <span>
                               {option.name} - R$ {option.price.toFixed(2)}
                             </span>
-                            {isFractioned && volumeToDiscount ? (
-                              <div className="flex items-center gap-2">
-                                <input
-                                  type="radio"
-                                  name={`option-${categoryId}`}
-                                  checked={choosableSelections[categoryId]?.[option.id] === volumeToDiscount}
-                                  onChange={() => handleQuantityChange(categoryId, option.id, volumeToDiscount)}
-                                  className="w-4 h-4"
-                                />
-                              </div>
+                            {isFractionedCategory ? (
+                              <input
+                                type="radio"
+                                name={`option-${categoryId}`}
+                                checked={choosableSelections[categoryId]?.[option.id] === volumeToDiscount}
+                                onChange={() => {
+                                  const newSelections = { ...choosableSelections };
+                                  if (!newSelections[categoryId]) newSelections[categoryId] = {};
+                                  // Limpa todas as seleções anteriores desta categoria
+                                  Object.keys(newSelections[categoryId]).forEach(key => {
+                                    newSelections[categoryId][key] = 0;
+                                  });
+                                  // Define o volume para a opção selecionada
+                                  newSelections[categoryId][option.id] = volumeToDiscount || 0;
+                                  setChoosableSelections(newSelections);
+                                }}
+                                className="w-4 h-4"
+                              />
                             ) : (
                               <Input
                                 type="number"
@@ -231,19 +221,19 @@ export function ComboOptionsModal({ open, onOpenChange, combo, onConfirm }: Comb
                             )}
                           </div>
                         </div>
-                      );
-                    })}
+                      ))}
+                    </div>
+                    <div className="text-sm text-gray-500">
+                      Total selecionado: {Object.values(choosableSelections[categoryId] || {}).reduce((sum, q) => sum + q, 0)} / {isFractionedCategory ? '1' : (item?.quantity || 1)}
+                    </div>
+                    {Object.values(choosableSelections[categoryId] || {}).reduce((sum, q) => sum + q, 0) !== (isFractionedCategory ? 1 : (item?.quantity || 1)) && (
+                      <div className="text-sm text-red-500">
+                        Selecione exatamente {isFractionedCategory ? '1' : (item?.quantity || 1)} opção(ões).
+                      </div>
+                    )}
                   </div>
-                  
-                  <div className="text-xs text-gray-500">
-                    Total selecionado: {Object.values(choosableSelections[categoryId] || {}).reduce((sum, q) => sum + q, 0)} / {group.quantity}
-                  </div>
-                  
-                  {Object.values(choosableSelections[categoryId] || {}).reduce((sum, q) => sum + q, 0) !== group.quantity && (
-                    <div className="text-xs text-red-600">Selecione exatamente {group.quantity} opções.</div>
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </>
           )}
         </div>

@@ -26,7 +26,8 @@ export const doseController = {
               allowFlavorSelection: !!item.allowFlavorSelection,
               categoryId: item.categoryId || null,
               discountBy: item.discountBy || 'unit',
-              nameFilter: item.nameFilter || null
+              nameFilter: item.nameFilter || null,
+              volumeToDiscount: item.volumeToDiscount ? parseFloat(item.volumeToDiscount) : null
             }))
           }
         },
@@ -85,7 +86,8 @@ export const doseController = {
               allowFlavorSelection: !!item.allowFlavorSelection,
               categoryId: item.categoryId || null,
               discountBy: item.discountBy || 'unit',
-              nameFilter: item.nameFilter || null
+              nameFilter: item.nameFilter || null,
+              volumeToDiscount: item.volumeToDiscount ? parseFloat(item.volumeToDiscount) : null
             }))
           }
         },
