@@ -297,21 +297,23 @@ export default function AdminPromotionsAndCombos() {
     const formData = new FormData(form);
     // Montar os items da dose
     const doseItems = selectedProducts.map(productId => {
+      const product = products.find(p => p.id === productId);
       if (productTypes[productId] === 'choosable') {
         return {
           productId,
           allowFlavorSelection: true,
           categoryId: choosableCategories[productId],
-          quantity: productQuantities[productId] || 1,
-          discountBy: discountBy[productId] || (products.find(p => p.id === productId)?.isFractioned ? 'volume' : 'unit'),
-          nameFilter: choosableNameFilters[productId] || null
+          quantity: product?.isFractioned ? 1 : (choosableQuantities[productId] || 1),
+          discountBy: product?.isFractioned ? 'volume' : 'unit',
+          nameFilter: choosableNameFilters[productId] || null,
+          volumeToDiscount: product?.isFractioned ? volumeToDiscount[productId] : null
         };
       }
       return {
         productId,
         allowFlavorSelection: false,
         quantity: productQuantities[productId] || 1,
-        discountBy: discountBy[productId] || (products.find(p => p.id === productId)?.isFractioned ? 'volume' : 'unit')
+        discountBy: product?.isFractioned ? 'volume' : 'unit'
       };
     });
     formData.set('items', JSON.stringify(doseItems));
