@@ -158,12 +158,109 @@ const AdminPDV = () => {
   const discount = 0; 
   const total = subtotal - discount;
 
+  // Handle combo configuration
+  const handleComboConfirm = (selections: Record<string, Record<string, number>>) => {
+    if (!comboToConfigure) return;
+  
+    const allComboProducts: { product: Product; quantity: number }[] = [];
+  
+    // Adiciona itens fixos
+    comboToConfigure.items.forEach((item: any) => {
+      if (!item.isChoosable && item.product) {
+        allComboProducts.push({ product: item.product, quantity: item.quantity });
+      }
+    });
+  
+    // Adiciona itens escolhidos
+    for (const categoryId in selections) {
+      for (const productId in selections[categoryId]) {
+        const quantity = selections[categoryId][productId];
+        if (quantity > 0) {
+          const product = products.find(p => p.id === productId);
+          if (product) {
+            allComboProducts.push({ product, quantity });
+          }
+        }
+      }
+    }
+  
+    // Calcular o preço total dos itens individuais para a proporção
+    const totalOriginalPrice = allComboProducts.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
+    const comboPrice = comboToConfigure.price;
+  
+    let accumulatedPrice = 0;
+    const newItems: CartItem[] = allComboProducts.map((item, index) => {
+      const proportion = (item.product.price * item.quantity) / totalOriginalPrice;
+      let proportionalPrice = comboPrice * proportion;
+  
+      // Arredondamento
+      proportionalPrice = Math.round(proportionalPrice * 100) / 100;
+      accumulatedPrice += proportionalPrice;
+  
+      // No último item, ajusta para bater o preço exato do combo
+      if (index === allComboProducts.length - 1) {
+        const difference = comboPrice - accumulatedPrice;
+        proportionalPrice += difference;
+      }
+  
+      return {
+        id: `${comboToConfigure.id}-${item.product.id}-${Math.random().toString(36).substring(2, 8)}`,
+        productId: item.product.id,
+        code: item.product.code,
+        name: `${item.product.name} (Combo: ${comboToConfigure.name})`,
+        quantity: item.quantity,
+        price: proportionalPrice / item.quantity, // Preço por unidade
+        total: proportionalPrice,
+      };
+    });
+  
+    setCartItems(prev => [...prev, ...newItems]);
+    setComboModalOpen(false);
+    setComboToConfigure(null);
+    toast({ description: `${comboToConfigure.name} adicionado ao carrinho.` });
+  };
+
   // Add item to cart
   const addToCart = (item: any, quantity: number = 1) => {
     if (item.type === 'combo') {
+      // Se tiver itens escolhíveis, abre o modal
       if (item.items?.some((i: any) => i.isChoosable || i.allowFlavorSelection)) {
         setComboToConfigure(item);
         setComboModalOpen(true);
+        return;
+      }
+      // Se for um combo SÓ com itens fixos, desmembra e adiciona direto
+      else {
+        const allComboProducts = item.items.map((i: any) => ({ product: i.product, quantity: i.quantity }));
+        const totalOriginalPrice = allComboProducts.reduce((sum, p: any) => sum + p.product.price * p.quantity, 0);
+        const comboPrice = item.price;
+
+        let accumulatedPrice = 0;
+        const newItems: CartItem[] = allComboProducts.map((p: any, index: number) => {
+          const proportion = (p.product.price * p.quantity) / totalOriginalPrice;
+          let proportionalPrice = comboPrice * proportion;
+
+          proportionalPrice = Math.round(proportionalPrice * 100) / 100;
+          accumulatedPrice += proportionalPrice;
+          
+          if (index === allComboProducts.length - 1) {
+            const difference = comboPrice - accumulatedPrice;
+            proportionalPrice += difference;
+          }
+
+          return {
+            id: `${item.id}-${p.product.id}-${Math.random().toString(36).substring(2, 8)}`,
+            productId: p.product.id,
+            code: p.product.code,
+            name: `${p.product.name} (Combo: ${item.name})`,
+            quantity: p.quantity,
+            price: proportionalPrice / p.quantity,
+            total: proportionalPrice,
+          };
+        });
+
+        setCartItems(prev => [...prev, ...newItems]);
+        toast({ description: `${item.name} adicionado ao carrinho.` });
         return;
       }
     } else if (item.type === 'dose') {
@@ -1018,95 +1115,7 @@ const AdminPDV = () => {
             open={comboModalOpen}
             onOpenChange={setComboModalOpen}
             combo={comboToConfigure}
-            onConfirm={(choosableSelections) => {
-              // 1. Montar lista de todos os produtos do combo (fixos + escolhidos)
-              const produtosCombo = [];
-              // Fixos
-              for (const item of comboToConfigure.items) {
-                if (!item.isChoosable) {
-                  produtosCombo.push({
-                    productId: item.productId,
-                    nome: item.product?.name || '',
-                    precoOriginal: item.product?.price || 0,
-                    quantidade: Math.max(1, item.quantity)
-                  });
-                }
-              }
-              // Escolhíveis
-              for (const [categoryId, selections] of Object.entries(choosableSelections)) {
-                for (const [productId, quantidade] of Object.entries(selections)) {
-                  if (quantidade > 0) {
-                    // Buscar o preço do produto nas opções carregadas
-                    let preco = 0;
-                    let nome = '';
-                    if (comboToConfigure.options && comboToConfigure.options[categoryId]) {
-                      const prod = comboToConfigure.options[categoryId].find((p) => p.id === productId);
-                      if (prod) {
-                        preco = prod.price;
-                        nome = prod.name;
-                      }
-                    }
-                    produtosCombo.push({
-                      productId,
-                      nome,
-                      precoOriginal: preco,
-                      quantidade: Number(quantidade)
-                    });
-                  }
-                }
-              }
-              // 2. Calcular valor total original
-              const totalOriginal = produtosCombo.reduce((sum, p) => sum + p.precoOriginal * p.quantidade, 0);
-              // 3. Distribuir valor do combo proporcionalmente (sem arredondar no loop)
-              const totaisNaoArredondados = produtosCombo.map(p =>
-                totalOriginal > 0
-                  ? ((p.precoOriginal * p.quantidade) / totalOriginal) * comboToConfigure.price
-                  : p.precoOriginal * p.quantidade
-              );
-              // 4. Arredonde cada total
-              let totaisArredondados = totaisNaoArredondados.map(v => Math.round(v * 100) / 100);
-              // 5. Calcule a diferença
-              let soma = totaisArredondados.reduce((a, b) => a + b, 0);
-              let diff = Math.round((comboToConfigure.price - soma) * 100); // em centavos
-              // 6. Distribua o ajuste entre todos os itens do combo de forma cíclica
-              if (diff !== 0) {
-                const indicesOrdenados = Array.from({ length: totaisArredondados.length }, (_, i) => i);
-                let i = 0;
-                while (diff !== 0) {
-                  const idx = indicesOrdenados[i % indicesOrdenados.length];
-                  totaisArredondados[idx] += diff > 0 ? 0.01 : -0.01;
-                  totaisArredondados[idx] = Math.round(totaisArredondados[idx] * 100) / 100;
-                  diff += diff > 0 ? -1 : 1;
-                  i++;
-                }
-              }
-              // 7. Calcula preço unitário ajustado e desconto
-              const descontos = produtosCombo.map((p, idx) => {
-                const precoAjustado = Math.round((totaisArredondados[idx] / p.quantidade) * 100) / 100;
-                return {
-                  productId: p.productId,
-                  nome: p.nome,
-                  quantidade: p.quantidade,
-                  precoAjustado,
-                  desconto: p.precoOriginal - precoAjustado
-                };
-              });
-              // 8. Adicionar cada produto ao carrinho já com o preço ajustado
-              setCartItems(prev => ([
-                ...prev,
-                ...descontos.map(d => ({
-                  id: d.productId + '-combo-' + Math.random().toString(36).substring(2, 8),
-                  productId: d.productId,
-                  code: d.productId.substring(0, 6),
-                  name: `Combo ${comboToConfigure.name} - ${d.nome}`,
-                  quantity: d.quantidade,
-                  price: d.precoAjustado,
-                  total: d.precoAjustado
-                }))
-              ]));
-              setComboModalOpen(false);
-              toast({ description: `${comboToConfigure.name} adicionado ao carrinho.` });
-            }}
+            onConfirm={handleComboConfirm}
           />
         )}
 
