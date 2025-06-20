@@ -14,7 +14,9 @@
     "update:margins": "ts-node src/scripts/updateProductMargins.ts",
     "fill:costprice": "ts-node src/scripts/fillCostPriceData.ts",
     "fix:migration": "ts-node src/scripts/fixFailedMigration.ts",
-    "prestart": "npx prisma generate && npx prisma migrate deploy && npx prisma db seed"
+    "resolve:migration": "ts-node src/scripts/resolveMigration.ts",
+    "force:resolve": "node force-resolve-migration.js",
+    "prestart": "npx prisma generate && npx node force-resolve-migration.js && npx prisma migrate deploy --skip-seed && npx prisma db seed"
   },
   "keywords": [
     "pdv",
