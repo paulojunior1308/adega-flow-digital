@@ -18,36 +18,62 @@ Este script calcula e atualiza automaticamente a margem de lucro de todos os pro
 npm run update:margins
 ```
 
+## fillCostPriceData.ts
+
+Este script preenche automaticamente os campos `costPrice` dos itens de venda e pedidos que ainda não possuem esse valor.
+
+### O que o script faz:
+
+1. **Busca itens** de `SaleItem` e `OrderItem` com `costPrice` nulo
+2. **Obtém o custo atual** do produto relacionado
+3. **Atualiza o item** com o custo do produto
+4. **Exibe relatório** detalhado do processo
+
+### Como executar:
+
+```bash
+# Na pasta backend
+npm run fill:costprice
+```
+
 ### Exemplo de saída:
 
 ```
-🚀 Iniciando atualização das margens dos produtos...
-📊 Encontrados 15 produtos para atualizar
-✅ Cerveja Heineken: 8.50 / 5.20 = 63.46%
-✅ Whisky Jack Daniels: 45.00 / 28.00 = 60.71%
-✅ Vodka Absolut: 35.00 / 22.50 = 55.56%
+🚀 Iniciando preenchimento dos dados de costPrice...
+📊 Encontrados 5 itens de venda para atualizar
+✅ SaleItem Cerveja Heineken: costPrice = 5.20
+✅ SaleItem Whisky Jack Daniels: costPrice = 28.00
+📊 Encontrados 3 itens de pedido para atualizar
+✅ OrderItem Vodka Absolut: costPrice = 22.50
 
-📈 Resumo da atualização:
-✅ Produtos atualizados: 15
-❌ Erros: 0
-📊 Total processado: 15
+📈 Resumo da atualização de costPrice:
+✅ SaleItems atualizados: 5
+✅ OrderItems atualizados: 3
+📊 Total processado: 8
 
-🎉 Todas as margens foram atualizadas com sucesso!
+🎉 Todos os costPrice foram preenchidos com sucesso!
 ```
 
 ### Quando usar:
 
-- **Após subir uma nova versão** para produção que inclui o campo `margin`
-- **Quando produtos antigos** não possuem margem definida
-- **Para padronizar** os dados de margem em todo o sistema
+- **Após migrações** que adicionam o campo `costPrice`
+- **Quando itens antigos** não possuem custo registrado
+- **Para garantir consistência** dos dados financeiros
+
+## Execução Automática no Render
+
+Ambos os scripts são executados automaticamente no `seed.ts` durante o deploy no Render:
+
+1. **fillCostPriceData()** - Preenche custos dos itens existentes
+2. **updateProductMargins()** - Calcula margens dos produtos
 
 ### Segurança:
 
-- O script só atualiza produtos que têm preço e custo válidos (> 0)
-- Não altera produtos que já possuem margem definida
-- Usa transações seguras do banco de dados
-- Exibe relatório detalhado de todas as operações
+- Os scripts só atualizam registros que realmente precisam
+- Usam transações seguras do banco de dados
+- Exibem relatórios detalhados de todas as operações
+- Não afetam dados que já estão corretos
 
 ### Importante:
 
-⚠️ **Execute este script apenas UMA VEZ** após a atualização para produção. Não é necessário rodar novamente a menos que novos produtos sejam adicionados sem margem. 
+⚠️ **Execute estes scripts apenas quando necessário** após atualizações que afetam esses campos. No Render, eles rodam automaticamente no deploy. 
