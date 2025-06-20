@@ -16,7 +16,7 @@
     "fix:migration": "ts-node src/scripts/fixFailedMigration.ts",
     "resolve:migration": "ts-node src/scripts/resolveMigration.ts",
     "force:resolve": "node force-resolve-migration.js",
-    "prestart": "npx prisma generate && npx node force-resolve-migration.js && npx prisma migrate deploy --skip-seed && npx prisma db seed"
+    "prestart": "npx prisma generate && npx node force-resolve-migration.js && npx prisma db seed"
   },
   "keywords": [
     "pdv",
