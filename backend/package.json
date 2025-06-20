@@ -13,6 +13,7 @@
     "create:admin": "ts-node src/scripts/createAdmin.ts",
     "update:margins": "ts-node src/scripts/updateProductMargins.ts",
     "fill:costprice": "ts-node src/scripts/fillCostPriceData.ts",
+    "fix:migration": "ts-node src/scripts/fixFailedMigration.ts",
     "prestart": "npx prisma generate && npx prisma migrate deploy && npx prisma db seed"
   },
   "keywords": [
