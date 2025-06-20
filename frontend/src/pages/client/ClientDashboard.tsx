@@ -5,7 +5,7 @@ import { ArrowRight, Bell, Search, ShoppingCart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
-import { api } from '@/lib/api';
+import api from '@/lib/api';
 import NotificationDropdown from '@/components/NotificationDropdown';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -52,7 +52,7 @@ const getRandomProducts = (products, count = 4) => {
   return shuffled.slice(0, count);
 };
 
-const API_URL = 'https://adega-flow-digital.onrender.com';
+const API_URL = import.meta.env.VITE_API_URL;
 
 const categoryImages = {
   'Whiskys': '/uploads/whisky.png',

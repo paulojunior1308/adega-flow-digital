@@ -9,7 +9,7 @@ import {
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ShoppingCart } from 'lucide-react';
-import { api } from '@/lib/api';
+import api from '@/lib/api';
 import { formatPrice } from '@/lib/utils';
 import { useCart } from '@/hooks/useCart';
 import { ComboOptionsModal } from './ComboOptionsModal';
@@ -39,11 +39,11 @@ interface Combo {
   items: ComboItem[];
 }
 
-const API_URL = 'https://adega-flow-digital.onrender.com';
+const API_URL = import.meta.env.VITE_API_URL;
 function getImageUrl(image?: string) {
   if (!image) return '';
   if (image.startsWith('http')) return image;
-  if (image.startsWith('/uploads')) return `https://adega-flow-digital.onrender.com${image}`;
+  if (image.startsWith('/uploads')) return `${API_URL}${image}`;
   return image;
 }
 

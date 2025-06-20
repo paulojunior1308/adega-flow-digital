@@ -49,16 +49,27 @@ export const productController = {
 
   create: async (req: Request, res: Response) => {
     try {
-      const { name, description, price, categoryId, supplierId, stock, minStock, barcode, costPrice, image, isFractioned, totalVolume, unitVolume } = req.body;
+      const { name, description, price, categoryId, supplierId, stock, minStock, barcode, costPrice, margin, image, isFractioned, totalVolume, unitVolume } = req.body;
+      
+      const pCost = (costPrice !== undefined && costPrice !== null && costPrice !== '') ? parseFloat(costPrice) : null;
+      const pMargin = (margin !== undefined && margin !== null && margin !== '') ? parseFloat(margin) : null;
+      let pPrice = (price !== undefined && price !== null && price !== '') ? parseFloat(price) : null;
+      
+      // Se a margem e o custo forem fornecidos, o preço é (re)calculado.
+      if (pCost !== null && pMargin !== null && !isNaN(pCost) && !isNaN(pMargin)) {
+        pPrice = pCost * (1 + (pMargin / 100));
+      }
+      
       const product = await prisma.product.create({
         data: {
           name,
           description,
-          price: parseFloat(price),
-          costPrice: parseFloat(costPrice),
+          price: (pPrice !== null && !isNaN(pPrice)) ? pPrice : 0,
+          costPrice: (pCost !== null && !isNaN(pCost)) ? pCost : 0,
+          margin: (pMargin !== null && !isNaN(pMargin)) ? pMargin : null,
           categoryId,
           supplierId: supplierId || null,
-          stock: parseInt(stock),
+          stock: stock ? parseInt(stock) : 0,
           minStock: minStock ? parseInt(minStock) : 0,
           barcode: barcode || null,
           image: image || null,
@@ -82,34 +93,61 @@ export const productController = {
   update: async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
-      const { name, description, price, categoryId, supplierId, stock, minStock, barcode, costPrice, active, image, isFractioned, totalVolume, unitVolume } = req.body;
+      const { name, description, price, categoryId, supplierId, stock, minStock, barcode, costPrice, margin, active, image, isFractioned, totalVolume, unitVolume } = req.body;
+      
+      const pCost = (costPrice !== undefined && costPrice !== null && costPrice !== '') ? parseFloat(costPrice) : null;
+      const pMargin = (margin !== undefined && margin !== null && margin !== '') ? parseFloat(margin) : null;
+      let pPrice = (price !== undefined && price !== null && price !== '') ? parseFloat(price) : null;
+
+      if (pCost !== null && pMargin !== null && !isNaN(pCost) && !isNaN(pMargin)) {
+        pPrice = pCost * (1 + (pMargin / 100));
+      }
+
+      const dataToUpdate: any = {};
+
+      if (name !== undefined) dataToUpdate.name = name;
+      if (description !== undefined) dataToUpdate.description = description;
+      if (active !== undefined) dataToUpdate.active = typeof active === 'boolean' ? active : active === 'true' || active === '1';
+      if (image !== undefined) dataToUpdate.image = image;
+      if (isFractioned !== undefined) dataToUpdate.isFractioned = isFractioned === true || isFractioned === 'true';
+      if (barcode !== undefined) dataToUpdate.barcode = barcode;
+      if (stock !== undefined && stock !== null) dataToUpdate.stock = parseInt(stock);
+      if (minStock !== undefined && minStock !== null) dataToUpdate.minStock = parseInt(minStock);
+      
+      if (totalVolume !== undefined) dataToUpdate.totalVolume = totalVolume === null ? null : parseFloat(totalVolume);
+      if (unitVolume !== undefined) dataToUpdate.unitVolume = unitVolume === null ? null : parseFloat(unitVolume);
+      
+      if (pPrice !== null && !isNaN(pPrice)) {
+        dataToUpdate.price = pPrice;
+      }
+
+      if (costPrice !== undefined) {
+        dataToUpdate.costPrice = (pCost !== null && !isNaN(pCost)) ? pCost : null;
+      }
+
+      if (margin !== undefined) {
+        dataToUpdate.margin = (pMargin !== null && !isNaN(pMargin)) ? pMargin : null;
+      }
+      
+      if (categoryId !== undefined) dataToUpdate.category = { connect: { id: categoryId } };
+      
+      if (supplierId !== undefined) {
+        if (supplierId === null) {
+          dataToUpdate.supplier = { disconnect: true };
+        } else {
+          dataToUpdate.supplier = { connect: { id: supplierId } };
+        }
+      }
+
       const product = await prisma.product.update({
         where: { id },
-        data: {
-          name,
-          description,
-          price: parseFloat(price),
-          costPrice: costPrice ? parseFloat(costPrice) : undefined,
-          stock: parseInt(stock),
-          minStock: minStock ? parseInt(minStock) : undefined,
-          barcode,
-          active: typeof active === 'boolean' ? active : active === 'true' || active === '1',
-          image: image || undefined,
-          isFractioned: isFractioned === true || isFractioned === 'true',
-          totalVolume: totalVolume ? parseFloat(totalVolume) : null,
-          unitVolume: unitVolume ? parseFloat(unitVolume) : null,
-          category: {
-            connect: { id: categoryId }
-          },
-          supplier: supplierId ? {
-            connect: { id: supplierId }
-          } : undefined
-        },
+        data: dataToUpdate,
         include: {
           category: true,
           supplier: true
         }
       });
+
       console.log('Produto atualizado:', product);
       res.json(product);
     } catch (error) {

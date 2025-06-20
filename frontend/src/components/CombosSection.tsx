@@ -8,9 +8,9 @@ import {
   CarouselPrevious, 
   CarouselNext 
 } from "@/components/ui/carousel";
-import { api } from '@/lib/api';
+import api from '@/lib/api';
 
-const API_URL = 'https://adega-flow-digital.onrender.com'; // URL base do backend
+const API_URL = import.meta.env.VITE_API_URL; // URL base do backend
 
 const getImageUrl = (image?: string) => {
   if (!image) return '';

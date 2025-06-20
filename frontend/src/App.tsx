@@ -12,6 +12,7 @@ import AdminDashboard from "@/pages/admin/AdminDashboard";
 import AdminOrders from "@/pages/admin/AdminOrders";
 import AdminStock from "@/pages/admin/AdminStock";
 import AdminProductRegistration from "@/pages/admin/AdminProductRegistration";
+import AdminFinance from "@/pages/admin/AdminFinance";
 import Promocoes from "@/pages/Promocoes";
 import Combos from "@/pages/Combos";
 import Narguile from "@/pages/Narguile";
@@ -70,6 +71,7 @@ const App = () => (
           <Route path="/admin-pedidos" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminOrders/></ProtectedRoute>} />
           <Route path="/admin-estoque" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminStock /></ProtectedRoute>} />
           <Route path="/admin-cadastro-produtos" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminProductRegistration /></ProtectedRoute>} />
+          <Route path="/admin-finance" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminFinance /></ProtectedRoute>} />
           <Route path="/admin-pdv" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminPDV /></ProtectedRoute>} />
           <Route path="/admin-vendas" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminSales /></ProtectedRoute>} />
           <Route path="/admin-clientes" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminCustomers /></ProtectedRoute>} />

@@ -16,7 +16,7 @@ const userTypes = [
   { value: 'motoboy', label: 'Motoboy' },
 ];
 
-const API_URL = 'https://adega-flow-digital.onrender.com/api';
+const API_URL = `${import.meta.env.VITE_API_URL}/api`;
 
 const AdminUsers = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);

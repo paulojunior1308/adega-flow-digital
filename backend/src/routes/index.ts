@@ -19,21 +19,29 @@ import doseRoutes from './dose.routes';
 
 const router = express.Router();
 
-// Rotas públicas (login e registro)
+// Tratamento para requisições OPTIONS (preflight CORS)
+router.options('*', (req, res) => {
+  res.status(200).end();
+});
+
+// Rotas públicas (login e registro) - SEM autenticação
 router.post('/login', clientController.login);
 router.post('/register', clientController.register);
 
 // Todas as outras rotas públicas (produtos, categorias, combos, promoções)
 router.use('/', publicRoutes);
 
-// Rotas administrativas
-router.use('/admin', authMiddleware, authorizeRoles('ADMIN'), adminRoutes);
-
-// Rotas do motoboy
-router.use('/motoboy', authMiddleware, motoboyMiddleware, motoboyRoutes);
+// Rotas públicas de doses
+router.use('/doses', doseRoutes);
 
 // Middleware de autenticação para todas as rotas protegidas
 router.use(authMiddleware);
+
+// Rotas administrativas
+router.use('/admin', authorizeRoles('ADMIN'), adminRoutes);
+
+// Rotas do motoboy
+router.use('/motoboy', motoboyMiddleware, motoboyRoutes);
 
 // Rotas do Cliente
 router.get('/cliente-dashboard', authorizeRoles('USER'), clientController.getDashboard);
@@ -55,10 +63,7 @@ router.get('/admin-pdv', authorizeRoles('ADMIN'), adminController.getPDV);
 
 router.use('/', clientRoutes);
 
-// Rotas públicas de doses
-router.use('/doses', doseRoutes);
-
 // Rotas de doses protegidas para admin
-router.use('/admin/doses', authMiddleware, authorizeRoles('ADMIN'), doseRoutes);
+router.use('/admin/doses', authorizeRoles('ADMIN'), doseRoutes);
 
 export default router; 

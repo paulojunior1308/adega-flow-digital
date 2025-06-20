@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import AdminSidebar from '@/components/admin/AdminSidebar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, ShoppingCart, X, RefreshCcw, DollarSign, QrCode, CreditCard, IdCard, Plus, Minus, ChevronUp, ChevronDown } from 'lucide-react';
+import { Search, ShoppingCart, X, RefreshCcw, DollarSign, QrCode, CreditCard, IdCard, Plus, Minus, ChevronUp, ChevronDown, Receipt } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -10,6 +10,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import api from '@/lib/axios';
 import { ComboOptionsModal } from '@/components/home/ComboOptionsModal';
 import { Drawer, DrawerContent } from '@/components/ui/drawer';
+import { ComandaModal } from '@/components/admin/ComandaModal';
 
 // Types definition
 interface Product {
@@ -33,6 +34,9 @@ interface CartItem {
   price: number;
   total: number;
   doseItems?: any[];
+  isDoseItem?: boolean;
+  isFractioned?: boolean;
+  discountBy?: 'volume' | 'unit';
   choosableSelections?: Record<string, Record<string, number>>;
 }
 
@@ -72,6 +76,7 @@ const AdminPDV = () => {
   const [doseModalOpen, setDoseModalOpen] = useState(false);
   const [doseToConfigure, setDoseToConfigure] = useState<Dose | null>(null);
   const [doseOptionsModalOpen, setDoseOptionsModalOpen] = useState(false);
+  const [comandaModalOpen, setComandaModalOpen] = useState(false);
   
   // Buscar produtos e combos ao carregar
   useEffect(() => {
@@ -169,36 +174,18 @@ const AdminPDV = () => {
         setDoseOptionsModalOpen(true);
         return;
       }
-      // Se não houver escolhíveis, distribui o valor igual ao combo
-      const produtosDose: { productId: string, nome: string, quantidade: number }[] = [];
-      for (const doseItem of item.items) {
-        produtosDose.push({
-          productId: doseItem.productId,
-          nome: doseItem.product?.name || '',
-          quantidade: Math.max(1, doseItem.quantity)
-        });
-      }
-      const numItems = produtosDose.length;
-      const basePrice = Math.floor((item.price / numItems) * 100) / 100;
-      const remainder = item.price - (basePrice * numItems);
-      const descontos = produtosDose.map((p, idx) => ({
-        productId: p.productId,
-        nome: p.nome,
-        quantidade: p.quantidade,
-        precoAjustado: idx === 0 ? basePrice + remainder : basePrice
-      }));
-      setCartItems(prev => ([
-        ...prev,
-        ...descontos.map(d => ({
-          id: d.productId + '-dose-' + Math.random().toString(36).substring(2, 8),
-          productId: d.productId,
-          code: d.productId.substring(0, 6),
-          name: `Dose de ${item.name} - ${d.nome}`,
-          quantity: d.quantidade,
-          price: d.precoAjustado,
-          total: d.precoAjustado
-        }))
-      ]));
+      // Se não houver escolhíveis, adiciona a dose diretamente
+      const newItem: CartItem = {
+        id: item.id + '-dose-' + Math.random().toString(36).substring(2, 8),
+        productId: item.id,
+        code: item.code,
+        name: item.name,
+        quantity: quantity,
+        price: item.price,
+        total: item.price * quantity,
+        isDoseItem: true
+      };
+      setCartItems(prev => [...prev, newItem]);
       toast({ description: `${item.name} (Dose) adicionada ao carrinho.` });
       return;
     }
@@ -234,6 +221,87 @@ const AdminPDV = () => {
       setCartItems([...cartItems, newItem]);
       toast({ description: `${item.name} adicionado ao carrinho.` });
     }
+  };
+
+  // Handle dose configuration
+  const handleDoseConfirm = (choosableSelections: Record<string, Record<string, number>>) => {
+    if (!doseToConfigure) return;
+
+    // Montar lista de todos os produtos da dose (fixos + escolhidos)
+    const produtosDose: { productId: string, nome: string, quantidade: number, isFractioned?: boolean }[] = [];
+    
+    // Fixos
+    for (const item of doseToConfigure.items) {
+      if (!(item as any).allowFlavorSelection) {
+        const produto = products.find(p => p.id === item.productId);
+        produtosDose.push({
+          productId: item.productId,
+          nome: item.product?.name || '',
+          quantidade: Math.max(1, item.quantity),
+          isFractioned: produto?.isFractioned
+        });
+      }
+    }
+
+    // Escolhíveis
+    for (const [categoryId, selections] of Object.entries(choosableSelections)) {
+      for (const [productId, quantidade] of Object.entries(selections)) {
+        if (quantidade > 0) {
+          const produto = products.find(p => p.id === productId);
+          if (produto) {
+            produtosDose.push({
+              productId,
+              nome: produto.name,
+              quantidade: Number(quantidade),
+              isFractioned: produto.isFractioned
+            });
+          }
+        }
+      }
+    }
+
+    // Calcular preço base e distribuir entre os itens
+    const totalQuantidade = produtosDose.reduce((sum, p) => sum + p.quantidade, 0);
+    const precoBase = Math.floor((doseToConfigure.price / totalQuantidade) * 100) / 100;
+    const totalPrecoBase = precoBase * totalQuantidade;
+    const diferenca = doseToConfigure.price - totalPrecoBase;
+
+    // Criar itens com preços ajustados
+    const newItems: CartItem[] = produtosDose.map((d, idx) => {
+      const precoAjustado = idx === 0 
+        ? precoBase + (diferenca / d.quantidade) // Primeiro item absorve a diferença
+        : precoBase;
+
+      return {
+        id: d.productId + '-dose-' + Math.random().toString(36).substring(2, 8),
+        productId: d.productId,
+        code: d.productId.substring(0, 6),
+        name: `Dose de ${doseToConfigure.name} - ${d.nome}`,
+        quantity: d.quantidade,
+        price: precoAjustado,
+        total: precoAjustado * d.quantidade,
+        isDoseItem: true,
+        isFractioned: d.isFractioned,
+        discountBy: d.isFractioned ? 'volume' : 'unit',
+        choosableSelections: {
+          [doseToConfigure.id]: { [d.productId]: d.quantidade }
+        }
+      };
+    });
+
+    // Verificar se o total dos itens está correto
+    const totalItens = newItems.reduce((sum, item) => sum + item.total, 0);
+    if (Math.abs(totalItens - doseToConfigure.price) > 0.01) {
+      // Ajustar o primeiro item para garantir o total correto
+      const diferenca = doseToConfigure.price - totalItens;
+      newItems[0].total += diferenca;
+      newItems[0].price = newItems[0].total / newItems[0].quantity;
+    }
+
+    setCartItems(prev => [...prev, ...newItems]);
+    setDoseOptionsModalOpen(false);
+    setDoseToConfigure(null);
+    toast({ description: `${doseToConfigure.name} (Dose) adicionada ao carrinho.` });
   };
 
   // Update cart item quantity
@@ -319,6 +387,40 @@ const AdminPDV = () => {
     });
   };
 
+  // Transfer items from comanda to main cart
+  const handleTransferFromComanda = (comandaItems: CartItem[]) => {
+    const newItemsFromComanda = comandaItems.map(item => {
+      const product = products.find(p => p.id === item.productId);
+      const discountBy: 'volume' | 'unit' = product?.isFractioned ? 'volume' : 'unit';
+      return {
+        ...item,
+        id: Math.random().toString(36).substring(2, 8), // Gera novo ID para o carrinho
+        // Define como o estoque será baixado
+        discountBy: discountBy,
+      };
+    });
+
+    const updatedCartItems = [...cartItems];
+
+    newItemsFromComanda.forEach(newItem => {
+      const existingItemIndex = updatedCartItems.findIndex(cartItem => 
+        cartItem.productId === newItem.productId && cartItem.name === newItem.name
+      );
+
+      if (existingItemIndex > -1) {
+        // Se já existe, soma a quantidade
+        const existingItem = updatedCartItems[existingItemIndex];
+        existingItem.quantity += newItem.quantity;
+        existingItem.total = existingItem.quantity * existingItem.price;
+      } else {
+        // Se não existe, adiciona
+        updatedCartItems.push(newItem);
+      }
+    });
+
+    setCartItems(updatedCartItems);
+  };
+
   // Finish ticket with payment method
   const finishTicket = async (paymentMethodId: string) => {
     if (cartItems.length === 0) {
@@ -331,13 +433,17 @@ const AdminPDV = () => {
     try {
       await api.post('/admin/pdv-sales', {
         items: cartItems.map(item => {
-          if (item.doseItems) {
-            // É uma dose
+          if (item.isDoseItem) {
+            // É uma dose - mantém o preço original da dose
+            const dose = doses.find(d => d.id === item.productId);
             return {
-              doseId: item.productId,
+              productId: item.productId,
               quantity: item.quantity,
-              price: item.price,
-              ...(item.choosableSelections ? { choosableSelections: item.choosableSelections } : {})
+              price: dose?.price || item.price, // Usa o preço da dose
+              isDoseItem: true,
+              isFractioned: item.isFractioned,
+              discountBy: item.discountBy,
+              choosableSelections: item.choosableSelections
             };
           }
           // Produto normal
@@ -421,13 +527,23 @@ const AdminPDV = () => {
             <ShoppingCart className="h-6 w-6 text-element-blue-dark" />
             <h1 className="text-xl font-medium text-element-blue-dark">PDV - Venda Local</h1>
           </div>
-          <Button 
-            onClick={() => setQuickProductsOpen(true)} 
-            variant="outline" 
-            className="flex items-center gap-2 w-full md:w-auto"
-          >
-            <span>Produtos Rápidos</span>
-          </Button>
+          <div className="flex gap-2 w-full md:w-auto">
+            <Button 
+              onClick={() => setComandaModalOpen(true)} 
+              variant="outline" 
+              className="flex items-center gap-2 w-full md:w-auto bg-green-50 border-green-200 hover:bg-green-100"
+            >
+              <Receipt className="h-4 w-4" />
+              <span>Abrir Comanda</span>
+            </Button>
+            <Button 
+              onClick={() => setQuickProductsOpen(true)} 
+              variant="outline" 
+              className="flex items-center gap-2 w-full md:w-auto"
+            >
+              <span>Produtos Rápidos</span>
+            </Button>
+          </div>
         </div>
 
         {/* Main content */}
@@ -1060,60 +1176,17 @@ const AdminPDV = () => {
                 isChoosable: item.allowFlavorSelection
               }))
             }}
-            onConfirm={(choosableSelections) => {
-              // Montar lista de todos os produtos da dose (fixos + escolhidos)
-              const produtosDose: { productId: string, nome: string, quantidade: number }[] = [];
-              // Fixos
-              for (const item of doseToConfigure.items) {
-                if (!item.allowFlavorSelection) {
-                  produtosDose.push({
-                    productId: item.productId,
-                    nome: item.product?.name || '',
-                    quantidade: Math.max(1, item.quantity)
-                  });
-                }
-              }
-              // Escolhíveis
-              for (const [categoryId, selections] of Object.entries(choosableSelections)) {
-                for (const [productId, quantidade] of Object.entries(selections)) {
-                  if (quantidade > 0) {
-                    let nome = '';
-                    nome = products.find((p: any) => p.id === productId)?.name || '';
-                    produtosDose.push({
-                      productId,
-                      nome,
-                      quantidade: Number(quantidade)
-                    });
-                  }
-                }
-              }
-              const numItems = produtosDose.length;
-              const basePrice = Math.floor((doseToConfigure.price / numItems) * 100) / 100;
-              const remainder = doseToConfigure.price - (basePrice * numItems);
-              const descontos = produtosDose.map((p, idx) => ({
-                productId: p.productId,
-                nome: p.nome,
-                quantidade: p.quantidade,
-                precoAjustado: idx === 0 ? basePrice + remainder : basePrice
-              }));
-              setCartItems(prev => ([
-                ...prev,
-                ...descontos.map(d => ({
-                  id: d.productId + '-dose-' + Math.random().toString(36).substring(2, 8),
-                  productId: d.productId,
-                  code: d.productId.substring(0, 6),
-                  name: `Dose de ${doseToConfigure.name} - ${d.nome}`,
-                  quantity: d.quantidade,
-                  price: d.precoAjustado,
-                  total: d.precoAjustado
-                }))
-              ]));
-              toast({ description: `${doseToConfigure.name} (Dose) adicionada ao carrinho.` });
-              setDoseOptionsModalOpen(false);
-              setDoseToConfigure(null);
-            }}
+            onConfirm={handleDoseConfirm}
+            isDoseConfiguration={true}
           />
         )}
+
+        {/* Comanda Modal */}
+        <ComandaModal
+          open={comandaModalOpen}
+          onOpenChange={setComandaModalOpen}
+          onTransferToCart={handleTransferFromComanda}
+        />
       </div>
     </div>
   );

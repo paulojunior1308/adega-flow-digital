@@ -33,7 +33,7 @@ const CartDetails: React.FC<CartDetailsProps> = ({
   onCheckout,
   disabled = false,
 }) => {
-  const API_URL = import.meta.env.VITE_API_URL || 'https://adega-flow-digital.onrender.com';
+  const API_URL = import.meta.env.VITE_API_URL;
 
   return (
     <div className="flex flex-col h-full">

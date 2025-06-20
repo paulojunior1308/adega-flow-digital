@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Plus, Edit, Trash2, Tag, Package, Search, Image as ImageIcon } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
-import { api } from '@/lib/api';
+import api from '@/lib/api';
 import { toast } from 'sonner';
 import { formatPrice } from '@/lib/utils';
 import AdminSidebar from '@/components/admin/AdminSidebar';

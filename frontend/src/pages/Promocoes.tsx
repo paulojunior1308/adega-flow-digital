@@ -84,14 +84,14 @@ const Promocoes = () => {
   const [searchTerm, setSearchTerm] = useState('');
   
   useEffect(() => {
-    fetch('https://adega-flow-digital.onrender.com/api/promotions')
+    fetch(`${import.meta.env.VITE_API_URL}/api/promotions`)
       .then(res => res.json())
       .then(data => {
         setPromos(data.map((promo: any) => ({
           id: promo.id,
           title: promo.name,
           description: promo.description,
-          image: promo.image ? (promo.image.startsWith('http') ? promo.image : `https://adega-flow-digital.onrender.com${promo.image}`) : '',
+          image: promo.image ? (promo.image.startsWith('http') ? promo.image : `${import.meta.env.VITE_API_URL}${promo.image}`) : '',
           price: `R$ ${promo.price.toFixed(2)}`,
           originalPrice: promo.originalPrice ? `R$ ${promo.originalPrice.toFixed(2)}` : undefined,
           discountPercentage: promo.originalPrice ? Math.round(((promo.originalPrice - promo.price) / promo.originalPrice) * 100) : undefined,

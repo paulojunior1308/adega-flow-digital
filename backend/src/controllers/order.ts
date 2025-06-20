@@ -195,14 +195,27 @@ export const orderController = {
         deliveryLat: addressLat,
         deliveryLng: addressLng,
         items: {
-          create: cart.items.map((item: any) => ({
-            productId: item.productId,
-            quantity: item.quantity,
-            price: item.price ?? item.product.price,
-            doseId: item.doseId || null,
-            choosableSelections: item.choosableSelections || null,
-            comboInstanceId: item.comboInstanceId || null,
-            doseInstanceId: item.doseInstanceId || null,
+          create: await Promise.all(cart.items.map(async (item: any) => {
+            const produto = await prisma.product.findUnique({ where: { id: item.productId } });
+            
+            // Determina a quantidade a ser registrada
+            let quantityToRecord = item.quantity;
+            
+            // Se for produto fracionado e não for dose, registra o volume total da garrafa
+            if (produto?.isFractioned && !item.doseId) {
+              quantityToRecord = produto.unitVolume || 1000; // Volume total da garrafa
+            }
+            
+            return {
+              productId: item.productId,
+              quantity: quantityToRecord,
+              price: item.price ?? item.product.price,
+              costPrice: produto?.costPrice || 0,
+              doseId: item.doseId || null,
+              choosableSelections: item.choosableSelections || null,
+              comboInstanceId: item.comboInstanceId || null,
+              doseInstanceId: item.doseInstanceId || null,
+            };
           })),
         },
       } as any,
@@ -222,6 +235,7 @@ export const orderController = {
         }
       },
     });
+    console.log('[ORDER][LOG] Pedido criado:', { id: order.id, createdAt: order.createdAt, status: order.status });
     // LOG dos itens do pedido após criação
     console.log('[DEBUG][ORDER CREATE] Itens do pedido criados:', order.items.map(i => ({
       id: i.id,
@@ -337,16 +351,155 @@ export const orderController = {
       })));
       // Agrupar doses por doseInstanceId
       const dosesMap: Record<string, any[]> = {};
+      const combosMap: Record<string, any[]> = {};
       const outros: any[] = [];
       for (const item of order.items as any[]) {
         const doseInstanceId = (item as any).doseInstanceId;
+        const comboInstanceId = (item as any).comboInstanceId;
         if (doseInstanceId) {
           if (!dosesMap[doseInstanceId]) dosesMap[doseInstanceId] = [];
           dosesMap[doseInstanceId].push(item);
+        } else if (comboInstanceId) {
+          if (!combosMap[comboInstanceId]) combosMap[comboInstanceId] = [];
+          combosMap[comboInstanceId].push(item);
         } else {
           outros.push(item);
         }
       }
+      
+      // Processar cada combo único
+      for (const comboItems of Object.values(combosMap)) {
+        const item = comboItems[0];
+        console.log('[DEBUG][COMBO] Processando comboInstanceId:', (item as any).comboInstanceId);
+        
+        // Buscar o combo através do comboInstanceId
+        // Como o carrinho pode ter sido limpo, vamos buscar diretamente no combo
+        // Vamos tentar encontrar um combo que tenha os produtos deste comboInstanceId
+        const comboInstanceId = (item as any).comboInstanceId;
+        
+        // Buscar todos os combos ativos
+        const combos = await prisma.combo.findMany({
+          where: { active: true },
+          include: { items: true }
+        });
+        
+        console.log('[DEBUG][COMBO] Total de combos ativos encontrados:', combos.length);
+        
+        // Encontrar o combo que corresponde aos produtos deste comboInstanceId
+        let foundCombo = null;
+        for (const combo of combos) {
+          const comboProductIds = combo.items.map(ci => ci.productId).sort();
+          const orderProductIds = comboItems.map(oi => (oi as any).productId).sort();
+          
+          console.log(`[DEBUG][COMBO] Comparando combo "${combo.name}" (ID: ${combo.id}):`);
+          console.log(`  - Produtos do combo: ${JSON.stringify(comboProductIds)}`);
+          console.log(`  - Produtos do pedido: ${JSON.stringify(orderProductIds)}`);
+          console.log(`  - Correspondem: ${JSON.stringify(comboProductIds) === JSON.stringify(orderProductIds)}`);
+          
+          if (JSON.stringify(comboProductIds) === JSON.stringify(orderProductIds)) {
+            foundCombo = combo;
+            console.log(`[DEBUG][COMBO] Combo encontrado: ${combo.name} (ID: ${combo.id})`);
+            break;
+          }
+        }
+        
+        if (foundCombo) {
+          console.log('[ORDER][LOG] Descontando estoque de combo:', foundCombo.id);
+          console.log('[DESCONTO ESTOQUE][COMBO] Composição do combo:', JSON.stringify(foundCombo.items, null, 2));
+          // Para cada item do combo descontar o estoque conforme a quantidade do combo
+          for (const comboItem of foundCombo.items) {
+            const produto = await prisma.product.findUnique({ where: { id: comboItem.productId } });
+            if (!produto) {
+              console.error('Produto do combo não encontrado:', comboItem.productId);
+              return res.status(400).json({ error: `Produto do combo não encontrado: ${comboItem.productId}` });
+            }
+            const quantidadeDescontada = Math.abs(Number(comboItem.quantity));
+            console.log(`[DEBUG][COMBO] Produto: ${produto.name}, isFractioned: ${produto.isFractioned}, quantidadeDescontada: ${quantidadeDescontada}`);
+            
+            if (produto.isFractioned) {
+              // Produto fracionado em combo: desconta o volume total da garrafa
+              const unitVolume = produto.unitVolume || 1000;
+              const volumeAtual = produto.totalVolume || 0;
+              const novoVolume = volumeAtual - unitVolume; // Desconta uma garrafa inteira
+              const novoEstoque = Math.floor(novoVolume / unitVolume);
+              console.log(`[COMBO][FRACIONADO] Produto: ${produto.name} | Volume atual: ${volumeAtual} | Descontar: ${unitVolume} ml (garrafa inteira) | Novo estoque: ${novoEstoque} | Novo volume: ${novoVolume}`);
+              if (novoVolume < 0) {
+                console.error(`[ERRO][COMBO][FRACIONADO] Estoque insuficiente para o produto: ${produto.name}`);
+                return res.status(400).json({ error: `Estoque insuficiente (volume) para o produto: ${produto.name}` });
+              }
+              await prisma.product.update({
+                where: { id: comboItem.productId },
+                data: {
+                  totalVolume: novoVolume,
+                  stock: novoEstoque
+                }
+              });
+            } else {
+              // Produto não fracionado: desconta normalmente
+              const estoqueAtual = produto.stock || 0;
+              const novoEstoque = estoqueAtual - quantidadeDescontada;
+              console.log(`[COMBO][NAO FRACIONADO] Produto: ${produto.name} | Estoque atual: ${estoqueAtual} | Descontar: ${quantidadeDescontada} un | Novo estoque: ${novoEstoque}`);
+              if (novoEstoque < 0) {
+                console.error(`[ERRO][COMBO][NAO FRACIONADO] Estoque insuficiente para o produto: ${produto.name}`);
+                return res.status(400).json({ error: `Estoque insuficiente para o produto: ${produto.name}` });
+              }
+              await prisma.product.update({
+                where: { id: comboItem.productId },
+                data: { stock: novoEstoque }
+              });
+            }
+          }
+        } else {
+          console.error('Combo não encontrado para comboInstanceId:', comboInstanceId);
+          console.log('[DEBUG][COMBO] Tratando itens como produtos avulsos...');
+          
+          // Se não encontrou o combo, trata como produtos avulsos
+          for (const orderItem of comboItems) {
+            const produto = await prisma.product.findUnique({ where: { id: (orderItem as any).productId } });
+            if (!produto) {
+              console.error('Produto não encontrado:', (orderItem as any).productId);
+              return res.status(400).json({ error: `Produto não encontrado: ${(orderItem as any).productId}` });
+            }
+            
+            const quantidade = (orderItem as any).quantity;
+            console.log(`[DEBUG][AVULSO] Produto: ${produto.name}, isFractioned: ${produto.isFractioned}, quantidade: ${quantidade}`);
+            
+            if (produto.isFractioned) {
+              // Produto fracionado: desconta o volume total da garrafa
+              const unitVolume = produto.unitVolume || 1000;
+              const volumeAtual = produto.totalVolume || 0;
+              const novoVolume = volumeAtual - unitVolume; // Desconta uma garrafa inteira
+              const novoEstoque = Math.floor(novoVolume / unitVolume);
+              console.log(`[AVULSO][FRACIONADO] Produto: ${produto.name} | Volume atual: ${volumeAtual} | Descontar: ${unitVolume} ml (garrafa inteira) | Novo estoque: ${novoEstoque} | Novo volume: ${novoVolume}`);
+              if (novoVolume < 0) {
+                console.error(`[ERRO][AVULSO][FRACIONADO] Estoque insuficiente para o produto: ${produto.name}`);
+                return res.status(400).json({ error: `Estoque insuficiente (volume) para o produto: ${produto.name}` });
+              }
+              await prisma.product.update({
+                where: { id: (orderItem as any).productId },
+                data: {
+                  totalVolume: novoVolume,
+                  stock: novoEstoque
+                }
+              });
+            } else {
+              // Produto não fracionado: desconta normalmente
+              const estoqueAtual = produto.stock || 0;
+              const novoEstoque = estoqueAtual - quantidade;
+              console.log(`[AVULSO][NAO FRACIONADO] Produto: ${produto.name} | Estoque atual: ${estoqueAtual} | Descontar: ${quantidade} un | Novo estoque: ${novoEstoque}`);
+              if (novoEstoque < 0) {
+                console.error(`[ERRO][AVULSO][NAO FRACIONADO] Estoque insuficiente para o produto: ${produto.name}`);
+                return res.status(400).json({ error: `Estoque insuficiente para o produto: ${produto.name}` });
+              }
+              await prisma.product.update({
+                where: { id: (orderItem as any).productId },
+                data: { stock: novoEstoque }
+              });
+            }
+          }
+        }
+      }
+      
       // Processar cada dose única
       for (const doseItems of Object.values(dosesMap)) {
         const item = doseItems[0];

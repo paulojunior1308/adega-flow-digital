@@ -50,6 +50,15 @@ import { useToast } from "@/components/ui/use-toast";
 import api from '@/lib/axios';
 import { Switch } from '@/components/ui/switch';
 import { uploadToCloudinary } from '@/lib/cloudinary';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Command,
+  CommandInput,
+  CommandList,
+  CommandEmpty,
+  CommandGroup,
+  CommandItem
+} from '@/components/ui/command';
 
 // Product interface
 interface Product {
@@ -102,10 +111,18 @@ const AdminStock = () => {
     unitVolume: '',
     totalVolume: '',
     active: true,
+    margin: '',
   });
   const [categories, setCategories] = useState<Category[]>([]);
-  
-  const suppliers = Array.from(new Set(products.map(product => product.supplier)));
+  const [isStockEntryDialogOpen, setIsStockEntryDialogOpen] = useState(false);
+  const [stockEntryForm, setStockEntryForm] = useState({
+    productId: '',
+    quantity: '',
+    unitCost: '',
+    notes: ''
+  });
+  const [loadingStockEntry, setLoadingStockEntry] = useState(false);
+  const [productSearchTerm, setProductSearchTerm] = useState('');
 
   const { toast } = useToast();
 
@@ -213,6 +230,7 @@ const AdminStock = () => {
       unitVolume: '',
       totalVolume: '',
       active: typeof product.active === 'boolean' ? product.active : true,
+      margin: '',
     });
     setIsEditDialogOpen(true);
   };
@@ -296,6 +314,40 @@ const AdminStock = () => {
     }
   };
 
+  const handleStockEntryChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setStockEntryForm({ ...stockEntryForm, [e.target.name]: e.target.value });
+  };
+  const handleStockEntrySelect = (name: string, value: string) => {
+    setStockEntryForm({ ...stockEntryForm, [name]: value });
+  };
+  const handleStockEntrySubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoadingStockEntry(true);
+    try {
+      await api.post('/admin/stock-entries', {
+        productId: stockEntryForm.productId,
+        quantity: Number(stockEntryForm.quantity),
+        unitCost: Number(stockEntryForm.unitCost),
+        notes: stockEntryForm.notes
+      });
+      toast({ title: 'Entrada registrada com sucesso!' });
+      setStockEntryForm({ productId: '', quantity: '', unitCost: '', notes: '' });
+      setProductSearchTerm('');
+      setIsStockEntryDialogOpen(false);
+      // Atualiza lista de produtos/estoque
+      api.get('/admin/products').then(res => setProducts(res.data));
+    } catch (error) {
+      toast({ title: 'Erro ao registrar entrada', variant: 'destructive' });
+    } finally {
+      setLoadingStockEntry(false);
+    }
+  };
+
+  // Filtrar produtos para busca no modal
+  const filteredProductsForModal = products.filter(product =>
+    product.name.toLowerCase().includes(productSearchTerm.toLowerCase())
+  );
+
   return (
     <div className="min-h-screen bg-element-gray-light flex">
       <AdminSidebar />
@@ -306,6 +358,13 @@ const AdminStock = () => {
           <p className="text-element-gray-dark">
             Visualize e atualize o estoque de produtos da Element Adega.
           </p>
+        </div>
+        
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-2xl font-bold text-element-blue-dark">Estoque</h1>
+          <Button onClick={() => setIsStockEntryDialogOpen(true)} className="bg-element-blue-dark hover:bg-element-blue-dark/90">
+            Registrar entrada de estoque
+          </Button>
         </div>
         
         {/* Filters and Search */}
@@ -604,20 +663,58 @@ const AdminStock = () => {
                     type="number"
                     step="0.01"
                     value={editForm.price}
-                    onChange={(e) => setEditForm({ ...editForm, price: e.target.value })}
+                    onChange={(e) => {
+                      setEditForm({ ...editForm, price: e.target.value });
+                      // Atualiza margem automaticamente
+                      const cost = parseFloat(editForm.costPrice || '0');
+                      const price = parseFloat(e.target.value || '0');
+                      if (!isNaN(cost) && !isNaN(price) && price > 0) {
+                        const margin = ((price - cost) / price) * 100;
+                        setEditForm((prev) => ({ ...prev, margin: margin.toFixed(2) }));
+                      }
+                    }}
                   />
                 </div>
-                
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Preço de Custo</label>
                   <Input
                     type="number"
                     step="0.01"
                     value={editForm.costPrice}
-                    onChange={(e) => setEditForm({ ...editForm, costPrice: e.target.value })}
+                    onChange={(e) => {
+                      setEditForm({ ...editForm, costPrice: e.target.value });
+                      // Atualiza preço de venda automaticamente se houver margem
+                      const cost = parseFloat(e.target.value || '0');
+                      const margin = parseFloat(editForm.margin || '0');
+                      if (!isNaN(cost) && !isNaN(margin) && margin !== 0) {
+                        const salePrice = cost / (1 - (margin / 100));
+                        if (!isNaN(salePrice) && salePrice > 0) {
+                          setEditForm((prev) => ({ ...prev, price: salePrice.toFixed(2) }));
+                        }
+                      }
+                    }}
                   />
                 </div>
-                
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Margem (%)</label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={editForm.margin || ''}
+                    onChange={(e) => {
+                      setEditForm({ ...editForm, margin: e.target.value });
+                      // Atualiza preço de venda automaticamente
+                      const cost = parseFloat(editForm.costPrice || '0');
+                      const margin = parseFloat(e.target.value || '0');
+                      if (!isNaN(cost) && !isNaN(margin) && margin !== 0) {
+                        const salePrice = cost / (1 - (margin / 100));
+                        if (!isNaN(salePrice) && salePrice > 0) {
+                          setEditForm((prev) => ({ ...prev, price: salePrice.toFixed(2) }));
+                        }
+                      }
+                    }}
+                  />
+                </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Estoque</label>
                   <Input
@@ -717,6 +814,63 @@ const AdminStock = () => {
                 Salvar alterações
               </Button>
             </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={isStockEntryDialogOpen} onOpenChange={setIsStockEntryDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Registrar entrada de estoque</DialogTitle>
+            </DialogHeader>
+            <form className="grid grid-cols-1 md:grid-cols-2 gap-4" onSubmit={handleStockEntrySubmit}>
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium mb-1">Produto*</label>
+                <Command>
+                  <CommandInput
+                    placeholder="Digite para buscar..."
+                    value={productSearchTerm}
+                    onValueChange={setProductSearchTerm}
+                  />
+                  <CommandList>
+                    <CommandEmpty>Nenhum produto encontrado.</CommandEmpty>
+                    <CommandGroup>
+                      {products.filter(product =>
+                        product.name.toLowerCase().includes(productSearchTerm.toLowerCase())
+                      ).map(product => (
+                        <CommandItem
+                          key={product.id}
+                          value={product.id}
+                          onSelect={() => {
+                            handleStockEntrySelect('productId', product.id);
+                            setProductSearchTerm(product.name);
+                          }}
+                        >
+                          {product.name}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Quantidade*</label>
+                <Input type="number" name="quantity" value={stockEntryForm.quantity} onChange={handleStockEntryChange} required min={1} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Custo Unitário (R$)*</label>
+                <Input type="number" name="unitCost" value={stockEntryForm.unitCost} onChange={handleStockEntryChange} required min={0.01} step={0.01} />
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium mb-1">Observação</label>
+                <Textarea name="notes" value={stockEntryForm.notes} onChange={handleStockEntryChange} rows={2} />
+              </div>
+              <div className="md:col-span-2 flex justify-end">
+                <Button type="submit" disabled={loadingStockEntry} className="bg-element-blue-dark hover:bg-element-blue-dark/90">
+                  {loadingStockEntry ? 'Salvando...' : 'Registrar Entrada'}
+                </Button>
+              </div>
+            </form>
+            <DialogFooter />
           </DialogContent>
         </Dialog>
       </div>

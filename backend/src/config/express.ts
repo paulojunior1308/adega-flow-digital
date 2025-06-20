@@ -19,15 +19,31 @@ export const initializeExpress = (app: Express) => {
   app.use(express.urlencoded({ extended: true }));
 
   // CORS
+  const allowedOrigins = [
+    'http://localhost:8080',
+    'http://127.0.0.1:8080',
+  ];
+
+  // Permite múltiplos domínios em FRONTEND_URL separados por vírgula
+  if (env.frontendUrl) {
+    env.frontendUrl.split(',').forEach((url: string) => {
+      const trimmed = url.trim();
+      if (trimmed && !allowedOrigins.includes(trimmed)) {
+        allowedOrigins.push(trimmed);
+      }
+    });
+  }
+
   app.use(cors({
-    origin: [
-      'https://adega-element.netlify.app',
-      'https://www.adega-element.netlify.app',
-    ],
+    origin: allowedOrigins,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
     credentials: true,
+    optionsSuccessStatus: 200 // Para compatibilidade com alguns navegadores
   }));
+
+  // Tratamento específico para requisições OPTIONS (preflight)
+  app.options('*', cors());
 
   // Helmet
   app.use(helmet({

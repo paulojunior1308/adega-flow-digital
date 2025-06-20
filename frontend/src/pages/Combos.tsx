@@ -22,13 +22,11 @@ const categories = [
   { id: 'energeticos', name: 'Energéticos' },
 ];
 
-// Adicionar função utilitária para tratar a URL da imagem
-function getImageUrl(image?: string) {
-  if (!image) return '/placeholder.png';
+const getImageUrl = (image: string) => {
   if (image.startsWith('http')) return image;
-  if (image.startsWith('/uploads')) return `https://adega-flow-digital.onrender.com${image}`;
+  if (image.startsWith('/uploads')) return `${import.meta.env.VITE_API_URL}${image}`;
   return image;
-}
+};
 
 const Combos = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -36,7 +34,7 @@ const Combos = () => {
   const [loading, setLoading] = useState(true);
   
   useEffect(() => {
-    fetch('https://adega-flow-digital.onrender.com/api/combos')
+    fetch(`${import.meta.env.VITE_API_URL}/api/combos`)
       .then(res => res.json())
       .then(data => {
         setCombos(data);

@@ -257,13 +257,13 @@ const Bebidas = () => {
   const [loading, setLoading] = useState(true);
   
   useEffect(() => {
-    fetch('https://adega-flow-digital.onrender.com/api/products/categories')
+    fetch(`${import.meta.env.VITE_API_URL}/api/products/categories`)
       .then(res => res.json())
       .then(categories => {
         const nomes = ['refrigerante', 'whisky', 'cerveja', 'energético', 'energetico', 'gin'];
         const ids = categories.filter((cat: any) => nomes.some(nome => cat.name.toLowerCase().includes(nome))).map((cat: any) => cat.id);
         if (ids.length === 0) return setLoading(false);
-        Promise.all(ids.map(id => fetch(`https://adega-flow-digital.onrender.com/api/products?categoryId=${id}`).then(res => res.json())))
+        Promise.all(ids.map(id => fetch(`${import.meta.env.VITE_API_URL}/api/products?categoryId=${id}`).then(res => res.json())))
           .then(results => {
             setProducts(results.flat());
             setLoading(false);

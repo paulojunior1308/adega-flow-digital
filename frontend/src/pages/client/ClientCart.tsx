@@ -52,7 +52,7 @@ import {
 import api from '@/lib/axios';
 
 // Defina a URL base do backend
-const API_URL = import.meta.env.VITE_API_URL || 'https://adega-flow-digital.onrender.com';
+const API_URL = import.meta.env.VITE_API_URL;
 
 // Interfaces
 interface Product {

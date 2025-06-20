@@ -9,7 +9,7 @@ import {
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ShoppingCart } from 'lucide-react';
-import { api } from '@/lib/api';
+import api from '@/lib/api';
 import { formatPrice } from '@/lib/utils';
 import { useCart } from '@/hooks/useCart';
 
@@ -29,7 +29,7 @@ interface Promotion {
   products: Product[];
 }
 
-const API_URL = 'https://adega-flow-digital.onrender.com'; // URL base do backend
+const API_URL = import.meta.env.VITE_API_URL; // URL base do backend
 
 export function PromotionCarousel() {
   const [promotions, setPromotions] = React.useState<Promotion[]>([]);

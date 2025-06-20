@@ -32,6 +32,7 @@ model Product {
   description String?
   price       Float
   costPrice   Float
+  margin      Float?      // Margem de lucro em porcentagem
   stock       Int         @default(0)
   minStock    Int         @default(0)
   barcode     String?     @unique
@@ -57,6 +58,7 @@ model Product {
   saleItems   SaleItem[]
   promotions  Promotion[] @relation("ProductToPromotion")
   doseItems   DoseItem[]
+  stockEntries StockEntry[]
 }
 
 model Category {
@@ -97,6 +99,7 @@ model Supplier {
   category  String?
   contact   String?
   products  Product[]
+  stockEntries StockEntry[]
 }
 
 model Sale {
@@ -119,10 +122,15 @@ model SaleItem {
   id        String   @id @default(uuid())
   quantity  Int
   price     Float
+  costPrice Float    // Custo do produto no momento da venda
   discount  Float    @default(0)
   createdAt DateTime @default(now())
   saleId    String
   productId String
+  isDoseItem Boolean @default(false)
+  isFractioned Boolean @default(false)
+  discountBy String? // 'volume' ou 'unit'
+  choosableSelections Json?
   product   Product  @relation(fields: [productId], references: [id])
   sale      Sale     @relation(fields: [saleId], references: [id])
 }
@@ -232,10 +240,11 @@ model OrderItem {
   productId String
   quantity  Int     @default(1)
   price     Float
-  comboInstanceId String? // Novo campo para identificar instância única do combo
-  doseInstanceId String? // Novo campo para identificar instância única da dose
-  doseId    String?  // Novo campo para referenciar doses
-  choosableSelections Json?  // Novo campo para armazenar seleções de itens escolhíveis
+  costPrice Float   // Custo do produto no momento da venda
+  comboInstanceId String?
+  doseInstanceId String?
+  doseId    String?
+  choosableSelections Json?
   order     Order   @relation(fields: [orderId], references: [id])
   product   Product @relation(fields: [productId], references: [id])
   dose      Dose?   @relation(fields: [doseId], references: [id])
@@ -345,6 +354,19 @@ model DoseItem {
   updatedAt DateTime @updatedAt
   dose      Dose     @relation(fields: [doseId], references: [id])
   product   Product  @relation(fields: [productId], references: [id])
+}
+
+model StockEntry {
+  id           String   @id @default(uuid())
+  productId    String
+  product      Product  @relation(fields: [productId], references: [id])
+  quantity     Int
+  unitCost     Float
+  totalCost    Float
+  supplierId   String?  // opcional
+  supplier     Supplier? @relation(fields: [supplierId], references: [id]) // opcional
+  createdAt    DateTime @default(now())
+  notes        String?
 }
 
 enum Role {

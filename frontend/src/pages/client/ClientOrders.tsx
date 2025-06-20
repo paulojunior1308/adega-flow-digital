@@ -385,7 +385,7 @@ const ClientOrders = () => {
                               product.image
                                 ? product.image.startsWith('http')
                                   ? product.image
-                                  : `https://adega-flow-digital.onrender.com${product.image}`
+                                  : `${import.meta.env.VITE_API_URL}${product.image}`
                                 : '/img/no-image.png'
                             } 
                             alt={product.name} 

@@ -14,7 +14,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { api } from '@/lib/api';
+import api from '@/lib/api';
 import { Badge } from '@/components/ui/badge';
 
 interface Product {

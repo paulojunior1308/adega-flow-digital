@@ -13,6 +13,8 @@ import path from 'path';
 import { comboController } from '../controllers/combo';
 import { supplierController } from '../controllers/supplier';
 import { paymentMethodController } from '../controllers/paymentMethod';
+import { financeController } from '../controllers/finance';
+import { stockEntryController } from '../controllers/stockEntry';
 
 const router = express.Router();
 
@@ -108,5 +110,12 @@ router.delete('/payment-methods/:id', paymentMethodController.delete);
 // Rota para vendas do PDV físico
 router.post('/pdv-sales', adminController.createPDVSale);
 router.get('/pdv-sales', adminController.getPDVSales);
+
+// Rota para relatório financeiro
+router.get('/finance/report', financeController.report);
+
+// Rotas de entradas de estoque
+router.post('/stock-entries', stockEntryController.create);
+router.get('/stock-entries', stockEntryController.list);
 
 export default router; 

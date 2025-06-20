@@ -40,6 +40,7 @@ interface ProductFormValues {
   category: string;
   price: string;
   costPrice: string;
+  margin: string;
   stock: string;
   description: string;
   image: FileList | null;
@@ -62,6 +63,16 @@ async function uploadToCloudinary(file: File): Promise<string> {
   return data.secure_url;
 }
 
+// Funções utilitárias para cálculo
+function calcularMargem(precoCusto: number, precoVenda: number) {
+  if (!precoCusto || !precoVenda) return '';
+  return (((precoVenda - precoCusto) / precoVenda) * 100).toFixed(2);
+}
+function calcularPrecoVenda(precoCusto: number, margem: number) {
+  if (!precoCusto || !margem) return '';
+  return (precoCusto / (1 - (margem / 100))).toFixed(2);
+}
+
 const AdminProductRegistration = () => {
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -79,6 +90,7 @@ const AdminProductRegistration = () => {
       category: "",
       price: "",
       costPrice: "",
+      margin: "",
       stock: "",
       description: "",
       image: null,
@@ -124,6 +136,7 @@ const AdminProductRegistration = () => {
           category: product.categoryId,
           price: product.price.toString(),
           costPrice: product.costPrice.toString(),
+          margin: product.margin?.toString() || '',
           stock: product.stock.toString(),
           description: product.description || '',
           image: null,
@@ -158,6 +171,7 @@ const AdminProductRegistration = () => {
     // Formata o preço para garantir que seja um número válido
     const price = parseFloat(data.price.replace(',', '.'));
     const costPrice = parseFloat(data.costPrice.replace(',', '.'));
+    const margin = data.margin ? parseFloat(data.margin.replace(',', '.')) : null;
     const unitVolume = data.isFractioned ? parseFloat(data.unitVolume.replace(',', '.')) : null;
     const totalVolume = data.isFractioned && calculatedTotalVolume ? parseFloat(calculatedTotalVolume) : null;
     
@@ -191,6 +205,7 @@ const AdminProductRegistration = () => {
         categoryId: data.category,
         price,
         costPrice,
+        margin,
         stock: data.stock,
         description: data.description || '',
         image: imageUrl,
@@ -289,11 +304,17 @@ const AdminProductRegistration = () => {
                             {...field}
                             required
                             onChange={(e) => {
-                              // Permite apenas números e vírgula/ponto
                               const value = e.target.value.replace(/[^\d.,]/g, '');
-                              // Substitui múltiplos pontos/vírgulas por um único
                               const formattedValue = value.replace(/[.,].*[.,]/g, '.');
                               field.onChange(formattedValue);
+                            }}
+                            onBlur={() => {
+                              const cost = parseFloat(form.getValues('costPrice').replace(',', '.') || '0');
+                              const price = parseFloat(form.getValues('price').replace(',', '.') || '0');
+                              if (!isNaN(cost) && !isNaN(price) && price > 0) {
+                                const margem = calcularMargem(cost, price);
+                                if (margem) form.setValue('margin', margem);
+                              }
                             }}
                           />
                         </FormControl>
@@ -314,11 +335,48 @@ const AdminProductRegistration = () => {
                             {...field}
                             required
                             onChange={(e) => {
-                              // Permite apenas números e vírgula/ponto
                               const value = e.target.value.replace(/[^\d.,]/g, '');
-                              // Substitui múltiplos pontos/vírgulas por um único
                               const formattedValue = value.replace(/[.,].*[.,]/g, '.');
                               field.onChange(formattedValue);
+                            }}
+                            onBlur={() => {
+                              const cost = parseFloat(form.getValues('costPrice').replace(',', '.') || '0');
+                              const margem = parseFloat(form.getValues('margin').replace(',', '.') || '0');
+                              if (!isNaN(cost) && !isNaN(margem) && margem > 0) {
+                                const precoVenda = calcularPrecoVenda(cost, margem);
+                                if (precoVenda) form.setValue('price', precoVenda);
+                              }
+                            }}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="margin"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Margem (%)*</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="text"
+                            placeholder="0,00"
+                            {...field}
+                            required
+                            onChange={(e) => {
+                              const value = e.target.value.replace(/[^\d.,]/g, '');
+                              const formattedValue = value.replace(/[.,].*[.,]/g, '.');
+                              field.onChange(formattedValue);
+                            }}
+                            onBlur={() => {
+                              const cost = parseFloat(form.getValues('costPrice').replace(',', '.') || '0');
+                              const margem = parseFloat(form.getValues('margin').replace(',', '.') || '0');
+                              if (!isNaN(cost) && !isNaN(margem) && margem > 0) {
+                                const precoVenda = calcularPrecoVenda(cost, margem);
+                                if (precoVenda) form.setValue('price', precoVenda);
+                              }
                             }}
                           />
                         </FormControl>

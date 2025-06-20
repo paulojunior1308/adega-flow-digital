@@ -15,7 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { api } from '@/lib/api';
+import api from '@/lib/api';
 import { useCart } from '@/hooks/useCart';
 import { Input } from '@/components/ui/input';
 
@@ -52,9 +52,10 @@ interface ComboOptionsModalProps {
     items: ComboItem[];
   };
   onConfirm: (choosableSelections: Record<string, Record<string, number>>) => void;
+  isDoseConfiguration?: boolean;
 }
 
-export function ComboOptionsModal({ open, onOpenChange, combo, onConfirm }: ComboOptionsModalProps) {
+export function ComboOptionsModal({ open, onOpenChange, combo, onConfirm, isDoseConfiguration = false }: ComboOptionsModalProps) {
   const [loading, setLoading] = React.useState(true);
   const [options, setOptions] = React.useState<Record<string, Product[]>>({});
   const [choosableSelections, setChoosableSelections] = React.useState<Record<string, Record<string, number>>>({});
@@ -111,10 +112,15 @@ export function ComboOptionsModal({ open, onOpenChange, combo, onConfirm }: Comb
             optionsMap[categoryId] = options;
           });
           setOptions(optionsMap);
-          // Inicializar seleções por categoria
+          
+          // Inicializar seleções por categoria com valores zerados
           const initialSelections: Record<string, Record<string, number>> = {};
           categoryIds.forEach(categoryId => {
+            const categoryOptions = optionsMap[categoryId] || [];
             initialSelections[categoryId] = {};
+            categoryOptions.forEach(option => {
+              initialSelections[categoryId][option.id] = 0;
+            });
           });
           setChoosableSelections(initialSelections);
         } catch (error) {
@@ -137,14 +143,36 @@ export function ComboOptionsModal({ open, onOpenChange, combo, onConfirm }: Comb
     }
   }, [open]);
 
-  const handleQuantityChange = (itemId: string, optionId: string, value: number) => {
-    setChoosableSelections(prev => ({
-      ...prev,
-      [itemId]: {
-        ...prev[itemId],
-        [optionId]: Math.max(0, value)
+  const handleQuantityChange = (categoryId: string, optionId: string, value: number) => {
+    const item = choosableItems.find(item => item.categoryId === categoryId);
+    const isFractionedCategory = !isDoseConfiguration && options[categoryId]?.some(option => option.isFractioned);
+    const totalEsperado = isFractionedCategory ? (item?.volumeToDiscount || 1) : (item?.quantity || 1);
+    
+    setChoosableSelections((prev: Record<string, Record<string, number>>) => {
+      const newSelections: Record<string, Record<string, number>> = { ...prev };
+      if (!newSelections[categoryId]) {
+        newSelections[categoryId] = {};
       }
-    }));
+
+      if (isFractionedCategory && isDoseConfiguration) {
+        // Para categorias fracionadas, zerar todas as seleções e definir apenas a selecionada
+        Object.keys(newSelections[categoryId]).forEach(key => {
+          newSelections[categoryId][key] = 0;
+        });
+        newSelections[categoryId][optionId] = totalEsperado;
+      } else {
+        // Para categorias não fracionadas (ou combos), atualizar apenas o valor selecionado
+        newSelections[categoryId][optionId] = Math.max(0, value);
+        
+        // Verificar se o total excede o esperado
+        const totalAtual = Object.values(newSelections[categoryId]).reduce((sum, q) => sum + q, 0);
+        if (totalAtual > totalEsperado) {
+          newSelections[categoryId][optionId] = Math.max(0, value - (totalAtual - totalEsperado));
+      }
+      }
+
+      return newSelections;
+    });
   };
 
   const handleSearchChange = (categoryId: string, value: string) => {
@@ -157,6 +185,16 @@ export function ComboOptionsModal({ open, onOpenChange, combo, onConfirm }: Comb
   // Ajustar validação: soma das quantidades por categoria
   const allQuantitiesValid = Object.entries(choosableByCategory).every(([categoryId, group]) => {
     const total = Object.values(choosableSelections[categoryId] || {}).reduce((sum, q) => sum + q, 0);
+    
+    // Para doses, a validação é diferente (baseada em volume)
+    if (isDoseConfiguration) {
+      const item = choosableItems.find(item => item.categoryId === categoryId);
+      const isFractionedCategory = options[categoryId]?.some(option => option.isFractioned);
+      if (isFractionedCategory) {
+        return total === (item?.volumeToDiscount || 1);
+      }
+    }
+
     return total === group.quantity;
   });
 
@@ -182,7 +220,7 @@ export function ComboOptionsModal({ open, onOpenChange, combo, onConfirm }: Comb
             <>
               {Object.entries(options).map(([categoryId, categoryOptions]) => {
                 const item = choosableItems.find(item => item.categoryId === categoryId);
-                const isFractionedCategory = categoryOptions.some(option => option.isFractioned);
+                const isFractionedCategory = isDoseConfiguration && categoryOptions.some(option => option.isFractioned);
                 const volumeToDiscount = item?.volumeToDiscount;
                 const totalSelecionado = isFractionedCategory
                   ? Object.values(choosableSelections[categoryId] || {}).reduce((sum, q) => sum + q, 0)
@@ -207,7 +245,7 @@ export function ComboOptionsModal({ open, onOpenChange, combo, onConfirm }: Comb
                               <input
                                 type="radio"
                                 name={`option-${categoryId}`}
-                                checked={choosableSelections[categoryId]?.[option.id] === volumeToDiscount}
+                                checked={!!choosableSelections[categoryId]?.[option.id]}
                                 onChange={() => {
                                   const newSelections = { ...choosableSelections };
                                   if (!newSelections[categoryId]) newSelections[categoryId] = {};

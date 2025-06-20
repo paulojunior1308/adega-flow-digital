@@ -47,19 +47,18 @@ interface NarguileProduct {
 }
 
 // Função utilitária para imagem
-function getImageUrl(image?: string) {
-  if (!image) return '/placeholder.png';
+const getImageUrl = (image: string) => {
   if (image.startsWith('http')) return image;
-  if (image.startsWith('/uploads')) return `https://adega-flow-digital.onrender.com${image}`;
+  if (image.startsWith('/uploads')) return `${import.meta.env.VITE_API_URL}${image}`;
   return image;
-}
+};
 
 const Narguile = () => {
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   
   useEffect(() => {
-    fetch('https://adega-flow-digital.onrender.com/api/products/categories')
+    fetch(`${import.meta.env.VITE_API_URL}/api/products/categories`)
       .then(res => res.json())
       .then(categories => {
         // Filtrar apenas as categorias exatamente com os nomes desejados
@@ -70,7 +69,7 @@ const Narguile = () => {
         setCategoriasNarguile(categoriasSelecionadas);
         const ids = categoriasSelecionadas.map((cat: any) => cat.id);
         if (ids.length === 0) return setLoading(false);
-        Promise.all(ids.map(id => fetch(`https://adega-flow-digital.onrender.com/api/products?categoryId=${id}`).then(res => res.json())))
+        Promise.all(ids.map(id => fetch(`${import.meta.env.VITE_API_URL}/api/products?categoryId=${id}`).then(res => res.json())))
           .then(results => {
             setProducts(results.flat());
             setLoading(false);

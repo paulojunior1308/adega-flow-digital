@@ -14,7 +14,7 @@ import { ComboOptionsModal } from '@/components/home/ComboOptionsModal';
 import CartDetails from '@/components/client/CartDetails';
 
 // Defina a URL base do backend
-const API_URL = import.meta.env.VITE_API_URL || 'https://adega-flow-digital.onrender.com';
+const API_URL = import.meta.env.VITE_API_URL;
 
 // Tipos para os produtos
 interface Product {
@@ -562,6 +562,7 @@ const ClientCatalog = () => {
             });
             setDoseToConfigure(null);
           }}
+          isDoseConfiguration={true}
         />
       )}
     </div>

@@ -11,6 +11,7 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
     "create:admin": "ts-node src/scripts/createAdmin.ts",
+    "update:margins": "ts-node src/scripts/updateProductMargins.ts",
     "prestart": "npx prisma generate && npx prisma migrate deploy && npx prisma db seed"
   },
   "keywords": [

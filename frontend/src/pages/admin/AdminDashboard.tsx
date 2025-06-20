@@ -10,7 +10,8 @@ import {
   Check,
   Truck,
   Clock,
-  MapPin
+  MapPin,
+  DollarSign
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import {
@@ -161,6 +162,8 @@ const AdminDashboard = () => {
   const [salesSummary, setSalesSummary] = useState<any[]>([]);
   const [salesPeriod, setSalesPeriod] = useState<'7d' | '1m' | '3m'>('7d');
   const [productsMap, setProductsMap] = useState<Record<string, any>>({});
+  // Estado para dados financeiros
+  const [financeReport, setFinanceReport] = useState<any>(null);
 
   // Buscar pedidos reais do backend
   useEffect(() => {
@@ -197,6 +200,12 @@ const AdminDashboard = () => {
       const map: Record<string, any> = {};
       res.data.forEach((p: any) => { map[p.id] = p; });
       setProductsMap(map);
+    });
+    // Buscar dados financeiros
+    api.get('/admin/finance/report').then(res => {
+      setFinanceReport(res.data);
+    }).catch(error => {
+      console.error('Erro ao buscar dados financeiros:', error);
     });
   }, []);
 
@@ -440,25 +449,25 @@ const AdminDashboard = () => {
               icon={<TrendingUp className="h-6 w-6 text-element-blue-dark" />} 
             />
             <StatCard 
+              title="Lucro Líquido"
+              value={financeReport ? `R$ ${financeReport.net_profit?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0,00'}` : 'R$ 0,00'}
+              change=""
+              changeType={financeReport && financeReport.net_profit >= 0 ? "up" : "down"}
+              icon={<DollarSign className="h-6 w-6 text-green-500" />} 
+            />
+            <StatCard 
+              title="Despesas"
+              value={financeReport ? `R$ ${financeReport.total_expenses?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0,00'}` : 'R$ 0,00'}
+              change=""
+              changeType="down"
+              icon={<Archive className="h-6 w-6 text-orange-500" />} 
+            />
+            <StatCard 
               title="Pedidos Pendentes"
               value={pedidosPendentes.toString()}
               change=""
               changeType="up"
               icon={<Package className="h-6 w-6 text-element-blue-dark" />} 
-            />
-            <StatCard 
-              title="Itens em Estoque"
-              value={estoque.toString()}
-              change=""
-              changeType="down"
-              icon={<Archive className="h-6 w-6 text-element-blue-dark" />} 
-            />
-            <StatCard 
-              title="Ticket Médio"
-              value={`R$ ${ticketMedio.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
-              change=""
-              changeType="up"
-              icon={<ShoppingCart className="h-6 w-6 text-element-blue-dark" />} 
             />
           </div>
           

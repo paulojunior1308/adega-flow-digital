@@ -14,6 +14,7 @@ import {
   Store,
   Truck,
   Tag,
+  TrendingUp,
   LogOut as LogOutIcon
 } from 'lucide-react';
 
@@ -46,6 +47,11 @@ const AdminSidebar = () => {
       icon: <DollarSign className="h-5 w-5" />, 
       label: 'Controle de Vendas', 
       path: '/admin-vendas' 
+    },
+    { 
+      icon: <TrendingUp className="h-5 w-5" />, 
+      label: 'Financeiro', 
+      path: '/admin-finance' 
     },
     { 
       icon: <Users className="h-5 w-5" />, 
