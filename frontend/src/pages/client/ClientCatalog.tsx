@@ -501,12 +501,14 @@ const ClientCatalog = () => {
                     <span>Filtrar por Categoria ({selectedCategoryName})</span>
                   </Button>
                 </SheetTrigger>
-                <SheetContent>
+                <SheetContent className="flex flex-col">
                   <SheetHeader>
                     <SheetTitle>Categorias</SheetTitle>
                   </SheetHeader>
-                  <div className="flex flex-col space-y-2 mt-4">
-                    {allCategoryButtons.map(renderCategoryButton)}
+                  <div className="flex-1 overflow-y-auto">
+                    <div className="flex flex-col gap-2 p-4">
+                      {allCategoryButtons.map(renderCategoryButton)}
+                    </div>
                   </div>
                 </SheetContent>
               </Sheet>
