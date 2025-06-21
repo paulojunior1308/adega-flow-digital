@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AdminSidebar from '@/components/admin/AdminSidebar';
 import { 
@@ -59,6 +59,7 @@ import {
   CommandGroup,
   CommandItem
 } from '@/components/ui/command';
+import AdminLayout from '@/components/admin/AdminLayout';
 
 // Product interface
 interface Product {
@@ -391,25 +392,17 @@ const AdminStock = () => {
   );
 
   return (
-    <div className="min-h-screen bg-element-gray-light flex">
-      <AdminSidebar />
-      
-      <div className="flex-1 p-8 ml-0 lg:ml-64">
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold text-element-blue-dark">Gerenciamento de Estoque</h1>
-          <p className="text-element-gray-dark">
-            Visualize e atualize o estoque de produtos da Element Adega.
-          </p>
-        </div>
-        
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold text-element-blue-dark">Estoque</h1>
+    <AdminLayout>
+      <div className="space-y-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
+          <h1 className="text-2xl md:text-3xl font-bold text-element-blue-dark mb-4 sm:mb-0">
+            Controle de Estoque
+          </h1>
           <Button onClick={() => setIsStockEntryDialogOpen(true)} className="bg-element-blue-dark hover:bg-element-blue-dark/90">
             Registrar entrada de estoque
           </Button>
         </div>
         
-        {/* Filters and Search */}
         <div className="bg-white p-4 rounded-lg shadow-sm mb-6">
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1 relative">
@@ -463,7 +456,6 @@ const AdminStock = () => {
           </div>
         </div>
         
-        {/* Stock Alerts */}
         <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-lg mb-6">
           <div className="flex items-center gap-3">
             <AlertCircle className="h-5 w-5 text-yellow-500" />
@@ -477,7 +469,6 @@ const AdminStock = () => {
           </div>
         </div>
         
-        {/* Products Table */}
         <div className="bg-white rounded-lg shadow-sm overflow-hidden">
           <Table>
             <TableHeader>
@@ -600,7 +591,6 @@ const AdminStock = () => {
           </Table>
         </div>
         
-        {/* Stock Update Dialog */}
         <Dialog open={isUpdateDialogOpen} onOpenChange={setIsUpdateDialogOpen}>
           <DialogContent>
             <DialogHeader>
@@ -663,7 +653,6 @@ const AdminStock = () => {
           </DialogContent>
         </Dialog>
 
-        {/* Modal de Edição */}
         <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
           <DialogContent className="max-w-2xl">
             <DialogHeader>
@@ -898,7 +887,6 @@ const AdminStock = () => {
                 </Command>
               </div>
 
-              {/* Informações do produto selecionado */}
               {selectedProductInfo && (
                 <div className="md:col-span-2 p-4 bg-gray-50 rounded-lg">
                   <h4 className="font-medium text-sm mb-2">Informações do Produto</h4>
@@ -967,7 +955,7 @@ const AdminStock = () => {
           </DialogContent>
         </Dialog>
       </div>
-    </div>
+    </AdminLayout>
   );
 };
 

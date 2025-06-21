@@ -1,5 +1,5 @@
-import React from 'react';
-import AdminSidebar from '@/components/admin/AdminSidebar';
+import React, { useState, useEffect } from 'react';
+import AdminLayout from '@/components/admin/AdminLayout';
 import { 
   Table, 
   TableBody, 
@@ -9,12 +9,13 @@ import {
   TableRow 
 } from '@/components/ui/table';
 import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardHeader, 
-  CardTitle 
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
 } from '@/components/ui/card';
+import { TrendingUp, TrendingDown, DollarSign, ShoppingCart } from 'lucide-react';
 import api from '@/lib/axios';
 
 const AdminSales = () => {
@@ -90,10 +91,11 @@ const AdminSales = () => {
   const formatPercent = (value) => `${value > 0 ? '+' : ''}${value.toFixed(1)}%`;
 
   return (
-    <div className="flex h-screen bg-gray-100">
-      <AdminSidebar />
-      <div className="flex-1 p-6 overflow-y-auto ml-0 lg:ml-64">
-        <h1 className="text-2xl font-bold text-element-blue-dark mb-6">Controle de Vendas</h1>
+    <AdminLayout>
+      <div className="space-y-6">
+        <h1 className="text-2xl md:text-3xl font-bold text-element-blue-dark">
+          Controle de Vendas
+        </h1>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
           <Card>
@@ -168,7 +170,7 @@ const AdminSales = () => {
           </CardContent>
         </Card>
       </div>
-    </div>
+    </AdminLayout>
   );
 };
 

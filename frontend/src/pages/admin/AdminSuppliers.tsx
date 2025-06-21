@@ -1,5 +1,5 @@
-import React from 'react';
-import AdminSidebar from '@/components/admin/AdminSidebar';
+import React, { useState, useEffect } from 'react';
+import AdminLayout from '@/components/admin/AdminLayout';
 import { 
   Table, 
   TableBody, 
@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, Plus } from 'lucide-react';
+import { Search, Plus, Edit, Trash2, Building2 } from 'lucide-react';
 import api from '@/lib/axios';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 
@@ -89,11 +89,13 @@ const AdminSuppliers = () => {
   });
 
   return (
-    <div className="flex h-screen bg-gray-100">
-      <AdminSidebar />
-      <div className="flex-1 p-6 overflow-y-auto ml-0 lg:ml-64">
+    <AdminLayout>
+      <div className="space-y-6">
+        <h1 className="text-2xl md:text-3xl font-bold text-element-blue-dark">
+          Cadastro de Fornecedores
+        </h1>
+        
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold text-element-blue-dark">Cadastro de Fornecedores</h1>
           <Button className="bg-element-blue-neon text-element-gray-dark hover:bg-element-blue-neon/80" onClick={openNew}>
             <Plus className="h-4 w-4 mr-2" />
             Novo Fornecedor
@@ -240,7 +242,7 @@ const AdminSuppliers = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </AdminLayout>
   );
 };
 

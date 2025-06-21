@@ -1,5 +1,12 @@
-import React from 'react';
-import AdminSidebar from '@/components/admin/AdminSidebar';
+import React, { useState, useEffect } from 'react';
+import AdminLayout from '@/components/admin/AdminLayout';
+import { 
+  Plus, 
+  Edit, 
+  Trash2, 
+  Search,
+  User
+} from 'lucide-react';
 import { 
   Table, 
   TableBody, 
@@ -16,7 +23,6 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Search } from 'lucide-react';
 import api from '@/lib/axios';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 
@@ -87,11 +93,13 @@ const AdminCustomers = () => {
   });
 
   return (
-    <div className="flex h-screen bg-gray-100">
-      <AdminSidebar />
-      <div className="flex-1 p-6 overflow-y-auto ml-0 lg:ml-64">
+    <AdminLayout>
+      <div className="space-y-6">
+        <h1 className="text-2xl md:text-3xl font-bold text-element-blue-dark">
+          Lista de Clientes
+        </h1>
+        
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold text-element-blue-dark">Lista de Clientes</h1>
           <Button className="bg-element-blue-neon text-element-gray-dark hover:bg-element-blue-neon/80" onClick={openNew}>
             + Novo Cliente
           </Button>
@@ -231,7 +239,7 @@ const AdminCustomers = () => {
           </DialogContent>
         </Dialog>
       </div>
-    </div>
+    </AdminLayout>
   );
 };
 

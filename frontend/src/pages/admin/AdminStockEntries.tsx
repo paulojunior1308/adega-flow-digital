@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import AdminSidebar from '@/components/admin/AdminSidebar';
+import AdminLayout from '@/components/admin/AdminLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import api from '@/lib/axios';
 import { useToast } from '@/hooks/use-toast';
 
-export default function AdminStockEntries() {
+const AdminStockEntries = () => {
   const [products, setProducts] = useState<any[]>([]);
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const [entries, setEntries] = useState<any[]>([]);
@@ -62,11 +62,13 @@ export default function AdminStockEntries() {
   };
 
   return (
-    <div className="flex h-screen bg-element-gray-light">
-      <AdminSidebar />
-      <div className="flex-1 p-8 overflow-y-auto">
+    <AdminLayout>
+      <div className="space-y-6">
+        <h1 className="text-2xl md:text-3xl font-bold text-element-blue-dark">
+          Entradas de Estoque
+        </h1>
+        
         <div className="max-w-4xl mx-auto">
-          <h1 className="text-2xl font-bold mb-6 text-element-blue-dark">Entradas de Estoque</h1>
           <Card className="mb-8">
             <CardHeader>
               <CardTitle>Registrar nova entrada</CardTitle>
@@ -158,6 +160,8 @@ export default function AdminStockEntries() {
           </Card>
         </div>
       </div>
-    </div>
+    </AdminLayout>
   );
-} 
+};
+
+export default AdminStockEntries; 

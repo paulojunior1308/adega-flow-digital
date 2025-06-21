@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import AdminSidebar from '@/components/admin/AdminSidebar';
+import AdminLayout from '@/components/admin/AdminLayout';
 import { 
   Check,
   Package,
@@ -149,7 +149,7 @@ const AdminOrders = () => {
   const itemsPerPage = 5;
   
   // Buscar pedidos reais do backend
-  React.useEffect(() => {
+  useEffect(() => {
     api.get('/admin/orders').then(res => {
       console.log('Pedidos recebidos do backend:', res.data);
       const mapped = res.data.map(order => ({
@@ -575,196 +575,200 @@ const AdminOrders = () => {
   }
 
   return (
-    <div className="min-h-screen bg-element-gray-light">
-      <AdminSidebar />
-      
-      {renderOrderDetailsDialog()}
-      
-      <div className="lg:pl-64 min-h-screen">
-        <div className="p-4 md:p-6 lg:p-8">
-          {/* Header */}
-          <div className="mb-6">
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4">
-              <div>
-                <h1 className="text-2xl md:text-3xl font-bold text-element-blue-dark mb-1">Gerenciar Pedidos</h1>
-                <p className="text-element-gray-dark">Visualize e gerencie todos os pedidos realizados</p>
-              </div>
-              <Button 
-                className="mt-4 md:mt-0" 
-                onClick={() => navigate('/admin-dashboard')}
-              >
-                Dashboard
-              </Button>
-            </div>
-            
-            {/* Search and filters */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
-              <div className="col-span-1 md:col-span-2">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                  <Input 
-                    placeholder="Buscar por ID ou cliente..." 
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
-                  />
+    <AdminLayout>
+      <div className="space-y-6">
+        <h1 className="text-2xl md:text-3xl font-bold text-element-blue-dark">
+          Gerenciamento de Pedidos
+        </h1>
+        
+        {renderOrderDetailsDialog()}
+        
+        <div className="lg:pl-64 min-h-screen">
+          <div className="p-4 md:p-6 lg:p-8">
+            {/* Header */}
+            <div className="mb-6">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4">
+                <div>
+                  <h1 className="text-2xl md:text-3xl font-bold text-element-blue-dark mb-1">Gerenciar Pedidos</h1>
+                  <p className="text-element-gray-dark">Visualize e gerencie todos os pedidos realizados</p>
                 </div>
+                <Button 
+                  className="mt-4 md:mt-0" 
+                  onClick={() => navigate('/admin-dashboard')}
+                >
+                  Dashboard
+                </Button>
               </div>
               
-              <div className="col-span-1">
-                <div className="flex items-center space-x-2">
-                  <Label htmlFor="date" className="min-w-fit">Data:</Label>
-                  <Input
-                    type="date"
-                    id="date"
-                    className="flex-1"
-                  />
+              {/* Search and filters */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+                <div className="col-span-1 md:col-span-2">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                    <Input 
+                      placeholder="Buscar por ID ou cliente..." 
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
+                
+                <div className="col-span-1">
+                  <div className="flex items-center space-x-2">
+                    <Label htmlFor="date" className="min-w-fit">Data:</Label>
+                    <Input
+                      type="date"
+                      id="date"
+                      className="flex-1"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-          
-          {/* Tabs */}
-          <Tabs defaultValue="all" value={currentTab} onValueChange={setCurrentTab} className="mb-6">
-            <TabsList className="grid grid-cols-3 md:grid-cols-6 gap-2 bg-background">
-              <TabsTrigger value="all" className="text-sm">Todos</TabsTrigger>
-              <TabsTrigger value="pending" className="text-sm">Pendentes</TabsTrigger>
-              <TabsTrigger value="preparing" className="text-sm">Preparando</TabsTrigger>
-              <TabsTrigger value="delivering" className="text-sm">Em entrega</TabsTrigger>
-              <TabsTrigger value="delivered" className="text-sm">Entregues</TabsTrigger>
-              <TabsTrigger value="cancelled" className="text-sm">Cancelados</TabsTrigger>
-            </TabsList>
-          </Tabs>
-          
-          {/* Orders table */}
-          <div className="bg-white rounded-lg shadow overflow-hidden">
-            <Table>
-              <TableCaption>
-                {filteredOrders.length === 0 
-                  ? "Nenhum pedido encontrado" 
-                  : `Total de ${filteredOrders.length} pedidos`}
-              </TableCaption>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>ID</TableHead>
-                  <TableHead>Cliente</TableHead>
-                  <TableHead>Data</TableHead>
-                  <TableHead>Total</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {paginatedOrders.map((order) => (
-                  <TableRow key={order.id}>
-                    <TableCell className="font-medium">{order.id}</TableCell>
-                    <TableCell>{order.customer}</TableCell>
-                    <TableCell>
-                      <div className="flex flex-col">
-                        <span>{formatDate(order.timestamp)}</span>
-                        <span className="text-xs text-gray-500">{formatTime(order.timestamp)}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>R$ {order.total.toFixed(2)}</TableCell>
-                    <TableCell>{getStatusLabel(order.status)}</TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        {order.status === 'pending' && (
-                          <>
+            
+            {/* Tabs */}
+            <Tabs defaultValue="all" value={currentTab} onValueChange={setCurrentTab} className="mb-6">
+              <TabsList className="grid grid-cols-3 md:grid-cols-6 gap-2 bg-background">
+                <TabsTrigger value="all" className="text-sm">Todos</TabsTrigger>
+                <TabsTrigger value="pending" className="text-sm">Pendentes</TabsTrigger>
+                <TabsTrigger value="preparing" className="text-sm">Preparando</TabsTrigger>
+                <TabsTrigger value="delivering" className="text-sm">Em entrega</TabsTrigger>
+                <TabsTrigger value="delivered" className="text-sm">Entregues</TabsTrigger>
+                <TabsTrigger value="cancelled" className="text-sm">Cancelados</TabsTrigger>
+              </TabsList>
+            </Tabs>
+            
+            {/* Orders table */}
+            <div className="bg-white rounded-lg shadow overflow-hidden">
+              <Table>
+                <TableCaption>
+                  {filteredOrders.length === 0 
+                    ? "Nenhum pedido encontrado" 
+                    : `Total de ${filteredOrders.length} pedidos`}
+                </TableCaption>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>ID</TableHead>
+                    <TableHead>Cliente</TableHead>
+                    <TableHead>Data</TableHead>
+                    <TableHead>Total</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {paginatedOrders.map((order) => (
+                    <TableRow key={order.id}>
+                      <TableCell className="font-medium">{order.id}</TableCell>
+                      <TableCell>{order.customer}</TableCell>
+                      <TableCell>
+                        <div className="flex flex-col">
+                          <span>{formatDate(order.timestamp)}</span>
+                          <span className="text-xs text-gray-500">{formatTime(order.timestamp)}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>R$ {order.total.toFixed(2)}</TableCell>
+                      <TableCell>{getStatusLabel(order.status)}</TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          {order.status === 'pending' && (
+                            <>
+                              <Button
+                                variant="default"
+                                size="sm"
+                                onClick={() => {
+                                  openWhatsappMsg(order);
+                                  updateOrderStatus(order, 'preparing');
+                                }}
+                              >
+                                <Check className="h-4 w-4" />
+                                <span className="sr-only md:not-sr-only md:ml-2">Aceitar</span>
+                              </Button>
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                onClick={() => updateOrderStatus(order, 'cancelled')}
+                              >
+                                <Trash className="h-4 w-4" />
+                                <span className="sr-only md:not-sr-only md:ml-2">Recusar</span>
+                              </Button>
+                            </>
+                          )}
+                          {order.status === 'preparing' && (
                             <Button
                               variant="default"
                               size="sm"
                               onClick={() => {
-                                openWhatsappMsg(order);
-                                updateOrderStatus(order, 'preparing');
+                                openWhatsappEntrega(order);
+                                updateOrderStatus(order, 'delivering');
                               }}
                             >
-                              <Check className="h-4 w-4" />
-                              <span className="sr-only md:not-sr-only md:ml-2">Aceitar</span>
+                              <Truck className="h-4 w-4" />
+                              <span className="sr-only md:not-sr-only md:ml-2">Saiu para entrega</span>
                             </Button>
+                          )}
+                          {order.status === 'delivering' && (
                             <Button
-                              variant="destructive"
+                              variant="default"
                               size="sm"
-                              onClick={() => updateOrderStatus(order, 'cancelled')}
+                              onClick={() => updateOrderStatus(order, 'delivered')}
                             >
-                              <Trash className="h-4 w-4" />
-                              <span className="sr-only md:not-sr-only md:ml-2">Recusar</span>
+                              <MapPin className="h-4 w-4" />
+                              <span className="sr-only md:not-sr-only md:ml-2">Marcar como entregue</span>
                             </Button>
-                          </>
-                        )}
-                        {order.status === 'preparing' && (
+                          )}
                           <Button
-                            variant="default"
+                            variant="ghost"
                             size="sm"
-                            onClick={() => {
-                              openWhatsappEntrega(order);
-                              updateOrderStatus(order, 'delivering');
-                            }}
+                            onClick={() => openOrderDetails(order)}
                           >
-                            <Truck className="h-4 w-4" />
-                            <span className="sr-only md:not-sr-only md:ml-2">Saiu para entrega</span>
+                            <Eye className="h-4 w-4" />
+                            <span className="sr-only md:not-sr-only md:ml-2">Detalhes</span>
                           </Button>
-                        )}
-                        {order.status === 'delivering' && (
-                          <Button
-                            variant="default"
-                            size="sm"
-                            onClick={() => updateOrderStatus(order, 'delivered')}
-                          >
-                            <MapPin className="h-4 w-4" />
-                            <span className="sr-only md:not-sr-only md:ml-2">Marcar como entregue</span>
-                          </Button>
-                        )}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => openOrderDetails(order)}
-                        >
-                          <Eye className="h-4 w-4" />
-                          <span className="sr-only md:not-sr-only md:ml-2">Detalhes</span>
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-          
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <Pagination className="mt-8">
-              <PaginationContent>
-                <PaginationItem>
-                  <PaginationPrevious 
-                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                    className={currentPage === 1 ? "pointer-events-none opacity-50" : ""}
-                  />
-                </PaginationItem>
-                
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                  <PaginationItem key={page}>
-                    <PaginationLink 
-                      isActive={currentPage === page}
-                      onClick={() => setCurrentPage(page)}
-                    >
-                      {page}
-                    </PaginationLink>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+            
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <Pagination className="mt-8">
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious 
+                      onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                      className={currentPage === 1 ? "pointer-events-none opacity-50" : ""}
+                    />
                   </PaginationItem>
-                ))}
-                
-                <PaginationItem>
-                  <PaginationNext 
-                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                    className={currentPage === totalPages ? "pointer-events-none opacity-50" : ""}
-                  />
-                </PaginationItem>
-              </PaginationContent>
-            </Pagination>
-          )}
+                  
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                    <PaginationItem key={page}>
+                      <PaginationLink 
+                        isActive={currentPage === page}
+                        onClick={() => setCurrentPage(page)}
+                      >
+                        {page}
+                      </PaginationLink>
+                    </PaginationItem>
+                  ))}
+                  
+                  <PaginationItem>
+                    <PaginationNext 
+                      onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                      className={currentPage === totalPages ? "pointer-events-none opacity-50" : ""}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            )}
+          </div>
         </div>
       </div>
-    </div>
+    </AdminLayout>
   );
 };
 

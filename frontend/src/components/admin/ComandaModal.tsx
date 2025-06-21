@@ -1,9 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, ShoppingCart, X, Plus, Minus, Receipt, User, List } from 'lucide-react';
+import { Search, ShoppingCart, X, Plus, Minus, Receipt, User, List, ArrowLeft } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { ScrollArea } from "@/components/ui/scroll-area";
 import api from '@/lib/axios';
 import { ComboOptionsModal } from '@/components/home/ComboOptionsModal';
 
@@ -57,7 +59,6 @@ export function ComandaModal({
   // State management
   const [comandas, setComandas] = useState<Comanda[]>([]);
   const [currentComanda, setCurrentComanda] = useState<Comanda | null>(null);
-  const [showComandaList, setShowComandaList] = useState(false);
   const [customerName, setCustomerName] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [productCode, setProductCode] = useState('');
@@ -72,20 +73,19 @@ export function ComandaModal({
   const [doseToConfigure, setDoseToConfigure] = useState<any>(null);
   const { toast } = useToast();
   const [nextComandaNumber, setNextComandaNumber] = useState(1);
+  const [comandaSearch, setComandaSearch] = useState('');
 
   // Carregar comandas do localStorage
   useEffect(() => {
     const savedComandas = localStorage.getItem('comandas');
     if (savedComandas) {
       const parsed = JSON.parse(savedComandas);
-      // Converter strings de data para objetos Date
       const comandasWithDates = parsed.map((c: any) => ({
         ...c,
-        createdAt: new Date(c.createdAt)
+        createdAt: new Date(c.createdAt),
+        items: c.items || [] // Garante que items seja um array
       }));
       setComandas(comandasWithDates);
-
-      // Encontrar o maior número de comanda para continuar a sequência
       const maxNumber = Math.max(...comandasWithDates.map((c: Comanda) => c.number), 0);
       setNextComandaNumber(maxNumber + 1);
     }
@@ -111,40 +111,12 @@ export function ComandaModal({
     }
   }, [open]);
 
-  // Unificar produtos, combos e doses para exibição
-  const allItems = React.useMemo(() => [
+  const allItems = useMemo(() => [
     ...products.map(p => ({ ...p, type: 'product' })),
-    ...combos.map(c => ({
-      ...c,
-      type: 'combo',
-      code: c.id.substring(0, 6),
-      name: c.name,
-      price: c.price,
-      items: c.items.map(item => ({
-        ...item,
-        isChoosable: item.allowFlavorSelection,
-        product: {
-          ...item.product,
-          category: item.product?.category
-        }
-      }))
-    })),
-    ...doses.map(d => ({
-      ...d,
-      type: 'dose',
-      code: d.id.substring(0, 6),
-      items: d.items.map((item: any) => ({
-        ...item,
-        isChoosable: item.allowFlavorSelection,
-        product: {
-          ...item.product,
-          category: item.product?.category
-        }
-      }))
-    }))
+    ...combos.map(c => ({ ...c, type: 'combo', code: c.id.substring(0, 6) })),
+    ...doses.map(d => ({ ...d, type: 'dose', code: d.id.substring(0, 6) }))
   ], [products, combos, doses]);
 
-  // Busca dinâmica
   useEffect(() => {
     if (searchQuery.trim() === '') {
       setFilteredProducts([]);
@@ -158,20 +130,17 @@ export function ComandaModal({
     }
   }, [searchQuery, allItems]);
 
-  // Calculate totals
   const subtotal = currentComanda?.items.reduce((sum, item) => sum + item.total, 0) || 0;
 
-  // Create new comanda
   const createNewComanda = () => {
     if (!customerName.trim()) {
       toast({
         title: "Nome obrigatório",
-        description: "Digite o nome da pessoa para criar a comanda.",
+        description: "Digite o nome do cliente para criar a comanda.",
         variant: "destructive",
       });
       return;
     }
-
     const newComanda: Comanda = {
       id: Math.random().toString(36).substring(2, 8),
       number: nextComandaNumber,
@@ -181,697 +150,292 @@ export function ComandaModal({
       createdAt: new Date(),
       isOpen: true
     };
-
     setComandas(prev => [...prev, newComanda]);
     setCurrentComanda(newComanda);
     setCustomerName('');
     setNextComandaNumber(prev => prev + 1);
-    setShowComandaList(false);
     toast({
       title: "Comanda criada",
       description: `Comanda #${newComanda.number} criada para ${newComanda.customerName}.`,
     });
   };
 
-  // Open existing comanda
   const openComanda = (comanda: Comanda) => {
     setCurrentComanda(comanda);
-    setShowComandaList(false);
+  };
+  
+  const updateComandaInList = (updatedComanda: Comanda) => {
+    const updatedTotal = updatedComanda.items.reduce((sum, item) => sum + item.total, 0);
+    const finalComanda = {...updatedComanda, total: updatedTotal};
+
+    setComandas(prev => prev.map(c => c.id === finalComanda.id ? finalComanda : c));
+    setCurrentComanda(finalComanda);
   };
 
-  // Close comanda
-  const closeComanda = (comandaId: string) => {
-    setComandas(prev => prev.map(comanda => 
-      comanda.id === comandaId 
-        ? { ...comanda, isOpen: false }
-        : comanda
-    ));
-
-    if (currentComanda?.id === comandaId) {
-      setCurrentComanda(null);
-      setShowComandaList(true);
-    }
-
-    toast({
-      title: "Comanda fechada",
-      description: "A comanda foi fechada com sucesso.",
-    });
-  };
-
-  // Add item to comanda
   const addToComanda = (item: any, quantity: number = 1) => {
-    if (!currentComanda) {
-      toast({
-        title: "Nenhuma comanda selecionada",
-        description: "Crie ou selecione uma comanda primeiro.",
-        variant: "destructive",
+    if (!currentComanda) return;
+
+    const existingItemIndex = currentComanda.items.findIndex(ci => ci.productId === item.id);
+
+    let newItems: ComandaItem[];
+
+    if (existingItemIndex > -1) {
+      newItems = currentComanda.items.map((ci, index) => {
+        if (index === existingItemIndex) {
+          const newQuantity = ci.quantity + quantity;
+          return { ...ci, quantity: newQuantity, total: ci.price * newQuantity };
+        }
+        return ci;
       });
-      return;
-    }
-
-    if (item.type === 'combo') {
-      setComboToConfigure(item);
-      setComboModalOpen(true);
-      return;
-    }
-
-    if (item.type === 'dose') {
-      setDoseToConfigure(item);
-      setDoseModalOpen(true);
-      return;
-    }
-
-    // Para produtos simples
-    const existingItem = currentComanda.items.find(cartItem => 
-      cartItem.productId === item.id && 
-      cartItem.name === `${item.name} (Avulso)`
-    );
-
-    if (existingItem) {
-      // Atualizar quantidade se já existe
-      updateComandaItemQuantity(existingItem.id, existingItem.quantity + quantity);
     } else {
-      // Adicionar novo item
-      const newItem = {
+      const newItem: ComandaItem = {
         id: Math.random().toString(36).substring(2, 8),
         productId: item.id,
         code: item.code,
-        name: `${item.name} (Avulso)`,
-        price: item.price,
+        name: item.name,
         quantity: quantity,
+        price: item.price,
         total: item.price * quantity,
-        isAvulso: true
       };
-
-      setCurrentComanda(prev => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          items: [...prev.items, newItem]
-        };
-      });
-
-      // Atualizar a lista de comandas
-      setComandas(prev => prev.map(comanda => 
-        comanda.id === currentComanda.id 
-          ? { ...comanda, items: [...comanda.items, newItem] }
-          : comanda
-      ));
+      newItems = [...currentComanda.items, newItem];
     }
-  };
-
-  // Handle combo configuration
-  const handleComboConfirm = (choosableSelections: Record<string, Record<string, number>>) => {
-    if (!currentComanda || !comboToConfigure) return;
-
-    const produtosCombo: { productId: string, nome: string, precoOriginal: number, quantidade: number }[] = [];
     
-    // Fixos
-    for (const item of comboToConfigure.items) {
-      if (!item.isChoosable) {
-        produtosCombo.push({
-          productId: item.productId,
-          nome: item.product?.name || '',
-          precoOriginal: item.product?.price || 0,
-          quantidade: Math.max(1, item.quantity)
-        });
-      }
-    }
-
-    // Escolhíveis
-    for (const [categoryId, selections] of Object.entries(choosableSelections)) {
-      for (const [productId, quantidade] of Object.entries(selections)) {
-        if (quantidade > 0) {
-          const product = products.find(p => p.id === productId);
-          if (product) {
-            produtosCombo.push({
-              productId: product.id,
-              nome: product.name,
-              precoOriginal: product.price,
-              quantidade: Number(quantidade)
-            });
-          }
-        }
-      }
-    }
-
-    // Calcular valor total original e fator de desconto
-    const totalOriginal = produtosCombo.reduce((sum, p) => sum + p.precoOriginal * p.quantidade, 0);
-    const fatorDesconto = comboToConfigure.price / totalOriginal;
-
-    // Criar itens com preços ajustados
-    const comboItems: ComandaItem[] = [];
-    let totalAjustado = 0;
-
-    // Processar todos os itens exceto o último
-    for (let i = 0; i < produtosCombo.length - 1; i++) {
-      const produto = produtosCombo[i];
-      const precoAjustado = Math.floor((produto.precoOriginal * fatorDesconto) * 100) / 100;
-      const total = precoAjustado * produto.quantidade;
-      totalAjustado += total;
-
-      comboItems.push({
-        id: Math.random().toString(36).substring(2, 8),
-        productId: produto.productId,
-        code: produto.productId.substring(0, 6),
-        name: `Combo ${comboToConfigure.name} - ${produto.nome}`,
-        quantity: produto.quantidade,
-        price: precoAjustado,
-        total
-      });
-    }
-
-    // Processar o último item ajustando o valor para bater com o total do combo
-    const ultimoProduto = produtosCombo[produtosCombo.length - 1];
-    const valorRestante = comboToConfigure.price - totalAjustado;
-    const precoUnitarioUltimo = Math.floor((valorRestante / ultimoProduto.quantidade) * 100) / 100;
-
-    comboItems.push({
-      id: Math.random().toString(36).substring(2, 8),
-      productId: ultimoProduto.productId,
-      code: ultimoProduto.productId.substring(0, 6),
-      name: `Combo ${comboToConfigure.name} - ${ultimoProduto.nome}`,
-      quantity: ultimoProduto.quantidade,
-      price: precoUnitarioUltimo,
-      total: valorRestante
-    });
-
-    // Calcular preço proporcional para cada item
-    let runningTotal = 0;
-    for (let i = 0; i < comboItems.length - 1; i++) {
-        const item = comboItems[i];
-        const adjustedPrice = item.price * fatorDesconto;
-        item.price = adjustedPrice;
-        item.total = item.price * item.quantity;
-        runningTotal += item.total;
-    }
-    // Ajustar o último item para bater o total exato
-    const lastItem = comboItems[comboItems.length - 1];
-    const lastItemTotal = comboToConfigure.price - runningTotal;
-    lastItem.price = lastItemTotal / lastItem.quantity;
-    lastItem.total = lastItemTotal;
-
-
-    setCurrentComanda(prev => {
-      if (!prev) return prev;
-      return {
-        ...prev,
-        items: [...prev.items, ...comboItems],
-        total: prev.total + comboToConfigure.price
-      };
-    });
-
-    setComboModalOpen(false);
-    setComboToConfigure(null);
-
-    toast({
-      description: `${comboToConfigure.name} adicionado à comanda.`
-    });
+    updateComandaInList({ ...currentComanda, items: newItems });
+    toast({ description: `${item.name} adicionado à comanda.` });
   };
 
-  const handleDoseConfirm = (choosableSelections: Record<string, Record<string, number>>) => {
-    if (!currentComanda || !doseToConfigure) return;
-
-    const produtosDose: { productId: string, nome: string, precoOriginal: number, quantidade: number, isFractioned?: boolean }[] = [];
-    
-    // Itens Fixos da Dose
-    for (const item of doseToConfigure.items) {
-      if (!(item as any).allowFlavorSelection) {
-        produtosDose.push({
-          productId: item.productId,
-          nome: item.product?.name || '',
-          precoOriginal: item.product?.price || 0,
-          quantidade: Math.max(1, item.quantity),
-          isFractioned: item.product?.isFractioned
-        });
-      }
-    }
-
-    // Itens Escolhíveis da Dose
-    for (const [categoryId, selections] of Object.entries(choosableSelections)) {
-      for (const [productId, quantidade] of Object.entries(selections)) {
-        if (quantidade > 0) {
-          const product = products.find(p => p.id === productId);
-          if (product) {
-            produtosDose.push({
-              productId: product.id,
-              nome: product.name,
-              precoOriginal: product.price,
-              quantidade: Number(quantidade),
-              isFractioned: product.isFractioned
-            });
-          }
-        }
-      }
-    }
-
-    const totalOriginal = produtosDose.reduce((sum, p) => sum + p.precoOriginal * p.quantidade, 0);
-    const fatorDesconto = totalOriginal > 0 ? doseToConfigure.price / totalOriginal : 0;
-
-    const doseItems: ComandaItem[] = [];
-    let totalAcumulado = 0;
-
-    for (let i = 0; i < produtosDose.length; i++) {
-        const produto = produtosDose[i];
-        let precoFinalItem: number;
-
-        if (i === produtosDose.length - 1) {
-            // Último item: ajusta para bater o total da dose
-            precoFinalItem = doseToConfigure.price - totalAcumulado;
-        } else {
-            // Demais itens: calcula o preço proporcional e arredonda
-            const precoProporcional = produto.precoOriginal * fatorDesconto;
-            precoFinalItem = Math.round(precoProporcional * 100) / 100;
-            totalAcumulado += precoFinalItem;
-        }
-        
-        const precoUnitario = precoFinalItem / produto.quantidade;
-
-        doseItems.push({
-            id: `${produto.productId}-${Math.random().toString(36).substring(2, 8)}`,
-            productId: produto.productId,
-            code: produto.productId.substring(0, 6),
-            name: `Dose de ${doseToConfigure.name} - ${produto.nome}`,
-            quantity: produto.quantidade,
-            price: precoUnitario,
-            total: precoFinalItem,
-            isDoseItem: true,
-            isFractioned: produto.isFractioned,
-            choosableSelections: {
-                [doseToConfigure.id]: { [produto.productId]: produto.quantidade }
-            }
-        });
-    }
-
-    setCurrentComanda(prev => {
-      if (!prev) return prev;
-      const newItems = [...prev.items, ...doseItems];
-      const newTotal = newItems.reduce((sum, item) => sum + item.total, 0);
-      return {
-        ...prev,
-        items: newItems,
-        total: newTotal
-      };
-    });
-
-    setDoseModalOpen(false);
-    setDoseToConfigure(null);
-    toast({
-      description: `Dose de ${doseToConfigure.name} adicionada à comanda.`
-    });
-  };
-
-  // Update item quantity
   const updateComandaItemQuantity = (itemId: string, newQuantity: number) => {
     if (!currentComanda) return;
-
-    if (newQuantity <= 0) {
+    if (newQuantity < 1) {
       removeComandaItem(itemId);
       return;
     }
-
-    const updatedItems = currentComanda.items.map(item =>
-      item.id === itemId
-        ? { ...item, quantity: newQuantity, total: newQuantity * item.price }
-        : item
-    );
-
-    setCurrentComanda(prev => prev ? { ...prev, items: updatedItems } : null);
-    setComandas(prev => prev.map(c => 
-      c.id === currentComanda.id ? { ...c, items: updatedItems } : c
-    ));
+    const newItems = currentComanda.items.map(item => {
+      if (item.id === itemId) {
+        return { ...item, quantity: newQuantity, total: item.price * newQuantity };
+      }
+      return item;
+    });
+    updateComandaInList({ ...currentComanda, items: newItems });
   };
 
-  // Remove item from comanda
   const removeComandaItem = (itemId: string) => {
     if (!currentComanda) return;
-
-    const updatedItems = currentComanda.items.filter(item => item.id !== itemId);
-    
-    setCurrentComanda(prev => prev ? { ...prev, items: updatedItems } : null);
-    setComandas(prev => prev.map(c => 
-      c.id === currentComanda.id ? { ...c, items: updatedItems } : c
-    ));
+    const newItems = currentComanda.items.filter(item => item.id !== itemId);
+    updateComandaInList({ ...currentComanda, items: newItems });
+    toast({ description: `Item removido da comanda.` });
   };
 
-  // Add product by code
-  const handleAddProductByCode = () => {
-    const product = products.find(p => p.code === productCode);
-    if (product) {
-      addToComanda(product, productQuantity);
-      setProductCode('');
-      setProductQuantity(1);
-    } else {
-      toast({
-        title: "Produto não encontrado",
-        description: "Verifique o código do produto.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  // Transfer items to cart
-  const handleTransferToCart = () => {
-    if (!currentComanda || currentComanda.items.length === 0) return;
-
-    // Transferir todos os itens de uma vez para o carrinho
-    onTransferToCart(currentComanda.items);
-
-    // Fechar a comanda
-    closeComanda(currentComanda.id);
-    
-    // Fechar o modal
-    onOpenChange(false);
-
-    toast({
-      title: "Itens transferidos",
-      description: `${currentComanda.items.length} itens foram transferidos para o carrinho.`,
-    });
-  };
-
-  // Reset comanda
   const handleResetComanda = () => {
     if (!currentComanda) return;
-
-    setCurrentComanda(prev => prev ? { ...prev, items: [] } : null);
-    setComandas(prev => prev.map(c => 
-      c.id === currentComanda.id ? { ...c, items: [] } : c
-    ));
-    
-    toast({
-      title: "Comanda resetada",
-      description: "Todos os itens foram removidos da comanda.",
-    });
+    updateComandaInList({ ...currentComanda, items: [] });
+    toast({ description: `Itens da comanda #${currentComanda.number} foram limpos.` });
   };
 
-  // Show comanda list
+  const handleTransferToCart = () => {
+    if (!currentComanda || currentComanda.items.length === 0) {
+      toast({
+        variant: "destructive",
+        description: "Não há itens para transferir.",
+      });
+      return;
+    }
+    onTransferToCart(currentComanda.items);
+    toast({ description: `Itens da comanda #${currentComanda.number} transferidos para o caixa.` });
+    setCurrentComanda(null);
+    onOpenChange(false);
+  };
+  
+  const closeComanda = (comandaId: string) => {
+    setComandas(prev => prev.map(c => c.id === comandaId ? { ...c, isOpen: false } : c));
+    if (currentComanda?.id === comandaId) {
+      setCurrentComanda(null);
+    }
+  };
+  
+  const handleTransferAndClose = (comanda: Comanda) => {
+    if (comanda.items.length > 0) {
+      onTransferToCart(comanda.items);
+    }
+    closeComanda(comanda.id);
+    toast({
+      title: "Comanda Encerrada",
+      description: `Comanda #${comanda.number} de ${comanda.customerName} foi encerrada.`,
+    });
+  };
+  
   const handleShowComandaList = () => {
-    setShowComandaList(true);
     setCurrentComanda(null);
   };
 
-  // Get open comandas
-  const openComandas = comandas.filter(c => c.isOpen);
+  const filteredComandas = useMemo(() => {
+    return comandas.filter(c =>
+      c.customerName.toLowerCase().includes(comandaSearch.toLowerCase()) ||
+      c.number.toString().includes(comandaSearch)
+    ).sort((a, b) => b.number - a.number);
+  }, [comandas, comandaSearch]);
 
-  return (
+  const renderComandaList = () => (
     <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Receipt className="h-5 w-5" />
-              {currentComanda ? `Comanda #${currentComanda.number} - ${currentComanda.customerName}` : 'Gerenciar Comandas'}
-            </DialogTitle>
-          </DialogHeader>
+      <DialogHeader>
+        <DialogTitle>Gerenciador de Comandas</DialogTitle>
+      </DialogHeader>
+      
+      <div className="p-4 bg-gray-50 rounded-lg">
+        <div className="grid sm:grid-cols-2 gap-4">
+          <Input
+            placeholder="Nome do cliente para nova comanda"
+            value={customerName}
+            onChange={(e) => setCustomerName(e.target.value)}
+            onKeyPress={(e) => e.key === 'Enter' && createNewComanda()}
+          />
+          <Button onClick={createNewComanda} disabled={!customerName.trim()}>
+            <Plus className="mr-2 h-4 w-4" /> Criar Nova Comanda
+          </Button>
+        </div>
+        <div className="relative mt-4">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
+          <Input
+            placeholder="Buscar comanda por nome ou número..."
+            className="pl-9"
+            value={comandaSearch}
+            onChange={(e) => setComandaSearch(e.target.value)}
+          />
+        </div>
+      </div>
 
-          {showComandaList ? (
-            // Comanda List View
-            <div className="flex flex-col h-full">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-medium">Comandas Abertas</h3>
-                <Button onClick={() => {
-                  setShowComandaList(false);
-                  setCurrentComanda(null);
-                }} variant="outline">
-                  Nova Comanda
-                </Button>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 overflow-y-auto">
-                {openComandas.length > 0 ? (
-                  openComandas.map((comanda) => (
-                    <div key={comanda.id} className="border rounded-lg p-4 bg-gray-50">
-                      <div className="flex justify-between items-start mb-2">
-                        <div>
-                          <h4 className="font-medium">#{comanda.number} - {comanda.customerName}</h4>
-                          <p className="text-sm text-gray-500">
-                            {comanda.items.length} itens • R$ {comanda.items.reduce((sum, item) => sum + item.total, 0).toFixed(2)}
-                          </p>
-                          <p className="text-xs text-gray-400">
-                            Criada em {new Date(comanda.createdAt).toLocaleString('pt-BR')}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button 
-                          onClick={() => openComanda(comanda)} 
-                          size="sm" 
-                          className="flex-1"
-                        >
-                          Abrir
-                        </Button>
-                        <Button 
-                          onClick={() => closeComanda(comanda.id)} 
-                          size="sm" 
-                          variant="outline"
-                        >
-                          Fechar
-                        </Button>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-center py-8 text-gray-500 col-span-full">
-                    Nenhuma comanda aberta
-                  </div>
-                )}
-              </div>
-            </div>
-          ) : currentComanda ? (
-            // Comanda Edit View
-            <div className="flex flex-col lg:flex-row gap-4 h-full overflow-hidden">
-              {/* Left side - Product search and display */}
-              <div className="flex-1 flex flex-col overflow-y-auto">
-                {/* Search bar */}
-                <div className="flex flex-col md:flex-row gap-2 mb-4">
-                  <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                    <Input 
-                      type="text" 
-                      placeholder="Buscar por nome ou código..." 
-                      className="pl-9"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                    />
-                  </div>
-                  <div className="w-full md:w-32">
-                    <Input 
-                      type="text" 
-                      placeholder="Cód.Prod" 
-                      value={productCode}
-                      onChange={(e) => setProductCode(e.target.value)}
-                    />
-                  </div>
-                  <div className="w-full md:w-16">
-                    <Input 
-                      type="number" 
-                      min="1" 
-                      value={productQuantity}
-                      onChange={(e) => setProductQuantity(parseInt(e.target.value) || 1)}
-                    />
-                  </div>
-                  <Button 
-                    onClick={handleAddProductByCode} 
-                    className="px-3 w-full md:w-auto" 
-                    disabled={!productCode || !products.find(p => p.code === productCode) || products.find(p => p.code === productCode)?.stock === 0}
-                  >
-                    <Plus className="h-4 w-4" />
+      <ScrollArea className="h-[50vh] flex-1">
+        <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredComandas.filter(c => c.isOpen).length > 0 ? (
+            filteredComandas.filter(c => c.isOpen).map(comanda => (
+              <Card key={comanda.id} className="flex flex-col justify-between hover:shadow-lg transition-shadow">
+                <CardHeader>
+                  <CardTitle className="flex justify-between items-center text-lg">
+                    <span>Comanda #{comanda.number}</span>
+                    <span className="text-sm font-medium text-green-600 bg-green-100 px-2 py-1 rounded-full">Aberta</span>
+                  </CardTitle>
+                  <p className="text-sm text-gray-500 pt-1">{comanda.customerName}</p>
+                </CardHeader>
+                <CardContent>
+                  <p>{comanda.items.length} item(s)</p>
+                  <p className="font-semibold text-lg">Total: R$ {comanda.total.toFixed(2)}</p>
+                </CardContent>
+                <CardFooter className="flex gap-2">
+                  <Button onClick={() => openComanda(comanda)} className="w-full">
+                    <Plus className="mr-2 h-4 w-4" /> Adicionar Itens
                   </Button>
-                </div>
-
-                <div className="flex-1 overflow-y-auto">
-                  {searchQuery.trim() !== '' && (
-                    <div className="grid grid-cols-1 gap-2">
-                      {filteredProducts.map(product => (
-                        <button
-                          key={product.id}
-                          className="text-left p-3 border rounded-md hover:border-cyan-400 transition-colors bg-white w-full"
-                          onClick={() => addToComanda(product)}
-                          disabled={product.stock === 0}
-                        >
-                          <div className="font-medium">{product.code} - {product.name}</div>
-                          <div className="text-green-600 mt-1">R$ {product.price.toFixed(2)}</div>
-                          {product.type === 'combo' && <span className="text-xs text-blue-600">(Combo)</span>}
-                          {product.type === 'dose' && <span className="text-xs text-purple-600">(Dose)</span>}
-                        </button>
-                      ))}
-                      {filteredProducts.length === 0 && (
-                        <div className="text-center py-4 text-gray-500">
-                          Nenhum produto encontrado para "{searchQuery}"
-                        </div>
-                      )}
-                    </div>
-                  )}
-                  {searchQuery.trim() === '' && (
-                    <div className="text-center py-8 text-gray-500">
-                      Digite algo na busca para encontrar produtos
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Right side - Comanda items */}
-              <div className="w-full lg:w-96 flex flex-col">
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="font-medium text-lg">Itens da Comanda</h3>
-                  <div className="flex gap-2">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={handleResetComanda}
-                      disabled={currentComanda.items.length === 0}
-                    >
-                      Limpar
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={handleShowComandaList}
-                    >
-                      <List className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Comanda items */}
-                <div className="flex-1 overflow-y-auto">
-                  {currentComanda.items.map((item) => (
-                    <div key={item.id} className="flex items-center justify-between py-2">
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between">
-                          <span className="font-medium">{item.name}</span>
-                          <span className="text-sm text-gray-500">
-                            {item.quantity} {item.discountBy === 'volume' || (item.discountBy === undefined && item.isFractioned) ? 'ml' : 'un'} x R$ {item.price.toFixed(2)}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between text-sm text-gray-500">
-                          <span>Cód: {item.code}</span>
-                          <span>R$ {item.total.toFixed(2)}</span>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2 ml-4">
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          onClick={() => updateComandaItemQuantity(item.id, item.quantity - 1)}
-                        >
-                          <Minus className="h-4 w-4" />
-                        </Button>
-                        <span className="w-12 text-center">{item.quantity}</span>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          onClick={() => updateComandaItemQuantity(item.id, item.quantity + 1)}
-                        >
-                          <Plus className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          onClick={() => removeComandaItem(item.id)}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="border-t pt-4 mt-4">
-                  <div className="flex justify-between mb-4">
-                    <div className="font-medium">Total:</div>
-                    <div className="font-medium text-lg text-green-600">R$ {subtotal.toFixed(2)}</div>
-                  </div>
-                  
-                  <div className="flex gap-2">
-                    <Button 
-                      onClick={handleTransferToCart}
-                      className="flex-1 bg-green-600 hover:bg-green-700"
-                      disabled={currentComanda.items.length === 0}
-                    >
-                      <ShoppingCart className="h-4 w-4 mr-2" />
-                      Transferir para Carrinho
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      onClick={() => onOpenChange(false)}
-                    >
-                      Cancelar
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </div>
+                  <Button variant="outline" title="Transferir para o caixa e fechar" size="icon" onClick={() => handleTransferAndClose(comanda)}>
+                    <Receipt className="h-4 w-4" />
+                  </Button>
+                </CardFooter>
+              </Card>
+            ))
           ) : (
-            // New Comanda View
-            <div className="flex flex-col items-center justify-center py-8">
-              <div className="text-center mb-6">
-                <Receipt className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium mb-2">Criar Nova Comanda</h3>
-                <p className="text-gray-500">Digite o nome da pessoa para criar uma nova comanda</p>
-              </div>
-              
-              <div className="w-full max-w-md space-y-4">
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                  <Input 
-                    type="text" 
-                    placeholder="Nome da pessoa" 
-                    className="pl-9"
-                    value={customerName}
-                    onChange={(e) => setCustomerName(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && createNewComanda()}
-                  />
-                </div>
-                
-                <div className="flex gap-2">
-                  <Button 
-                    onClick={createNewComanda}
-                    className="flex-1"
-                    disabled={!customerName.trim()}
-                  >
-                    Criar Comanda
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    onClick={handleShowComandaList}
-                  >
-                    Ver Comandas
-                  </Button>
-                </div>
-              </div>
+            <div className="col-span-full text-center py-10 text-gray-500">
+              <List className="mx-auto h-12 w-12 text-gray-400" />
+              <h3 className="mt-2 text-sm font-medium">Nenhuma comanda aberta</h3>
+              <p className="mt-1 text-sm">Crie uma nova comanda para começar.</p>
             </div>
           )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Combo Options Modal */}
-      {comboToConfigure && (
-        <ComboOptionsModal
-          open={comboModalOpen}
-          onOpenChange={setComboModalOpen}
-          combo={comboToConfigure}
-          onConfirm={handleComboConfirm}
-        />
-      )}
-
-      {/* Dose Options Modal */}
-      {doseToConfigure && (
-        <ComboOptionsModal
-          open={doseModalOpen}
-          onOpenChange={setDoseModalOpen}
-          combo={{
-            id: doseToConfigure.id,
-            name: `Dose de ${doseToConfigure.name}`,
-            items: doseToConfigure.items.map((item: any) => ({
-              ...item,
-              isChoosable: item.allowFlavorSelection
-            }))
-          }}
-          onConfirm={handleDoseConfirm}
-          isDoseConfiguration={true}
-        />
-      )}
+        </div>
+      </ScrollArea>
     </>
+  );
+
+  const renderComandaDetail = () => (
+    <>
+      <DialogHeader className="flex flex-row items-center justify-between pr-6 border-b pb-4">
+        <div>
+          <DialogTitle>Comanda #{currentComanda?.number} - {currentComanda?.customerName}</DialogTitle>
+          <p className="text-sm text-gray-500">{currentComanda?.items.length || 0} item(s) no total</p>
+        </div>
+        <Button variant="ghost" size="icon" onClick={handleShowComandaList}>
+           <ArrowLeft className="h-5 w-5" />
+        </Button>
+      </DialogHeader>
+
+      <div className="flex flex-col lg:flex-row gap-4 flex-1 overflow-hidden p-1 lg:p-4">
+        <div className="flex-1 flex flex-col gap-2 overflow-hidden">
+          <div className="flex flex-col sm:flex-row gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Input
+                type="text"
+                placeholder="Buscar por nome ou código..."
+                className="pl-9"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+          </div>
+          <ScrollArea className="flex-1 bg-white rounded-lg p-2 border">
+            {searchQuery.trim() !== '' && (
+              <div className="grid grid-cols-1 gap-1">
+                {filteredProducts.map(product => (
+                  <button
+                    key={product.id}
+                    className="text-left p-2 border-b rounded-md hover:bg-gray-100 transition-colors w-full"
+                    onClick={() => addToComanda(product)}
+                  >
+                    <div className="font-medium text-sm">{product.name}</div>
+                    <div className="text-sm text-green-600">R$ {product.price.toFixed(2)}</div>
+                  </button>
+                ))}
+              </div>
+            )}
+            {searchQuery.trim() !== '' && filteredProducts.length === 0 && (
+                <div className="text-center text-sm text-gray-500 py-4">Nenhum produto encontrado.</div>
+            )}
+          </ScrollArea>
+        </div>
+
+        <div className="lg:w-2/5 flex flex-col gap-2 overflow-hidden">
+          <h3 className="font-semibold text-lg px-4 lg:px-0">Itens na Comanda</h3>
+          <ScrollArea className="h-full bg-gray-50 p-2 rounded-lg border">
+            {currentComanda?.items.length > 0 ? (
+              currentComanda.items.map(item => (
+                <div key={item.id} className="p-2 border-b last:border-b-0">
+                  <div className="flex justify-between items-center">
+                    <span className="font-medium text-sm flex-1 pr-2">{item.name}</span>
+                    <span className="font-bold text-sm">R$ {item.total.toFixed(2)}</span>
+                  </div>
+                  <div className="flex items-center gap-2 mt-2">
+                    <Button variant="outline" size="icon" className="h-6 w-6" onClick={() => updateComandaItemQuantity(item.id, item.quantity - 1)}><Minus className="h-3 w-3"/></Button>
+                    <span>{item.quantity}</span>
+                    <Button variant="outline" size="icon" className="h-6 w-6" onClick={() => updateComandaItemQuantity(item.id, item.quantity + 1)}><Plus className="h-3 w-3"/></Button>
+                    <div className="flex-grow"></div>
+                    <Button variant="ghost" size="icon" className="h-6 w-6 text-red-500" onClick={() => removeComandaItem(item.id)}><X className="h-4 w-4"/></Button>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="text-center py-8 text-gray-500">Nenhum item adicionado</div>
+            )}
+          </ScrollArea>
+        </div>
+      </div>
+
+      <DialogFooter className="p-4 bg-gray-100 border-t">
+        <div className="flex justify-between items-center w-full flex-wrap gap-2">
+            <div className="text-lg">
+                Total: <span className="font-bold">R$ {subtotal.toFixed(2)}</span>
+            </div>
+            <div className="flex gap-2">
+                <Button variant="destructive" onClick={handleResetComanda}>Limpar Itens</Button>
+                <Button onClick={handleTransferToCart} className="bg-green-600 hover:bg-green-700">
+                <ShoppingCart className="mr-2 h-4 w-4" /> Transferir p/ Caixa
+                </Button>
+            </div>
+        </div>
+      </DialogFooter>
+    </>
+  );
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-6xl h-[90vh] flex flex-col p-0">
+        {currentComanda ? renderComandaDetail() : renderComandaList()}
+      </DialogContent>
+    </Dialog>
   );
 } 

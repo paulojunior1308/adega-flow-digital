@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import AdminSidebar from '@/components/admin/AdminSidebar';
+import AdminLayout from '@/components/admin/AdminLayout';
 import { 
   Package,
   Save, 
@@ -234,16 +234,11 @@ const AdminProductRegistration = () => {
   };
 
   return (
-    <div className="min-h-screen bg-element-gray-light flex">
-      <AdminSidebar />
-      
-      <div className="flex-1 p-8 ml-0 lg:ml-64">
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold text-element-blue-dark">Cadastro de Produtos</h1>
-          <p className="text-element-gray-dark">
-            Cadastre novos produtos para o estoque da Element Adega.
-          </p>
-        </div>
+    <AdminLayout>
+      <div className="space-y-6">
+        <h1 className="text-2xl md:text-3xl font-bold text-element-blue-dark">
+          Cadastro de Produtos
+        </h1>
         
         <div className="bg-white p-6 rounded-lg shadow-sm">
           <Form {...form}>
@@ -563,7 +558,7 @@ const AdminProductRegistration = () => {
           </Form>
         </div>
       </div>
-    </div>
+    </AdminLayout>
   );
 };
 

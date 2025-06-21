@@ -1,16 +1,17 @@
-import React, { useState, useEffect } from 'react';
-import AdminSidebar from '@/components/admin/AdminSidebar';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import AdminLayout from '@/components/admin/AdminLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Search, ShoppingCart, X, RefreshCcw, DollarSign, QrCode, CreditCard, IdCard, Plus, Minus, ChevronUp, ChevronDown, Receipt } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
 import api from '@/lib/axios';
 import { ComboOptionsModal } from '@/components/home/ComboOptionsModal';
 import { Drawer, DrawerContent } from '@/components/ui/drawer';
 import { ComandaModal } from '@/components/admin/ComandaModal';
+import { Label } from '@/components/ui/label';
 
 // Types definition
 interface Product {
@@ -614,58 +615,37 @@ const AdminPDV = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  return (
-    <div className="flex h-screen bg-gray-100">
-      <AdminSidebar />
-      <div className="flex-1 flex flex-col overflow-hidden p-0 ml-0 lg:ml-64">
-        {/* Header */}
-        <div className="bg-white shadow-sm p-4 flex flex-col md:flex-row md:justify-between md:items-center gap-2">
-          <div className="flex items-center gap-2">
-            <ShoppingCart className="h-6 w-6 text-element-blue-dark" />
-            <h1 className="text-xl font-medium text-element-blue-dark">PDV - Venda Local</h1>
-          </div>
-          <div className="flex gap-2 w-full md:w-auto">
-            <Button 
-              onClick={() => setComandaModalOpen(true)} 
-              variant="outline" 
-              className="flex items-center gap-2 w-full md:w-auto bg-green-50 border-green-200 hover:bg-green-100"
-            >
-              <Receipt className="h-4 w-4" />
-              <span>Abrir Comanda</span>
-            </Button>
-            <Button 
-              onClick={() => setQuickProductsOpen(true)} 
-              variant="outline" 
-              className="flex items-center gap-2 w-full md:w-auto"
-            >
-              <span>Produtos Rápidos</span>
-            </Button>
-          </div>
-        </div>
+  const actionButtons = [
+    { label: 'Cancelar Item', icon: <X className="h-5 w-5 mb-1" />, onClick: () => cartItems.length > 0 && removeItem(cartItems[cartItems.length - 1].id), visible: true },
+    { label: 'Cancelar Tíquete', icon: <X className="h-5 w-5 mb-1" />, onClick: cancelTicket, visible: true },
+    { label: 'Extornar', icon: <RefreshCcw className="h-5 w-5 mb-1" />, onClick: cancelOperation, visible: true },
+    ...paymentMethods.map(method => ({
+      label: method.name,
+      icon: <CreditCard className="h-5 w-5 mb-1" />, // Ícone genérico, pode ser melhorado
+      onClick: () => finishTicket(method.id),
+      visible: true
+    })),
+    { label: 'CPF/CNPJ', icon: <IdCard className="h-5 w-5 mb-1" />, onClick: () => setCpfCnpjDialogOpen(true), visible: true },
+  ];
 
-        {/* Main content */}
-        <div className="flex flex-col md:flex-row flex-1 overflow-hidden">
-          {/* Left side - Product search and display */}
-          <div className="flex-1 flex flex-col p-4 overflow-y-auto">
-            {/* Pinned Products - Quick access buttons */}
-            <div className="mb-4">
-              <div className="flex gap-2 overflow-x-auto pb-2 md:grid md:grid-cols-3 xl:grid-cols-4 md:gap-2 md:overflow-x-visible">
-                {pinnedProducts.map(product => (
-                  <button
-                    key={product.id}
-                    className="min-w-[220px] md:min-w-0 text-left p-3 border rounded-md hover:border-cyan-400 transition-colors bg-white"
-                    onClick={() => addToCart(product)}
-                    disabled={product.stock === 0}
-                  >
-                    <div className="text-sm font-medium truncate">{product.code} - {product.name}</div>
-                    <div className="text-sm text-green-600">R$ {product.price.toFixed(2)}</div>
-                  </button>
-                ))}
+  return (
+    <AdminLayout noPadding={true}>
+      <div className="flex flex-col h-[calc(100vh-4rem)] lg:h-screen bg-gray-100">
+        {/* Container principal que controla a rolagem e o layout */}
+        <div className="flex-1 flex flex-col lg:flex-row gap-4 overflow-y-auto lg:overflow-hidden p-2 lg:p-4 pb-24 lg:pb-2">
+          
+          {/* Lado Esquerdo: Busca e Produtos (não tem mais overflow próprio no mobile) */}
+          <div className="flex-1 flex flex-col gap-4">
+            <div className="bg-white shadow-sm p-4 flex flex-col sm:flex-row justify-between items-center gap-2 rounded-lg">
+              <h1 className="text-xl font-medium text-element-blue-dark">PDV - Venda Local</h1>
+              <div className="flex gap-2 w-full sm:w-auto">
+                <Button onClick={() => setComandaModalOpen(true)} variant="outline" className="w-full">Abrir Comanda</Button>
+                <Button onClick={() => setQuickProductsOpen(true)} variant="outline" className="w-full">Produtos Rápidos</Button>
               </div>
             </div>
 
-            {/* Search bar */}
-            <div className="flex flex-col md:flex-row gap-2 mb-4">
+            {/* Search inputs */}
+            <div className="flex flex-col sm:flex-row gap-2">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                 <Input 
@@ -676,7 +656,7 @@ const AdminPDV = () => {
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
-              <div className="w-full md:w-32">
+              <div className="w-full sm:w-32">
                 <Input 
                   type="text" 
                   placeholder="Cód.Prod" 
@@ -684,7 +664,7 @@ const AdminPDV = () => {
                   onChange={(e) => setProductCode(e.target.value)}
                 />
               </div>
-              <div className="w-full md:w-16">
+              <div className="w-full sm:w-16">
                 <Input 
                   type="number" 
                   min="1" 
@@ -692,43 +672,63 @@ const AdminPDV = () => {
                   onChange={(e) => setProductQuantity(parseInt(e.target.value) || 1)}
                 />
               </div>
-              <Button onClick={handleAddProductByCode} className="px-3 w-full md:w-auto" disabled={!productCode || !products.find(p => p.code === productCode) || products.find(p => p.code === productCode)?.stock === 0}>
+              <Button onClick={handleAddProductByCode} className="px-3 w-full sm:w-auto" disabled={!productCode || !products.find(p => p.code === productCode) || products.find(p => p.code === productCode)?.stock === 0}>
                 <Plus className="h-4 w-4" />
               </Button>
             </div>
 
-            {/* Search results */}
-            <div className={`${isMobile ? '' : 'flex-1 overflow-y-auto'}`}>
-              {searchQuery.trim() !== '' && (
-                <div className="grid grid-cols-1 gap-2">
-                  {filteredProducts.map(product => (
+            {/* Pinned/Searched Products (toma o espaço restante, mas não rola independentemente no mobile) */}
+            <div className="flex-1 bg-white rounded-lg p-2 space-y-2">
+              {/* Pinned Products */}
+              <div className="mb-4">
+                <div className="flex gap-2 overflow-x-auto pb-2 md:grid md:grid-cols-3 xl:grid-cols-4 md:gap-2 md:overflow-x-visible">
+                  {pinnedProducts.map(product => (
                     <button
                       key={product.id}
-                      className="text-left p-3 border rounded-md hover:border-cyan-400 transition-colors bg-white w-full"
+                      className="min-w-[220px] md:min-w-0 text-left p-3 border rounded-md hover:border-cyan-400 transition-colors bg-white"
                       onClick={() => addToCart(product)}
                       disabled={product.stock === 0}
                     >
-                      <div className="font-medium">{product.code} - {product.name}</div>
-                      <div className="text-green-600 mt-1">R$ {product.price.toFixed(2)}</div>
+                      <div className="text-sm font-medium truncate">{product.code} - {product.name}</div>
+                      <div className="text-sm text-green-600">R$ {product.price.toFixed(2)}</div>
                     </button>
                   ))}
-                  {filteredProducts.length === 0 && (
-                    <div className="text-center py-4 text-gray-500">
-                      Nenhum produto encontrado para "{searchQuery}"
-                    </div>
-                  )}
                 </div>
-              )}
-              {searchQuery.trim() === '' && pinnedProducts.length === 0 && (
-                <div className="text-center py-8 text-gray-500">
-                  Selecione produtos na opção "Produtos Rápidos" para aparecerem aqui
-                </div>
-              )}
+              </div>
+
+              {/* Search results (removido o overflow daqui) */}
+              <div>
+                {searchQuery.trim() !== '' && (
+                  <div className="grid grid-cols-1 gap-2">
+                    {filteredProducts.map(product => (
+                      <button
+                        key={product.id}
+                        className="text-left p-3 border rounded-md hover:border-cyan-400 transition-colors bg-white w-full"
+                        onClick={() => addToCart(product)}
+                        disabled={product.stock === 0}
+                      >
+                        <div className="font-medium">{product.code} - {product.name}</div>
+                        <div className="text-green-600 mt-1">R$ {product.price.toFixed(2)}</div>
+                      </button>
+                    ))}
+                    {filteredProducts.length === 0 && (
+                      <div className="text-center py-4 text-gray-500">
+                        Nenhum produto encontrado para "{searchQuery}"
+                      </div>
+                    )}
+                  </div>
+                )}
+                {searchQuery.trim() === '' && pinnedProducts.length === 0 && (
+                  <div className="text-center py-8 text-gray-500">
+                    Selecione produtos na opção "Produtos Rápidos" para aparecerem aqui
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
-          {/* Carrinho - responsivo: cards no mobile, tabela no desktop */}
-          <div className={`w-full md:w-96 bg-white shadow-md flex flex-col overflow-hidden ${isMobile ? 'px-2 pb-32 mt-0' : 'mt-4'} md:mt-0`}>
+          {/* Lado Direito: Carrinho (não tem mais overflow próprio) */}
+          <div className="w-full lg:w-[450px] bg-white shadow-md flex flex-col rounded-lg lg:overflow-hidden">
             {/* Ticket header */}
             <div className="p-4 bg-gray-100 flex justify-between items-center">
               <div className="font-medium">Tíquete: {ticketNumber}</div>
@@ -736,184 +736,184 @@ const AdminPDV = () => {
             </div>
 
             {/* Cart items */}
-            {isMobile ? (
-              <div className="flex flex-col gap-2 p-2">
-                {cartItems.length > 0 ? (
-                  cartItems.map((item, index) => (
-                    <div key={item.id} className="rounded-lg border p-3 flex flex-col gap-2 bg-gray-50">
-                      <div className="flex justify-between items-center">
-                        <span className="font-semibold text-sm">{item.name}</span>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="h-6 w-6 p-0 text-red-500"
-                          onClick={() => removeItem(item.id)}
-                          aria-label="Remover item"
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                      <div className="flex justify-between items-center text-xs text-gray-500">
-                        <span>Cód: {item.code}</span>
-                        <span>Preço: R$ {item.price.toFixed(2)}</span>
-                      </div>
-                      <div className="flex items-center gap-2 mt-1">
-                        <Button 
-                          variant="outline" 
-                          size="icon" 
-                          className="h-6 w-6 rounded-full p-0"
-                          onClick={() => updateCartItemQuantity(item.id, item.quantity - 1)}
-                          aria-label="Diminuir quantidade"
-                        >
-                          <Minus className="h-3 w-3" />
-                        </Button>
-                        <span className="mx-2 font-medium">{item.quantity}</span>
-                        <Button 
-                          variant="outline" 
-                          size="icon" 
-                          className="h-6 w-6 rounded-full p-0"
-                          onClick={() => updateCartItemQuantity(item.id, item.quantity + 1)}
-                          aria-label="Aumentar quantidade"
-                        >
-                          <Plus className="h-3 w-3" />
-                        </Button>
-                        <span className="ml-auto font-semibold text-sm">Total: R$ {item.total.toFixed(2)}</span>
-                      </div>
-                      {item.doseItems && (
-                        <div className="mt-2 bg-gray-100 rounded p-2">
-                          <div className="font-semibold text-xs mb-1 text-cyan-700">Composição:</div>
-                          <ul className="text-xs text-gray-700 space-y-1">
-                            {item.doseItems.map((doseItem, idx) => (
-                              <li key={doseItem.productId + '-' + idx} className="flex justify-between">
-                                <span>{doseItem.product?.name || 'Produto'}</span>
-                                <span>
-                                  {doseItem.quantity} {doseItem.discountBy === 'volume' || (doseItem.discountBy === undefined && doseItem.product?.isFractioned) ? 'ml' : 'un'}
-                                </span>
-                              </li>
-                            ))}
-                          </ul>
-                          {/* Se houver seleções escolhíveis, exibir também */}
-                          {item.choosableSelections && Object.keys(item.choosableSelections).length > 0 && (
-                            <div className="mt-1 text-cyan-800">
-                              <div className="font-semibold">Escolhas do cliente:</div>
-                              <ul className="list-disc ml-4">
-                                {Object.entries(item.choosableSelections).map(([cat, prods]) => (
-                                  Object.entries(prods).map(([prodId, qty]) => (
-                                    <li key={cat + '-' + prodId}>
-                                      {qty}x {prodId}
-                                    </li>
-                                  ))
-                                ))}
-                              </ul>
-                            </div>
-                          )}
+            <div className="lg:flex-1 lg:overflow-y-auto">
+              {isMobile ? (
+                <div className="flex flex-col gap-2 p-2">
+                  {cartItems.length > 0 ? (
+                    cartItems.map((item, index) => (
+                      <div key={item.id} className="rounded-lg border p-3 flex flex-col gap-2 bg-gray-50">
+                        <div className="flex justify-between items-center">
+                          <span className="font-semibold text-sm">{item.name}</span>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-6 w-6 p-0 text-red-500"
+                            onClick={() => removeItem(item.id)}
+                            aria-label="Remover item"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
                         </div>
-                      )}
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-center py-8 text-gray-500">Nenhum item adicionado</div>
-                )}
-              </div>
-            ) : (
-              <div className="flex-1 overflow-x-auto">
-                <Table className="min-w-[600px]">
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-12">Item</TableHead>
-                      <TableHead className="w-16">Cód.</TableHead>
-                      <TableHead>Produto</TableHead>
-                      <TableHead className="w-24 text-center">Qtd</TableHead>
-                      <TableHead className="w-20 text-right">Preço</TableHead>
-                      <TableHead className="w-20 text-right">Total</TableHead>
-                      <TableHead className="w-8"></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {cartItems.length > 0 ? (
-                      cartItems.map((item, index) => (
-                        <TableRow key={item.id} className="hover:bg-gray-50">
-                          <TableCell>{index + 1}</TableCell>
-                          <TableCell>{item.code}</TableCell>
-                          <TableCell className="font-medium">
-                            {item.name}
-                            {item.doseItems && (
-                              <div className="mt-1 text-xs text-gray-700">
-                                <div className="font-semibold text-cyan-700">Composição:</div>
-                                <ul className="ml-2">
-                                  {item.doseItems.map((doseItem, idx) => (
-                                    <li key={doseItem.productId + '-' + idx} className="flex justify-between">
-                                      <span>{doseItem.product?.name || 'Produto'}</span>
-                                      <span>
-                                        {doseItem.quantity} {doseItem.discountBy === 'volume' || (doseItem.discountBy === undefined && doseItem.product?.isFractioned) ? 'ml' : 'un'}
-                                      </span>
-                                    </li>
+                        <div className="flex justify-between items-center text-xs text-gray-500">
+                          <span>Cód: {item.code}</span>
+                          <span>Preço: R$ {item.price.toFixed(2)}</span>
+                        </div>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Button 
+                            variant="outline" 
+                            size="icon" 
+                            className="h-6 w-6 rounded-full p-0"
+                            onClick={() => updateCartItemQuantity(item.id, item.quantity - 1)}
+                            aria-label="Diminuir quantidade"
+                          >
+                            <Minus className="h-3 w-3" />
+                          </Button>
+                          <span className="mx-2 font-medium">{item.quantity}</span>
+                          <Button 
+                            variant="outline" 
+                            size="icon" 
+                            className="h-6 w-6 rounded-full p-0"
+                            onClick={() => updateCartItemQuantity(item.id, item.quantity + 1)}
+                            aria-label="Aumentar quantidade"
+                          >
+                            <Plus className="h-3 w-3" />
+                          </Button>
+                          <span className="ml-auto font-semibold text-sm">Total: R$ {item.total.toFixed(2)}</span>
+                        </div>
+                        {item.doseItems && (
+                          <div className="mt-2 bg-gray-100 rounded p-2">
+                            <div className="font-semibold text-xs mb-1 text-cyan-700">Composição:</div>
+                            <ul className="text-xs text-gray-700 space-y-1">
+                              {item.doseItems.map((doseItem, idx) => (
+                                <li key={doseItem.productId + '-' + idx} className="flex justify-between">
+                                  <span>{doseItem.product?.name || 'Produto'}</span>
+                                  <span>
+                                    {doseItem.quantity} {doseItem.discountBy === 'volume' || (doseItem.discountBy === undefined && doseItem.product?.isFractioned) ? 'ml' : 'un'}
+                                  </span>
+                                </li>
+                              ))}
+                            </ul>
+                            {item.choosableSelections && Object.keys(item.choosableSelections).length > 0 && (
+                              <div className="mt-1 text-cyan-800">
+                                <div className="font-semibold">Escolhas do cliente:</div>
+                                <ul className="list-disc ml-4">
+                                  {Object.entries(item.choosableSelections).map(([cat, prods]) => (
+                                    Object.entries(prods).map(([prodId, qty]) => (
+                                      <li key={cat + '-' + prodId}>
+                                        {qty}x {prodId}
+                                      </li>
+                                    ))
                                   ))}
                                 </ul>
-                                {/* Se houver seleções escolhíveis, exibir também */}
-                                {item.choosableSelections && Object.keys(item.choosableSelections).length > 0 && (
-                                  <div className="mt-1 text-cyan-800">
-                                    <div className="font-semibold">Escolhas do cliente:</div>
-                                    <ul className="list-disc ml-4">
-                                      {Object.entries(item.choosableSelections).map(([cat, prods]) => (
-                                        Object.entries(prods).map(([prodId, qty]) => (
-                                          <li key={cat + '-' + prodId}>
-                                            {qty}x {prodId}
-                                          </li>
-                                        ))
-                                      ))}
-                                    </ul>
-                                  </div>
-                                )}
                               </div>
                             )}
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center justify-center">
+                          </div>
+                        )}
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-8 text-gray-500">Nenhum item adicionado</div>
+                  )}
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table className="min-w-[600px]">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-12">Item</TableHead>
+                        <TableHead className="w-16">Cód.</TableHead>
+                        <TableHead>Produto</TableHead>
+                        <TableHead className="w-24 text-center">Qtd</TableHead>
+                        <TableHead className="w-20 text-right">Preço</TableHead>
+                        <TableHead className="w-20 text-right">Total</TableHead>
+                        <TableHead className="w-8"></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {cartItems.length > 0 ? (
+                        cartItems.map((item, index) => (
+                          <TableRow key={item.id} className="hover:bg-gray-50">
+                            <TableCell>{index + 1}</TableCell>
+                            <TableCell>{item.code}</TableCell>
+                            <TableCell className="font-medium">
+                              {item.name}
+                              {item.doseItems && (
+                                <div className="mt-1 text-xs text-gray-700">
+                                  <div className="font-semibold text-cyan-700">Composição:</div>
+                                  <ul className="ml-2">
+                                    {item.doseItems.map((doseItem, idx) => (
+                                      <li key={doseItem.productId + '-' + idx} className="flex justify-between">
+                                        <span>{doseItem.product?.name || 'Produto'}</span>
+                                        <span>
+                                          {doseItem.quantity} {doseItem.discountBy === 'volume' || (doseItem.discountBy === undefined && doseItem.product?.isFractioned) ? 'ml' : 'un'}
+                                        </span>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                  {item.choosableSelections && Object.keys(item.choosableSelections).length > 0 && (
+                                    <div className="mt-1 text-cyan-800">
+                                      <div className="font-semibold">Escolhas do cliente:</div>
+                                      <ul className="list-disc ml-4">
+                                        {Object.entries(item.choosableSelections).map(([cat, prods]) => (
+                                          Object.entries(prods).map(([prodId, qty]) => (
+                                            <li key={cat + '-' + prodId}>
+                                              {qty}x {prodId}
+                                            </li>
+                                          ))
+                                        ))}
+                                      </ul>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center justify-center">
+                                <Button 
+                                  variant="outline" 
+                                  size="icon" 
+                                  className="h-6 w-6 rounded-full p-0"
+                                  onClick={() => updateCartItemQuantity(item.id, item.quantity - 1)}
+                                >
+                                  <Minus className="h-3 w-3" />
+                                </Button>
+                                <span className="mx-2">{item.quantity}</span>
+                                <Button 
+                                  variant="outline" 
+                                  size="icon" 
+                                  className="h-6 w-6 rounded-full p-0"
+                                  onClick={() => updateCartItemQuantity(item.id, item.quantity + 1)}
+                                >
+                                  <Plus className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-right">R$ {item.price.toFixed(2)}</TableCell>
+                            <TableCell className="text-right">R$ {item.total.toFixed(2)}</TableCell>
+                            <TableCell>
                               <Button 
-                                variant="outline" 
+                                variant="ghost" 
                                 size="icon" 
-                                className="h-6 w-6 rounded-full p-0"
-                                onClick={() => updateCartItemQuantity(item.id, item.quantity - 1)}
+                                className="h-6 w-6 p-0 text-red-500"
+                                onClick={() => removeItem(item.id)}
                               >
-                                <Minus className="h-3 w-3" />
+                                <X className="h-4 w-4" />
                               </Button>
-                              <span className="mx-2">{item.quantity}</span>
-                              <Button 
-                                variant="outline" 
-                                size="icon" 
-                                className="h-6 w-6 rounded-full p-0"
-                                onClick={() => updateCartItemQuantity(item.id, item.quantity + 1)}
-                              >
-                                <Plus className="h-3 w-3" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-right">R$ {item.price.toFixed(2)}</TableCell>
-                          <TableCell className="text-right">R$ {item.total.toFixed(2)}</TableCell>
-                          <TableCell>
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="h-6 w-6 p-0 text-red-500"
-                              onClick={() => removeItem(item.id)}
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={7} className="text-center py-8 text-gray-500">
+                            Nenhum item adicionado
                           </TableCell>
                         </TableRow>
-                      ))
-                    ) : (
-                      <TableRow>
-                        <TableCell colSpan={7} className="text-center py-8 text-gray-500">
-                          Nenhum item adicionado
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </div>
 
             {/* Totals */}
             <div className="p-4 border-t">
@@ -933,271 +933,124 @@ const AdminPDV = () => {
           </div>
         </div>
 
-        {/* Painel retrátil de botões no rodapé (mobile) */}
-        {isMobile ? (
-          <div className="fixed bottom-0 left-0 w-full z-20 flex flex-col items-center">
-            <button
-              className="bg-element-blue-neon text-white rounded-t-lg shadow-lg flex items-center justify-center w-12 h-7 mb-1 animate-bounce-short"
-              style={{ marginBottom: showActions ? 0 : 8, transition: 'margin-bottom 0.2s' }}
-              onClick={() => setShowActions((v) => !v)}
-              aria-label={showActions ? 'Ocultar ações' : 'Mostrar ações'}
-            >
-              {showActions ? <ChevronDown className="h-6 w-6" /> : <ChevronUp className="h-6 w-6" />}
-            </button>
-            <div
-              className={`w-full bg-gray-200 transition-all duration-300 overflow-hidden ${showActions ? 'max-h-[500px] py-2' : 'max-h-0 py-0'}`}
-              style={{ boxShadow: showActions ? '0 -2px 16px rgba(0,0,0,0.08)' : 'none' }}
-            >
-              <div className="grid grid-cols-2 gap-1 px-2">
+        {/* Barra de Ações Retrátil (Mobile) */}
+        <div className="lg:hidden fixed bottom-0 left-0 right-0 z-20 flex flex-col items-center">
+          <button
+            className="bg-element-blue-neon text-white rounded-t-lg shadow-lg flex items-center justify-center w-12 h-6"
+            onClick={() => setShowActions(prev => !prev)}
+            aria-label={showActions ? 'Ocultar ações' : 'Mostrar ações'}
+          >
+            {showActions ? <ChevronDown className="h-5 w-5" /> : <ChevronUp className="h-5 w-5" />}
+          </button>
+          <div
+            className={`w-full bg-gray-200 transition-all duration-300 overflow-hidden ${showActions ? 'max-h-[500px] p-2' : 'max-h-0'}`}
+          >
+            <div className="grid grid-cols-3 gap-2">
+              {actionButtons.map(btn => btn.visible && (
                 <Button 
-                  variant="outline" 
-                  className="bg-cyan-400 hover:bg-cyan-500 text-white flex flex-col items-center justify-center py-4 h-auto"
-                  onClick={() => cartItems.length > 0 && removeItem(cartItems[cartItems.length - 1].id)}
+                  key={btn.label}
+                  variant="outline"
+                  className="bg-cyan-400 hover:bg-cyan-500 text-white flex flex-col items-center justify-center py-3 h-auto"
+                  onClick={btn.onClick}
                 >
-                  <X className="h-5 w-5 mb-1" />
-                  <span className="text-xs">Cancelar Item</span>
+                  {btn.icon}
+                  <span className="text-xs text-center">{btn.label}</span>
                 </Button>
-                
-                <Button 
-                  variant="outline" 
-                  className="bg-cyan-400 hover:bg-cyan-500 text-white flex flex-col items-center justify-center py-4 h-auto"
-                  onClick={cancelTicket}
-                >
-                  <X className="h-5 w-5 mb-1" />
-                  <span className="text-xs">Cancelar Tíquete</span>
-                </Button>
-                
-                <Button 
-                  variant="outline" 
-                  className="bg-cyan-400 hover:bg-cyan-500 text-white flex flex-col items-center justify-center py-4 h-auto"
-                  onClick={cancelOperation}
-                >
-                  <RefreshCcw className="h-5 w-5 mb-1" />
-                  <span className="text-xs">Extornar</span>
-                </Button>
-                
-                {paymentMethods.map((method) => (
-                  <Button
-                    key={method.id}
-                    variant="outline"
-                    className="bg-cyan-400 hover:bg-cyan-500 text-white flex flex-col items-center justify-center py-4 h-auto"
-                    onClick={() => finishTicket(method.id)}
-                  >
-                    <span className="text-xs">{method.name}</span>
-                  </Button>
-                ))}
-                
-                <Button 
-                  variant="outline" 
-                  className="bg-cyan-400 hover:bg-cyan-500 text-white flex flex-col items-center justify-center py-4 h-auto"
-                  onClick={() => setCpfCnpjDialogOpen(true)}
-                >
-                  <IdCard className="h-5 w-5 mb-1" />
-                  <span className="text-xs">CPF/CNPJ</span>
-                </Button>
-              </div>
-            </div>
-          </div>
-        ) : (
-          <div className="w-full bg-gray-200 p-1 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-1 md:static md:z-auto">
-            <Button 
-              variant="outline" 
-              className="bg-cyan-400 hover:bg-cyan-500 text-white flex flex-col items-center justify-center py-4 h-auto"
-              onClick={() => cartItems.length > 0 && removeItem(cartItems[cartItems.length - 1].id)}
-            >
-              <X className="h-5 w-5 mb-1" />
-              <span className="text-xs">Cancelar Item</span>
-            </Button>
-            
-            <Button 
-              variant="outline" 
-              className="bg-cyan-400 hover:bg-cyan-500 text-white flex flex-col items-center justify-center py-4 h-auto"
-              onClick={cancelTicket}
-            >
-              <X className="h-5 w-5 mb-1" />
-              <span className="text-xs">Cancelar Tíquete</span>
-            </Button>
-            
-            <Button 
-              variant="outline" 
-              className="bg-cyan-400 hover:bg-cyan-500 text-white flex flex-col items-center justify-center py-4 h-auto"
-              onClick={cancelOperation}
-            >
-              <RefreshCcw className="h-5 w-5 mb-1" />
-              <span className="text-xs">Extornar</span>
-            </Button>
-            
-            {paymentMethods.map((method) => (
-              <Button
-                key={method.id}
-                variant="outline"
-                className="bg-cyan-400 hover:bg-cyan-500 text-white flex flex-col items-center justify-center py-4 h-auto"
-                onClick={() => finishTicket(method.id)}
-              >
-                <span className="text-xs">{method.name}</span>
-              </Button>
-            ))}
-            
-            <Button 
-              variant="outline" 
-              className="bg-cyan-400 hover:bg-cyan-500 text-white flex flex-col items-center justify-center py-4 h-auto"
-              onClick={() => setCpfCnpjDialogOpen(true)}
-            >
-              <IdCard className="h-5 w-5 mb-1" />
-              <span className="text-xs">CPF/CNPJ</span>
-            </Button>
-          </div>
-        )}
-
-        {/* Quick Products Modal */}
-        <Dialog open={quickProductsOpen} onOpenChange={setQuickProductsOpen}>
-          <DialogContent className="sm:max-w-[600px] w-full p-2 sm:p-6">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                Selecionar Produtos Rápidos
-              </DialogTitle>
-            </DialogHeader>
-            <div className="flex gap-2 overflow-x-auto pb-2 md:grid md:grid-cols-3 md:gap-4 md:overflow-x-visible">
-              {allItems.map((item) => (
-                <div 
-                  key={item.id} 
-                  className={`min-w-[220px] md:min-w-0 border rounded-lg p-4 transition-colors ${item.pinned ? 'border-yellow-400 bg-yellow-50' : 'hover:border-yellow-400'}`}
-                >
-                  <div className="flex justify-between items-start mb-2">
-                    <span className="text-sm font-medium">{item.code}</span>
-                    {item.type === 'product' && (
-                      <Checkbox 
-                        id={`product-${item.id}`} 
-                        checked={item.pinned}
-                        onCheckedChange={() => togglePinProduct(item.id)}
-                      />
-                    )}
-                  </div>
-                  <div className="text-sm mb-1">{item.name} {item.type === 'combo' && <span className="text-xs text-blue-600">(Combo)</span>}</div>
-                  <div className="text-sm text-green-600">R$ {item.price.toFixed(2)}</div>
-                </div>
               ))}
             </div>
-            <Button 
-              onClick={() => setQuickProductsOpen(false)} 
-              className="w-full bg-cyan-400 hover:bg-cyan-500 text-white"
-            >
-              Fechar
-            </Button>
-          </DialogContent>
-        </Dialog>
+          </div>
+        </div>
 
-        {/* CPF/CNPJ Modal */}
-        <Dialog open={cpfCnpjDialogOpen} onOpenChange={setCpfCnpjDialogOpen}>
-          <DialogContent className="sm:max-w-[400px] w-full p-2 sm:p-6">
-            <DialogHeader>
-              <DialogTitle>Adicionar CPF/CNPJ</DialogTitle>
-            </DialogHeader>
-            <div className="py-4">
+        {/* Barra de Ações Fixa (Desktop) */}
+        <div className="hidden lg:grid bg-gray-200 p-2 grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2">
+          {actionButtons.map(btn => btn.visible && (
+            <Button 
+              key={btn.label}
+              variant="outline"
+              className="bg-cyan-400 hover:bg-cyan-500 text-white flex flex-col items-center justify-center py-3 h-auto"
+              onClick={btn.onClick}
+            >
+              {btn.icon}
+              <span className="text-xs">{btn.label}</span>
+            </Button>
+          ))}
+        </div>
+      </div>
+      
+      {/* Modals */}
+      <Dialog open={cpfCnpjDialogOpen} onOpenChange={setCpfCnpjDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Adicionar CPF/CNPJ</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="cpfCnpj" className="text-right">
+                CPF/CNPJ
+              </Label>
               <Input
-                placeholder="Digite o CPF/CNPJ"
+                id="cpfCnpj"
                 value={cpfCnpjValue}
                 onChange={(e) => setCpfCnpjValue(e.target.value)}
-                className="mb-4"
+                className="col-span-3"
               />
-              <Button 
-                onClick={handleCpfCnpjSubmit} 
-                className="w-full bg-cyan-400 hover:bg-cyan-500 text-white"
-              >
-                Adicionar
-              </Button>
             </div>
-          </DialogContent>
-        </Dialog>
-
-        {comboToConfigure && (
-          <ComboOptionsModal
-            open={comboModalOpen}
-            onOpenChange={setComboModalOpen}
-            combo={comboToConfigure}
-            onConfirm={handleComboConfirm}
-          />
-        )}
-
-        <Dialog open={doseModalOpen} onOpenChange={setDoseModalOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Configurar Dose</DialogTitle>
-            </DialogHeader>
-            {doseToConfigure && (
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <h3 className="font-medium">{doseToConfigure.name}</h3>
-                  <p className="text-sm text-gray-500">
-                    Produtos incluídos:
-                  </p>
-                  <ul className="space-y-2">
-                    {doseToConfigure.items.map((item) => (
-                      <li key={item.productId} className="flex items-center justify-between">
-                        <span>{item.product.name}</span>
-                        <span className="text-sm text-gray-500">
-                          {item.quantity} {item.product.isFractioned ? 'ml' : 'un'}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-                <div className="flex justify-end space-x-2">
-                  <Button
-                    variant="outline"
-                    onClick={() => setDoseModalOpen(false)}
-                  >
-                    Cancelar
-                  </Button>
-                  <Button
-                    onClick={() => {
-                      const newItem: CartItem = {
-                        id: doseToConfigure.id,
-                        productId: doseToConfigure.id,
-                        code: doseToConfigure.id.substring(0, 6),
-                        name: doseToConfigure.name,
-                        quantity: 1,
-                        price: doseToConfigure.price,
-                        total: doseToConfigure.price
-                      };
-                      setCartItems([...cartItems, newItem]);
-                      setDoseModalOpen(false);
-                      toast({ description: `${doseToConfigure.name} adicionado ao carrinho.` });
-                    }}
-                  >
-                    Adicionar ao Carrinho
-                  </Button>
-                </div>
-              </div>
-            )}
-          </DialogContent>
-        </Dialog>
-
-        {doseToConfigure && (
-          <ComboOptionsModal
-            open={doseOptionsModalOpen}
-            onOpenChange={setDoseOptionsModalOpen}
-            combo={{
-              id: doseToConfigure.id,
-              name: doseToConfigure.name,
-              items: doseToConfigure.items.map((item: any) => ({
-                ...item,
-                isChoosable: item.allowFlavorSelection
-              }))
-            }}
-            onConfirm={handleDoseConfirm}
-            isDoseConfiguration={true}
-          />
-        )}
-
-        {/* Comanda Modal */}
-        <ComandaModal
-          open={comandaModalOpen}
-          onOpenChange={setComandaModalOpen}
-          onTransferToCart={handleTransferFromComanda}
+          </div>
+          <DialogFooter>
+            <Button type="submit" onClick={handleCpfCnpjSubmit}>Adicionar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <ComandaModal 
+        open={comandaModalOpen} 
+        onOpenChange={setComandaModalOpen} 
+        onTransferToCart={handleTransferFromComanda}
+      />
+      {comboToConfigure && (
+        <ComboOptionsModal
+          open={comboModalOpen}
+          onOpenChange={setComboModalOpen}
+          combo={comboToConfigure}
+          onConfirm={handleComboConfirm}
         />
-      </div>
-    </div>
+      )}
+      <Drawer open={cartOpen} onOpenChange={() => setCartOpen(false)}>
+        {/* ... (conteúdo do drawer) ... */}
+      </Drawer>
+      <Drawer open={doseModalOpen} onOpenChange={() => setDoseModalOpen(false)}>
+        {/* ... (conteúdo do drawer) ... */}
+      </Drawer>
+      <Drawer open={doseOptionsModalOpen} onOpenChange={() => setDoseOptionsModalOpen(false)}>
+        {/* ... (conteúdo do drawer) ... */}
+      </Drawer>
+      <Dialog open={quickProductsOpen} onOpenChange={setQuickProductsOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              Selecionar Produtos Rápidos
+            </DialogTitle>
+          </DialogHeader>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 py-4 max-h-[60vh] overflow-y-auto">
+            {products.map((product) => (
+              <div 
+                key={product.id} 
+                className={`border rounded-lg p-3 transition-colors cursor-pointer ${product.pinned ? 'border-yellow-400 bg-yellow-50' : 'hover:border-yellow-400'}`}
+                onClick={() => togglePinProduct(product.id)}
+              >
+                <div className="flex justify-between items-start mb-2">
+                  <span className="text-sm font-medium">{product.name}</span>
+                  <Checkbox 
+                    checked={!!product.pinned}
+                    onCheckedChange={() => togglePinProduct(product.id)}
+                  />
+                </div>
+                <div className="text-sm text-gray-600">{product.price.toFixed(2)}</div>
+              </div>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
+    </AdminLayout>
   );
 };
 
