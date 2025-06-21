@@ -55,6 +55,7 @@ const ClientCatalog = () => {
   const [doseModalOpen, setDoseModalOpen] = useState(false);
   const [doseToConfigure, setDoseToConfigure] = useState<any>(null);
   const [categoryLoading, setCategoryLoading] = useState(false);
+  const [isFilterSheetOpen, setFilterSheetOpen] = useState(false);
   
   const location = useLocation();
   const navigate = useNavigate();
@@ -401,8 +402,44 @@ const ClientCatalog = () => {
     } else {
       navigate(`/cliente-catalogo?cat=${value}`);
     }
+    setFilterSheetOpen(false); // Fecha o menu de filtros no mobile
     // Simular um pequeno delay para mostrar o loading
     setTimeout(() => setCategoryLoading(false), 300);
+  };
+
+  const selectedCategoryName = React.useMemo(() => {
+    if (selectedCategory === 'all') return 'Todos';
+    if (selectedCategory === 'combo') return 'Combos';
+    return categories.find(c => c.id === selectedCategory)?.name || 'Categoria';
+  }, [selectedCategory, categories]);
+
+  const allCategoryButtons = React.useMemo(() => {
+    const buttons = [...availableCategories];
+    if (!availableCategories.some(c => c.name.toLowerCase() === 'combos')) {
+      buttons.push({ id: 'combo', name: 'Combos' });
+    }
+    return buttons;
+  }, [availableCategories]);
+
+  // Função para renderizar um botão de categoria
+  const renderCategoryButton = (category: any) => {
+    const value = String(category.id);
+    const isActive = selectedCategory === value;
+
+    return (
+      <Button
+        key={value}
+        variant={isActive ? 'default' : 'outline'}
+        onClick={() => handleCategoryChange(value)}
+        className={`flex items-center justify-center gap-2 transition-all duration-200 ${isActive ? 'bg-element-blue-dark text-white shadow-md' : 'bg-white'}`}
+      >
+        {getCategoryIcon(category.name)}
+        <span className="font-medium">{category.name}</span>
+        <Badge variant={isActive ? 'secondary' : 'outline'} className="ml-1 text-xs">
+          {getCategoryProductCount(value)}
+        </Badge>
+      </Button>
+    );
   };
 
   return (
@@ -448,50 +485,32 @@ const ClientCatalog = () => {
           
           {/* Filters */}
           <div className="mb-6">
-            <Tabs
-              value={selectedCategory}
-              onValueChange={handleCategoryChange}
-              className="w-full"
-            >
-              <TabsList className="w-full flex flex-wrap gap-2 bg-transparent p-0 shadow-none">
-                {availableCategories.map(category => (
-                  <TabsTrigger 
-                    key={category.id} 
-                    value={String(category.id)}
-                    className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 border border-element-gray-light bg-white hover:bg-element-blue-neon/10 hover:border-element-blue-dark data-[state=active]:bg-element-blue-dark data-[state=active]:text-white data-[state=active]:shadow-md"
-                  >
-                    {getCategoryIcon(category.name)}
-                    <span className="font-medium">{category.name}</span>
-                    <Badge variant="secondary" className="ml-1 text-xs bg-element-gray-light text-element-gray-dark">
-                      {getCategoryProductCount(category.id)}
-                    </Badge>
-                  </TabsTrigger>
-                ))}
-                {!availableCategories.some(c => c.name.toLowerCase() === 'combos') && (
-                  <TabsTrigger 
-                    key="combo" 
-                    value="combo" 
-                    className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 border border-element-gray-light bg-white hover:bg-element-blue-neon/10 hover:border-element-blue-dark data-[state=active]:bg-element-blue-dark data-[state=active]:text-white data-[state=active]:shadow-md"
-                  >
-                    <ShoppingBag className="h-4 w-4" />
-                    <span className="font-medium">Combos</span>
-                    <Badge variant="secondary" className="ml-1 text-xs bg-element-gray-light text-element-gray-dark">
-                      {getCategoryProductCount('combo')}
-                    </Badge>
-                  </TabsTrigger>
-                )}
-              </TabsList>
-              
-              {availableCategories.map(category => (
-                <TabsContent 
-                  key={category.id} 
-                  value={String(category.id)}
-                  className="mt-4"
-                >
-                  {/* O conteúdo é renderizado de forma dinâmica abaixo */}
-                </TabsContent>
-              ))}
-            </Tabs>
+            {/* Filtros para telas Maiores (md+) */}
+            <div className="hidden md:block">
+              <div className="flex flex-wrap gap-2">
+                {allCategoryButtons.map(renderCategoryButton)}
+              </div>
+            </div>
+
+            {/* Botão de Filtro para Telas Pequenas (<md) */}
+            <div className="md:hidden">
+              <Sheet open={isFilterSheetOpen} onOpenChange={setFilterSheetOpen}>
+                <SheetTrigger asChild>
+                  <Button variant="outline" className="w-full justify-center gap-2">
+                    <Filter className="h-4 w-4" />
+                    <span>Filtrar por Categoria ({selectedCategoryName})</span>
+                  </Button>
+                </SheetTrigger>
+                <SheetContent>
+                  <SheetHeader>
+                    <SheetTitle>Categorias</SheetTitle>
+                  </SheetHeader>
+                  <div className="flex flex-col space-y-2 mt-4">
+                    {allCategoryButtons.map(renderCategoryButton)}
+                  </div>
+                </SheetContent>
+              </Sheet>
+            </div>
           </div>
           
           {/* Products Grid */}
@@ -560,7 +579,7 @@ const ClientCatalog = () => {
                     </Button>
                   )}
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                   {filteredProducts.map((product, index) => (
                     <div
                       key={product.id}
