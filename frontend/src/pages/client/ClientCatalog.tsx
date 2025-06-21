@@ -453,12 +453,12 @@ const ClientCatalog = () => {
               onValueChange={handleCategoryChange}
               className="w-full"
             >
-              <TabsList className="w-full overflow-x-auto flex flex-nowrap justify-start bg-white border border-gray-200 rounded-lg p-1 shadow-sm">
+              <TabsList className="w-full flex flex-wrap gap-2 bg-transparent p-0 shadow-none">
                 {availableCategories.map(category => (
                   <TabsTrigger 
                     key={category.id} 
                     value={String(category.id)}
-                    className="flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-md transition-all duration-200 hover:bg-element-blue-neon/10 data-[state=active]:bg-element-blue-dark data-[state=active]:text-white data-[state=active]:shadow-md"
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 border border-element-gray-light bg-white hover:bg-element-blue-neon/10 hover:border-element-blue-dark data-[state=active]:bg-element-blue-dark data-[state=active]:text-white data-[state=active]:shadow-md"
                   >
                     {getCategoryIcon(category.name)}
                     <span className="font-medium">{category.name}</span>
@@ -471,7 +471,7 @@ const ClientCatalog = () => {
                   <TabsTrigger 
                     key="combo" 
                     value="combo" 
-                    className="flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-md transition-all duration-200 hover:bg-element-blue-neon/10 data-[state=active]:bg-element-blue-dark data-[state=active]:text-white data-[state=active]:shadow-md"
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 border border-element-gray-light bg-white hover:bg-element-blue-neon/10 hover:border-element-blue-dark data-[state=active]:bg-element-blue-dark data-[state=active]:text-white data-[state=active]:shadow-md"
                   >
                     <ShoppingBag className="h-4 w-4" />
                     <span className="font-medium">Combos</span>
