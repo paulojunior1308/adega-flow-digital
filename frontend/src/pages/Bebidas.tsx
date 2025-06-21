@@ -189,42 +189,26 @@ const featuredProducts = [
   productsData[3]  // Whisky Jack Daniel's
 ];
 
-const ProductCard = ({ product }: { product: ProductProps }) => {
+const ProductCard = ({ product }: { product: any }) => {
   return (
-    <Card className="overflow-hidden transition-all duration-300 hover:shadow-lg border-element-gray-light hover:border-element-blue-neon h-full">
-      <div className="relative">
-        <AspectRatio ratio={4/3}>
-          <img src={product.image} alt={product.title} className="object-cover w-full h-full bg-white" />
-        </AspectRatio>
-        
-        {product.discountPercentage && (
-          <div className="absolute top-2 right-2 bg-element-blue-neon text-element-gray-dark px-2 py-1 rounded-full font-bold text-sm flex items-center gap-1">
-            {product.discountPercentage}% OFF
-          </div>
-        )}
-        
-        {product.badge && (
-          <div className="absolute top-2 left-2 bg-element-blue-dark text-white px-2 py-1 rounded-full text-xs font-bold">
-            {product.badge}
-          </div>
-        )}
-
-        {product.stock <= 20 && (
-          <div className="absolute bottom-2 left-2 bg-red-600 text-white px-2 py-1 rounded-full text-xs font-bold">
-            Últimas unidades
-          </div>
-        )}
-      </div>
+    <Card className="overflow-hidden transition-all duration-300 hover:shadow-lg border-element-gray-light hover:border-element-blue-neon h-full flex flex-col">
+      <AspectRatio ratio={4/3} className="bg-white">
+        <img 
+          src={product.image.startsWith('http') ? product.image : `${import.meta.env.VITE_API_URL}${product.image}`}
+          alt={product.name}
+          className="w-full h-full object-contain"
+        />
+      </AspectRatio>
       
-      <CardContent className="p-4">
-        <h3 className="font-bold text-lg mb-1 text-element-blue-dark">{product.title}</h3>
+      <CardContent className="p-4 flex-grow flex flex-col">
+        <h3 className="font-bold text-lg mb-1 text-element-blue-dark flex-grow">{product.name}</h3>
         <p className="text-element-gray-dark/80 text-sm mb-3 min-h-[40px]">{product.description}</p>
         
-        <div className="flex items-end justify-between">
+        <div className="flex items-end justify-between mt-auto">
           <div>
-            <p className="text-element-blue-dark font-bold text-xl">{product.price}</p>
+            <p className="text-element-blue-dark font-bold text-xl">R$ {product.price?.toFixed(2)}</p>
             {product.originalPrice && (
-              <p className="text-element-gray-dark/60 text-sm line-through">{product.originalPrice}</p>
+              <p className="text-element-gray-dark/60 text-sm line-through">R$ {product.originalPrice.toFixed(2)}</p>
             )}
           </div>
           
