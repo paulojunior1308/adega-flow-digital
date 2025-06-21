@@ -335,168 +335,171 @@ const ClientOrders = () => {
           
           {/* Order Details Dialog */}
           <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
-            <DialogContent className="sm:max-w-[600px]">
+            <DialogContent className="sm:max-w-[600px] flex flex-col h-[90vh] sm:h-auto">
               <DialogHeader>
                 <DialogTitle>Detalhes do Pedido {selectedOrder?.id}</DialogTitle>
               </DialogHeader>
               
               {selectedOrder && (
-                <div className="space-y-6">
-                  {/* Status amigável em destaque */}
-                  <div className="flex items-center gap-3 p-4 rounded-md bg-element-gray-light border">
-                    {getOrderStatusInfo(selectedOrder.status).icon}
-                    <span className="font-medium text-lg text-element-blue-dark">
-                      {getOrderStatusInfo(selectedOrder.status).label}
-                    </span>
-                  </div>
-                  {/* Timeline visual */}
-                  <div className="flex flex-col gap-2 px-2">
-                    <div className="flex items-center gap-2">
-                      <span className={`h-3 w-3 rounded-full ${['pending','preparing','delivering','delivered'].includes(selectedOrder.status) ? 'bg-yellow-500' : 'bg-gray-300'}`}></span>
-                      <span className="text-sm">Aguardando confirmação</span>
+                <>
+                  <div className="flex-1 overflow-y-auto px-6 py-2 space-y-6">
+                    {/* Status amigável em destaque */}
+                    <div className="flex items-center gap-3 p-4 rounded-md bg-element-gray-light border">
+                      {getOrderStatusInfo(selectedOrder.status).icon}
+                      <span className="font-medium text-lg text-element-blue-dark">
+                        {getOrderStatusInfo(selectedOrder.status).label}
+                      </span>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className={`h-3 w-3 rounded-full ${['preparing','delivering','delivered'].includes(selectedOrder.status) ? 'bg-blue-500' : 'bg-gray-300'}`}></span>
-                      <span className="text-sm">Pedido sendo preparado</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className={`h-3 w-3 rounded-full ${['delivering','delivered'].includes(selectedOrder.status) ? 'bg-purple-500' : 'bg-gray-300'}`}></span>
-                      <span className="text-sm">Saiu para entrega</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className={`h-3 w-3 rounded-full ${selectedOrder.status === 'delivered' ? 'bg-green-500' : 'bg-gray-300'}`}></span>
-                      <span className="text-sm">Pedido entregue</span>
-                    </div>
-                    {selectedOrder.status === 'cancelled' && (
+                    {/* Timeline visual */}
+                    <div className="flex flex-col gap-2 px-2">
                       <div className="flex items-center gap-2">
-                        <span className="h-3 w-3 rounded-full bg-red-500"></span>
-                        <span className="text-sm">Pedido cancelado</span>
+                        <span className={`h-3 w-3 rounded-full ${['pending','preparing','delivering','delivered'].includes(selectedOrder.status) ? 'bg-yellow-500' : 'bg-gray-300'}`}></span>
+                        <span className="text-sm">Aguardando confirmação</span>
                       </div>
-                    )}
-                  </div>
-                  
-                  <div>
-                    <h4 className="font-medium mb-2">Produtos</h4>
-                    <div className="space-y-3">
-                      {(selectedOrder?.products ?? []).map((product, idx) => (
-                        <div key={product.id ? `${product.id}-${idx}` : idx} className="flex items-center gap-3">
-                          <img 
-                            src={
-                              product.image
-                                ? product.image.startsWith('http')
-                                  ? product.image
-                                  : `${import.meta.env.VITE_API_URL}${product.image}`
-                                : '/img/no-image.png'
-                            } 
-                            alt={product.name} 
-                            className="w-12 h-12 object-cover rounded-md"
-                          />
-                          <div className="flex-1">
-                            <p className="font-medium">{product.name}</p>
-                            <p className="text-sm text-gray-500">
-                              {product.quantity} x R$ {product.price.toFixed(2)}
-                            </p>
-                          </div>
-                          <div className="font-medium">
-                            R$ {(product.price * product.quantity).toFixed(2)}
-                          </div>
+                      <div className="flex items-center gap-2">
+                        <span className={`h-3 w-3 rounded-full ${['preparing','delivering','delivered'].includes(selectedOrder.status) ? 'bg-blue-500' : 'bg-gray-300'}`}></span>
+                        <span className="text-sm">Pedido sendo preparado</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className={`h-3 w-3 rounded-full ${['delivering','delivered'].includes(selectedOrder.status) ? 'bg-purple-500' : 'bg-gray-300'}`}></span>
+                        <span className="text-sm">Saiu para entrega</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className={`h-3 w-3 rounded-full ${selectedOrder.status === 'delivered' ? 'bg-green-500' : 'bg-gray-300'}`}></span>
+                        <span className="text-sm">Pedido entregue</span>
+                      </div>
+                      {selectedOrder.status === 'cancelled' && (
+                        <div className="flex items-center gap-2">
+                          <span className="h-3 w-3 rounded-full bg-red-500"></span>
+                          <span className="text-sm">Pedido cancelado</span>
                         </div>
-                      ))}
-                    </div>
-                  </div>
-                  
-                  <div className="border-t pt-4">
-                    <div className="flex justify-between">
-                      <span className="font-medium">Subtotal</span>
-                      <span>R$ {(selectedOrder.total - (selectedOrder.deliveryFee ?? 0)).toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between mt-1">
-                      <span className="font-medium">Taxa de entrega</span>
-                      <span>R$ {(selectedOrder.deliveryFee ?? 0).toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between mt-3 text-lg font-bold">
-                      <span>Total</span>
-                      <span>R$ {selectedOrder.total.toFixed(2)}</span>
-                    </div>
-                  </div>
-                  
-                  <div className="border-t pt-4 space-y-4">
-                    <div>
-                      <h4 className="font-medium mb-1">Endereço de entrega</h4>
-                      <p className="text-sm">{selectedOrder.address}</p>
+                      )}
                     </div>
                     
                     <div>
-                      <h4 className="font-medium mb-1">Forma de pagamento</h4>
-                      <p className="text-sm">{selectedOrder.paymentMethod}</p>
+                      <h4 className="font-medium mb-2">Produtos</h4>
+                      <div className="space-y-3">
+                        {(selectedOrder?.products ?? []).map((product, idx) => (
+                          <div key={product.id ? `${product.id}-${idx}` : idx} className="flex items-center gap-3">
+                            <img 
+                              src={
+                                product.image
+                                  ? product.image.startsWith('http')
+                                    ? product.image
+                                    : `${import.meta.env.VITE_API_URL}${product.image}`
+                                  : '/img/no-image.png'
+                              } 
+                              alt={product.name} 
+                              className="w-12 h-12 object-cover rounded-md"
+                            />
+                            <div className="flex-1">
+                              <p className="font-medium">{product.name}</p>
+                              <p className="text-sm text-gray-500">
+                                {product.quantity} x R$ {product.price.toFixed(2)}
+                              </p>
+                            </div>
+                            <div className="font-medium">
+                              R$ {(product.price * product.quantity).toFixed(2)}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                  
-                  {selectedOrder && selectedOrder.paymentMethod && selectedOrder.paymentMethod.toLowerCase().includes('pix') && (
+                    
                     <div className="border-t pt-4">
-                      <h4 className="font-medium mb-1">Status do pagamento PIX</h4>
-                      <div className="flex items-center gap-2">
-                        {selectedOrder.pixPaymentStatus === 'APPROVED' && <Badge className="bg-green-100 text-green-700">Aprovado</Badge>}
-                        {selectedOrder.pixPaymentStatus === 'REJECTED' && <Badge className="bg-red-100 text-red-700">Rejeitado</Badge>}
-                        {(!selectedOrder.pixPaymentStatus || selectedOrder.pixPaymentStatus === 'PENDING') && <Badge className="bg-yellow-100 text-yellow-700">Pendente</Badge>}
+                      <div className="flex justify-between">
+                        <span className="font-medium">Subtotal</span>
+                        <span>R$ {(selectedOrder.total - (selectedOrder.deliveryFee ?? 0)).toFixed(2)}</span>
                       </div>
-                      {selectedOrder.pixPaymentStatus === 'REJECTED' && (
-                        <div className="text-xs text-red-600 mt-1">Pagamento não identificado. Entre em contato com o estabelecimento.</div>
-                      )}
-                      {selectedOrder.pixPaymentStatus === 'PENDING' && (
-                        <div className="text-xs text-yellow-600 mt-1">Aguardando confirmação do pagamento pelo estabelecimento.</div>
-                      )}
-                      {selectedOrder.pixPaymentStatus === 'APPROVED' && (
-                        <div className="text-xs text-green-600 mt-1">Pagamento aprovado! Seu pedido será processado.</div>
-                      )}
-                    </div>
-                  )}
-                  
-                  {selectedOrder && selectedOrder.status === 'shipped' && selectedOrder.deliveryLat && selectedOrder.deliveryLng && (
-                    <div className="mt-6">
-                      <h3 className="font-semibold mb-2">Rastreamento da Entrega</h3>
-                      <div style={{ width: '100%', height: 300, borderRadius: 8, overflow: 'hidden' }}>
-                        <iframe
-                          title="Mapa do Entregador"
-                          width="100%"
-                          height="300"
-                          frameBorder="0"
-                          style={{ border: 0 }}
-                          src={`https://www.google.com/maps?q=${selectedOrder.deliveryLat},${selectedOrder.deliveryLng}&z=16&output=embed`}
-                          allowFullScreen
-                        ></iframe>
+                      <div className="flex justify-between mt-1">
+                        <span className="font-medium">Taxa de entrega</span>
+                        <span>R$ {(selectedOrder.deliveryFee ?? 0).toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between mt-3 text-lg font-bold">
+                        <span>Total</span>
+                        <span>R$ {selectedOrder.total.toFixed(2)}</span>
                       </div>
                     </div>
-                  )}
-                  
-                  {selectedOrder && ['delivering', 'shipped'].includes(selectedOrder.status) && isLoaded && clientLatLng && (
-                    <div className="my-4 rounded-md overflow-hidden border" style={{height: 320}}>
-                      <GoogleMap
-                        mapContainerStyle={{ width: '100%', height: '100%' }}
-                        center={motoboyLatLng || STORE_LOCATION}
-                        zoom={14}
-                      >
-                        {/* Loja */}
-                        <Marker position={STORE_LOCATION} label="Loja" />
-                        {/* Cliente */}
-                        <Marker position={clientLatLng} label="Cliente" />
-                        {/* Motoboy */}
-                        {motoboyLatLng && <Marker position={motoboyLatLng} label="Motoboy" icon={{ url: 'https://cdn-icons-png.flaticon.com/512/684/684908.png', scaledSize: new window.google.maps.Size(40, 40) }} />}
-                        {/* Linha entre loja, motoboy e cliente */}
-                        <Polyline path={[STORE_LOCATION, ...(motoboyLatLng ? [motoboyLatLng] : []), clientLatLng]} options={{ strokeColor: '#007bff', strokeWeight: 4 }} />
-                      </GoogleMap>
+                    
+                    <div className="border-t pt-4 space-y-4">
+                      <div>
+                        <h4 className="font-medium mb-1">Endereço de entrega</h4>
+                        <p className="text-sm">{selectedOrder.address}</p>
+                      </div>
+                      
+                      <div>
+                        <h4 className="font-medium mb-1">Forma de pagamento</h4>
+                        <p className="text-sm">{selectedOrder.paymentMethod}</p>
+                      </div>
                     </div>
-                  )}
+                    
+                    {selectedOrder.paymentMethod && selectedOrder.paymentMethod.toLowerCase().includes('pix') && (
+                      <div className="border-t pt-4">
+                        <h4 className="font-medium mb-1">Status do pagamento PIX</h4>
+                        <div className="flex items-center gap-2">
+                          {selectedOrder.pixPaymentStatus === 'APPROVED' && <Badge className="bg-green-100 text-green-700">Aprovado</Badge>}
+                          {selectedOrder.pixPaymentStatus === 'REJECTED' && <Badge className="bg-red-100 text-red-700">Rejeitado</Badge>}
+                          {(!selectedOrder.pixPaymentStatus || selectedOrder.pixPaymentStatus === 'PENDING') && <Badge className="bg-yellow-100 text-yellow-700">Pendente</Badge>}
+                        </div>
+                        {selectedOrder.pixPaymentStatus === 'REJECTED' && (
+                          <div className="text-xs text-red-600 mt-1">Pagamento não identificado. Entre em contato com o estabelecimento.</div>
+                        )}
+                        {selectedOrder.pixPaymentStatus === 'PENDING' && (
+                          <div className="text-xs text-yellow-600 mt-1">Aguardando confirmação do pagamento pelo estabelecimento.</div>
+                        )}
+                        {selectedOrder.pixPaymentStatus === 'APPROVED' && (
+                          <div className="text-xs text-green-600 mt-1">Pagamento aprovado! Seu pedido será processado.</div>
+                        )}
+                      </div>
+                    )}
+                    
+                    {selectedOrder.status === 'shipped' && selectedOrder.deliveryLat && selectedOrder.deliveryLng && (
+                      <div className="mt-6">
+                        <h3 className="font-semibold mb-2">Rastreamento da Entrega</h3>
+                        <div style={{ width: '100%', height: 300, borderRadius: 8, overflow: 'hidden' }}>
+                          <iframe
+                            title="Mapa do Entregador"
+                            width="100%"
+                            height="300"
+                            frameBorder="0"
+                            style={{ border: 0 }}
+                            src={`https://www.google.com/maps?q=${selectedOrder.deliveryLat},${selectedOrder.deliveryLng}&z=16&output=embed`}
+                            allowFullScreen
+                          ></iframe>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {['delivering', 'shipped'].includes(selectedOrder.status) && isLoaded && clientLatLng && (
+                      <div className="my-4 rounded-md overflow-hidden border" style={{height: 320}}>
+                        <GoogleMap
+                          mapContainerStyle={{ width: '100%', height: '100%' }}
+                          center={motoboyLatLng || STORE_LOCATION}
+                          zoom={14}
+                        >
+                          {/* Loja */}
+                          <Marker position={STORE_LOCATION} label="Loja" />
+                          {/* Cliente */}
+                          <Marker position={clientLatLng} label="Cliente" />
+                          {/* Motoboy */}
+                          {motoboyLatLng && <Marker position={motoboyLatLng} label="Motoboy" icon={{ url: 'https://cdn-icons-png.flaticon.com/512/684/684908.png', scaledSize: new window.google.maps.Size(40, 40) }} />}
+                          {/* Linha entre loja, motoboy e cliente */}
+                          <Polyline path={[STORE_LOCATION, ...(motoboyLatLng ? [motoboyLatLng] : []), clientLatLng]} options={{ strokeColor: '#007bff', strokeWeight: 4 }} />
+                        </GoogleMap>
+                      </div>
+                    )}
+                  </div>
                   
                   <DialogFooter>
                     <Button 
                       variant="outline" 
                       onClick={() => setDetailsOpen(false)}
+                      className="w-full"
                     >
                       Fechar
                     </Button>
                   </DialogFooter>
-                </div>
+                </>
               )}
             </DialogContent>
           </Dialog>
