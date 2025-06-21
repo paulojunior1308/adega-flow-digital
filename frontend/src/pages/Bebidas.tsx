@@ -194,7 +194,7 @@ const ProductCard = ({ product }: { product: any }) => {
     <Card className="overflow-hidden transition-all duration-300 hover:shadow-lg border-element-gray-light hover:border-element-blue-neon h-full flex flex-col">
       <AspectRatio ratio={4/3} className="bg-white">
         <img 
-          src={product.image.startsWith('http') ? product.image : `${import.meta.env.VITE_API_URL}${product.image}`}
+          src={product.image ? (product.image.startsWith('http') ? product.image : `${import.meta.env.VITE_API_URL}${product.image}`) : ''}
           alt={product.name}
           className="w-full h-full object-contain"
         />
