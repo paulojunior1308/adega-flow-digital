@@ -1,0 +1,14 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const dose_controller_1 = require("../controllers/dose.controller");
+const cloudinary_1 = require("../utils/cloudinary");
+const auth_1 = require("../middlewares/auth");
+const router = (0, express_1.Router)();
+router.get('/', dose_controller_1.doseController.list);
+router.get('/:id', dose_controller_1.doseController.getById);
+router.use(auth_1.authMiddleware);
+router.post('/', cloudinary_1.upload.single('image'), dose_controller_1.doseController.create);
+router.put('/:id', cloudinary_1.upload.single('image'), dose_controller_1.doseController.update);
+router.delete('/:id', dose_controller_1.doseController.delete);
+exports.default = router;

@@ -13,13 +13,18 @@ const admin_2 = __importDefault(require("./admin"));
 const motoboy_1 = __importDefault(require("./motoboy"));
 const motoboy_2 = require("../middlewares/motoboy");
 const public_1 = __importDefault(require("./public"));
+const dose_routes_1 = __importDefault(require("./dose.routes"));
 const router = express_1.default.Router();
+router.options('*', (req, res) => {
+    res.status(200).end();
+});
 router.post('/login', client_1.clientController.login);
 router.post('/register', client_1.clientController.register);
 router.use('/', public_1.default);
-router.use('/admin', auth_1.authMiddleware, (0, role_1.authorizeRoles)('ADMIN'), admin_2.default);
-router.use('/motoboy', auth_1.authMiddleware, motoboy_2.motoboyMiddleware, motoboy_1.default);
+router.use('/doses', dose_routes_1.default);
 router.use(auth_1.authMiddleware);
+router.use('/admin', (0, role_1.authorizeRoles)('ADMIN'), admin_2.default);
+router.use('/motoboy', motoboy_2.motoboyMiddleware, motoboy_1.default);
 router.get('/cliente-dashboard', (0, role_1.authorizeRoles)('USER'), client_1.clientController.getDashboard);
 router.get('/cliente-catalogo', (0, role_1.authorizeRoles)('USER'), client_1.clientController.getCatalogo);
 router.get('/cliente-buscar', (0, role_1.authorizeRoles)('USER'), client_1.clientController.buscarProdutos);
@@ -35,4 +40,5 @@ router.get('/admin-relatorios', (0, role_1.authorizeRoles)('ADMIN'), admin_1.adm
 router.get('/admin-configuracoes', (0, role_1.authorizeRoles)('ADMIN'), admin_1.adminController.getConfiguracoes);
 router.get('/admin-pdv', (0, role_1.authorizeRoles)('ADMIN'), admin_1.adminController.getPDV);
 router.use('/', client_2.default);
+router.use('/admin/doses', (0, role_1.authorizeRoles)('ADMIN'), dose_routes_1.default);
 exports.default = router;

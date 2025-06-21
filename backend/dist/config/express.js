@@ -10,6 +10,7 @@ const helmet_1 = __importDefault(require("helmet"));
 const compression_1 = __importDefault(require("compression"));
 const morgan_1 = __importDefault(require("morgan"));
 const swagger_ui_express_1 = __importDefault(require("swagger-ui-express"));
+const env_1 = require("./env");
 const errorHandler_1 = require("./errorHandler");
 const sanitizer_1 = require("./sanitizer");
 const swagger_1 = require("./swagger");
@@ -18,15 +19,26 @@ const routes_1 = __importDefault(require("../routes"));
 const initializeExpress = (app) => {
     app.use(express_1.default.json());
     app.use(express_1.default.urlencoded({ extended: true }));
+    const allowedOrigins = [
+        'http://localhost:8080',
+        'http://127.0.0.1:8080',
+    ];
+    if (env_1.env.frontendUrl) {
+        env_1.env.frontendUrl.split(',').forEach((url) => {
+            const trimmed = url.trim();
+            if (trimmed && !allowedOrigins.includes(trimmed)) {
+                allowedOrigins.push(trimmed);
+            }
+        });
+    }
     app.use((0, cors_1.default)({
-        origin: [
-            'https://adega-element.netlify.app',
-            'https://www.adega-element.netlify.app',
-        ],
+        origin: allowedOrigins,
         methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-        allowedHeaders: ['Content-Type', 'Authorization'],
+        allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
         credentials: true,
+        optionsSuccessStatus: 200
     }));
+    app.options('*', (0, cors_1.default)());
     app.use((0, helmet_1.default)({
         crossOriginResourcePolicy: { policy: 'cross-origin' }
     }));

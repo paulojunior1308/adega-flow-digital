@@ -54,26 +54,35 @@ exports.productController = {
     },
     create: async (req, res) => {
         try {
-            const { name, description, price, categoryId, supplierId, stock, minStock, barcode, costPrice } = req.body;
-            const imageUrl = req.file ? `/uploads/${req.file.filename}` : null;
+            const { name, description, price, categoryId, supplierId, stock, minStock, barcode, costPrice, margin, image, isFractioned, totalVolume, unitVolume } = req.body;
+            let finalPrice = parseFloat(price);
+            if (margin && costPrice && !price) {
+                const marginPercent = parseFloat(margin);
+                finalPrice = parseFloat(costPrice) / (1 - (marginPercent / 100));
+            }
             const product = await prisma_1.default.product.create({
                 data: {
                     name,
                     description,
-                    price: parseFloat(price),
-                    costPrice: parseFloat(costPrice),
+                    price: finalPrice,
+                    costPrice: costPrice ? parseFloat(costPrice) : 0,
+                    margin: margin ? parseFloat(margin) : null,
                     categoryId,
                     supplierId: supplierId || null,
                     stock: parseInt(stock),
                     minStock: minStock ? parseInt(minStock) : 0,
                     barcode: barcode || null,
-                    image: imageUrl
+                    image: image || null,
+                    isFractioned: isFractioned === true || isFractioned === 'true',
+                    totalVolume: totalVolume ? parseFloat(totalVolume) : null,
+                    unitVolume: unitVolume ? parseFloat(unitVolume) : null
                 },
                 include: {
                     category: true,
                     supplier: true
                 }
             });
+            console.log('Produto criado:', product);
             res.json(product);
         }
         catch (error) {
@@ -84,20 +93,28 @@ exports.productController = {
     update: async (req, res) => {
         try {
             const { id } = req.params;
-            const { name, description, price, categoryId, supplierId, stock, minStock, barcode, costPrice, active } = req.body;
-            const imageUrl = req.file ? `/uploads/${req.file.filename}` : undefined;
+            const { name, description, price, categoryId, supplierId, stock, minStock, barcode, costPrice, margin, active, image, isFractioned, totalVolume, unitVolume } = req.body;
+            let finalPrice = parseFloat(price);
+            if (margin && costPrice) {
+                const marginPercent = parseFloat(margin);
+                finalPrice = parseFloat(costPrice) / (1 - (marginPercent / 100));
+            }
             const product = await prisma_1.default.product.update({
                 where: { id },
                 data: {
                     name,
                     description,
-                    price: parseFloat(price),
+                    price: finalPrice,
                     costPrice: costPrice ? parseFloat(costPrice) : undefined,
+                    margin: margin ? parseFloat(margin) : undefined,
                     stock: parseInt(stock),
                     minStock: minStock ? parseInt(minStock) : undefined,
                     barcode,
                     active: typeof active === 'boolean' ? active : active === 'true' || active === '1',
-                    image: imageUrl,
+                    image: image || undefined,
+                    isFractioned: isFractioned === true || isFractioned === 'true',
+                    totalVolume: totalVolume ? parseFloat(totalVolume) : null,
+                    unitVolume: unitVolume ? parseFloat(unitVolume) : null,
                     category: {
                         connect: { id: categoryId }
                     },
@@ -110,6 +127,7 @@ exports.productController = {
                     supplier: true
                 }
             });
+            console.log('Produto atualizado:', product);
             res.json(product);
         }
         catch (error) {

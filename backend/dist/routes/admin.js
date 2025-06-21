@@ -16,6 +16,8 @@ const path_1 = __importDefault(require("path"));
 const combo_1 = require("../controllers/combo");
 const supplier_1 = require("../controllers/supplier");
 const paymentMethod_1 = require("../controllers/paymentMethod");
+const finance_1 = require("../controllers/finance");
+const stockEntry_1 = require("../controllers/stockEntry");
 const router = express_1.default.Router();
 const storage = multer_1.default.diskStorage({
     destination: (req, file, cb) => {
@@ -41,8 +43,8 @@ router.patch('/orders/:id/location', order_1.orderController.updateLocation);
 router.patch('/orders/:id/pix-status', order_1.orderController.updatePixStatus);
 router.get('/products', product_1.productController.list);
 router.get('/products/categories', product_1.productController.listCategories);
-router.post('/products', upload.single('image'), product_1.productController.create);
-router.put('/products/:id', upload.single('image'), product_1.productController.update);
+router.post('/products', product_1.productController.create);
+router.put('/products/:id', product_1.productController.update);
 router.delete('/products/:id', product_1.productController.delete);
 router.patch('/products/:id/pinned', product_1.productController.updatePinned);
 router.put('/products/:id/stock', product_1.productController.updateStock);
@@ -84,4 +86,7 @@ router.put('/payment-methods/:id', paymentMethod_1.paymentMethodController.updat
 router.delete('/payment-methods/:id', paymentMethod_1.paymentMethodController.delete);
 router.post('/pdv-sales', admin_1.adminController.createPDVSale);
 router.get('/pdv-sales', admin_1.adminController.getPDVSales);
+router.get('/finance/report', finance_1.financeController.report);
+router.post('/stock-entries', stockEntry_1.stockEntryController.create);
+router.get('/stock-entries', stockEntry_1.stockEntryController.list);
 exports.default = router;

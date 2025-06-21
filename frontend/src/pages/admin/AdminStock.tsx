@@ -123,6 +123,12 @@ const AdminStock = () => {
   });
   const [loadingStockEntry, setLoadingStockEntry] = useState(false);
   const [productSearchTerm, setProductSearchTerm] = useState('');
+  const [selectedProductInfo, setSelectedProductInfo] = useState<{
+    name: string;
+    currentCost: number;
+    currentStock: number;
+    newCost?: number;
+  } | null>(null);
 
   const { toast } = useToast();
 
@@ -314,12 +320,48 @@ const AdminStock = () => {
     }
   };
 
+  const handleStockEntrySelect = (name: string, value: string) => {
+    setStockEntryForm({ ...stockEntryForm, [name]: value });
+    
+    // Buscar informações do produto selecionado
+    if (name === 'productId') {
+      const product = products.find(p => p.id === value);
+      if (product) {
+        setSelectedProductInfo({
+          name: product.name,
+          currentCost: product.costPrice || 0,
+          currentStock: product.stock
+        });
+      }
+    }
+  };
+
+  // Calcular novo custo médio quando quantidade ou custo unitário mudar
+  const calculateNewCost = () => {
+    if (!selectedProductInfo || !stockEntryForm.quantity || !stockEntryForm.unitCost) {
+      return null;
+    }
+
+    const estoqueAtual = selectedProductInfo.currentStock;
+    const custoAtual = selectedProductInfo.currentCost;
+    const quantidadeNova = Number(stockEntryForm.quantity);
+    const custoNovo = Number(stockEntryForm.unitCost);
+
+    if (estoqueAtual === 0) {
+      return custoNovo;
+    }
+
+    const valorTotalAtual = estoqueAtual * custoAtual;
+    const valorTotalNovo = quantidadeNova * custoNovo;
+    const estoqueTotal = estoqueAtual + quantidadeNova;
+    
+    return (valorTotalAtual + valorTotalNovo) / estoqueTotal;
+  };
+
   const handleStockEntryChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setStockEntryForm({ ...stockEntryForm, [e.target.name]: e.target.value });
   };
-  const handleStockEntrySelect = (name: string, value: string) => {
-    setStockEntryForm({ ...stockEntryForm, [name]: value });
-  };
+
   const handleStockEntrySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoadingStockEntry(true);
@@ -818,9 +860,12 @@ const AdminStock = () => {
         </Dialog>
 
         <Dialog open={isStockEntryDialogOpen} onOpenChange={setIsStockEntryDialogOpen}>
-          <DialogContent>
+          <DialogContent className="max-w-2xl">
             <DialogHeader>
               <DialogTitle>Registrar entrada de estoque</DialogTitle>
+              <DialogDescription>
+                Registre uma nova entrada de estoque. O sistema calculará automaticamente o novo custo médio ponderado.
+              </DialogDescription>
             </DialogHeader>
             <form className="grid grid-cols-1 md:grid-cols-2 gap-4" onSubmit={handleStockEntrySubmit}>
               <div className="md:col-span-2">
@@ -852,17 +897,65 @@ const AdminStock = () => {
                   </CommandList>
                 </Command>
               </div>
+
+              {/* Informações do produto selecionado */}
+              {selectedProductInfo && (
+                <div className="md:col-span-2 p-4 bg-gray-50 rounded-lg">
+                  <h4 className="font-medium text-sm mb-2">Informações do Produto</h4>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="text-gray-600">Nome:</span>
+                      <p className="font-medium">{selectedProductInfo.name}</p>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Estoque Atual:</span>
+                      <p className="font-medium">{selectedProductInfo.currentStock} unidades</p>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Custo Atual:</span>
+                      <p className="font-medium">R$ {selectedProductInfo.currentCost.toFixed(2)}</p>
+                    </div>
+                    {calculateNewCost() && (
+                      <div>
+                        <span className="text-gray-600">Novo Custo Médio:</span>
+                        <p className="font-medium text-green-600">R$ {calculateNewCost()!.toFixed(2)}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               <div>
                 <label className="block text-sm font-medium mb-1">Quantidade*</label>
-                <Input type="number" name="quantity" value={stockEntryForm.quantity} onChange={handleStockEntryChange} required min={1} />
+                <Input 
+                  type="number" 
+                  name="quantity" 
+                  value={stockEntryForm.quantity} 
+                  onChange={handleStockEntryChange} 
+                  required 
+                  min={1} 
+                />
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">Custo Unitário (R$)*</label>
-                <Input type="number" name="unitCost" value={stockEntryForm.unitCost} onChange={handleStockEntryChange} required min={0.01} step={0.01} />
+                <Input 
+                  type="number" 
+                  name="unitCost" 
+                  value={stockEntryForm.unitCost} 
+                  onChange={handleStockEntryChange} 
+                  required 
+                  min={0.01} 
+                  step={0.01} 
+                />
               </div>
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium mb-1">Observação</label>
-                <Textarea name="notes" value={stockEntryForm.notes} onChange={handleStockEntryChange} rows={2} />
+                <Textarea 
+                  name="notes" 
+                  value={stockEntryForm.notes} 
+                  onChange={handleStockEntryChange} 
+                  rows={2} 
+                />
               </div>
               <div className="md:col-span-2 flex justify-end">
                 <Button type="submit" disabled={loadingStockEntry} className="bg-element-blue-dark hover:bg-element-blue-dark/90">

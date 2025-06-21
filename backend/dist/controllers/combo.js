@@ -18,7 +18,8 @@ exports.comboController = {
                                 }
                             }
                         }
-                    }
+                    },
+                    category: true
                 }
             });
             res.json(combos);
@@ -30,22 +31,23 @@ exports.comboController = {
     },
     create: async (req, res) => {
         try {
-            const { name, description, price, items } = req.body;
-            const imageUrl = req.file ? `/uploads/${req.file.filename}` : null;
+            const { name, description, price, items, image, categoryId } = req.body;
             const parsedItems = JSON.parse(items);
             const combo = await prisma_1.default.combo.create({
                 data: {
                     name,
                     description,
                     price: parseFloat(price),
-                    image: imageUrl,
+                    image: image || undefined,
+                    categoryId: categoryId || null,
                     items: {
                         create: parsedItems.map((item) => ({
                             productId: item.productId,
                             quantity: item.quantity,
                             allowFlavorSelection: item.allowFlavorSelection,
                             maxFlavors: item.maxFlavors || 1,
-                            categoryId: item.categoryId || null
+                            categoryId: item.categoryId || null,
+                            nameFilter: item.nameFilter || null
                         }))
                     }
                 },
@@ -58,7 +60,8 @@ exports.comboController = {
                                 }
                             }
                         }
-                    }
+                    },
+                    category: true
                 }
             });
             res.json(combo);
@@ -71,24 +74,31 @@ exports.comboController = {
     update: async (req, res) => {
         try {
             const { id } = req.params;
-            const { name, description, price, items, active } = req.body;
-            const imageUrl = req.file ? `/uploads/${req.file.filename}` : undefined;
+            const { name, description, price, items, active, image, categoryId } = req.body;
             const parsedItems = JSON.parse(items);
             await prisma_1.default.comboItem.deleteMany({
                 where: { comboId: id }
             });
             const combo = await prisma_1.default.combo.update({
                 where: { id },
-                data: Object.assign(Object.assign({ name,
-                    description, price: parseFloat(price), active: active === 'true' }, (imageUrl && { image: imageUrl })), { items: {
+                data: {
+                    name,
+                    description,
+                    price: parseFloat(price),
+                    active: active === 'true',
+                    image: image || undefined,
+                    categoryId: categoryId || null,
+                    items: {
                         create: parsedItems.map((item) => ({
                             productId: item.productId,
                             quantity: item.quantity,
                             allowFlavorSelection: item.allowFlavorSelection,
                             maxFlavors: item.maxFlavors || 1,
-                            categoryId: item.categoryId || null
+                            categoryId: item.categoryId || null,
+                            nameFilter: item.nameFilter || null
                         }))
-                    } }),
+                    }
+                },
                 include: {
                     items: {
                         include: {
@@ -98,7 +108,8 @@ exports.comboController = {
                                 }
                             }
                         }
-                    }
+                    },
+                    category: true
                 }
             });
             res.json(combo);

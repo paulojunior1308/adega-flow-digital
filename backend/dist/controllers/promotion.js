@@ -26,15 +26,14 @@ exports.promotionController = {
     },
     create: async (req, res) => {
         try {
-            const { name, description, price, originalPrice, productIds } = req.body;
-            const imageUrl = req.file ? `/uploads/${req.file.filename}` : null;
+            const { name, description, price, originalPrice, productIds, image } = req.body;
             const promotion = await prisma_1.default.promotion.create({
                 data: {
                     name,
                     description,
                     price: parseFloat(price),
                     originalPrice: parseFloat(originalPrice),
-                    image: imageUrl,
+                    image: image || undefined,
                     products: {
                         connect: JSON.parse(productIds).map((id) => ({ id }))
                     }
@@ -57,14 +56,20 @@ exports.promotionController = {
     update: async (req, res) => {
         try {
             const { id } = req.params;
-            const { name, description, price, originalPrice, productIds, active } = req.body;
-            const imageUrl = req.file ? `/uploads/${req.file.filename}` : undefined;
+            const { name, description, price, originalPrice, productIds, active, image } = req.body;
             const promotion = await prisma_1.default.promotion.update({
                 where: { id },
-                data: Object.assign(Object.assign({ name,
-                    description, price: parseFloat(price), originalPrice: parseFloat(originalPrice), active: active === 'true' }, (imageUrl && { image: imageUrl })), { products: {
+                data: {
+                    name,
+                    description,
+                    price: parseFloat(price),
+                    originalPrice: parseFloat(originalPrice),
+                    active: active === 'true',
+                    image: image || undefined,
+                    products: {
                         set: JSON.parse(productIds).map((id) => ({ id }))
-                    } }),
+                    }
+                },
                 include: {
                     products: {
                         include: {
