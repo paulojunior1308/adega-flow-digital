@@ -31,7 +31,7 @@ const PromoCard = ({ promo }: { promo: PromoCardProps }) => {
     <Card className="overflow-hidden transition-all duration-300 hover:shadow-lg border-element-gray-light hover:border-element-blue-neon">
       <div className="relative">
         <AspectRatio ratio={4/3}>
-          <img src={promo.image} alt={promo.title} className="object-contain w-full h-full bg-white" />
+          <img src={promo.image} alt={promo.title} className="object-cover w-full h-full bg-white" />
         </AspectRatio>
         
         {promo.discountPercentage && (

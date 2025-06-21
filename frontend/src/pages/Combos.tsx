@@ -79,7 +79,7 @@ const Combos = () => {
                               <img 
                                 src={getImageUrl(combo.image)}
                                 alt={combo.name}
-                                className="w-full h-48 object-contain bg-white rounded-t-lg" 
+                                className="w-full h-48 object-cover bg-white rounded-t-lg" 
                               />
                               <div className="absolute top-2 right-2 bg-element-blue-neon text-element-gray-dark px-2 py-1 rounded-md text-sm font-bold">
                                 Popular
@@ -147,7 +147,7 @@ const Combos = () => {
                         <img
                           src={getImageUrl(combo.image)}
                           alt={combo.name}
-                          className="object-contain w-full h-full bg-white"
+                          className="object-cover w-full h-full bg-white"
                         />
                       </AspectRatio>
                     </div>

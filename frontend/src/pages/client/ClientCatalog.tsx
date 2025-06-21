@@ -4,7 +4,7 @@ import ClientSidebar from '@/components/client/ClientSidebar';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Filter, Search, ShoppingCart, Plus, Star } from 'lucide-react';
+import { Filter, Search, ShoppingCart, Plus, Star, Package, Wine, Beer, Coffee, ShoppingBag } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
@@ -54,6 +54,7 @@ const ClientCatalog = () => {
   const [comboToConfigure, setComboToConfigure] = useState<any>(null);
   const [doseModalOpen, setDoseModalOpen] = useState(false);
   const [doseToConfigure, setDoseToConfigure] = useState<any>(null);
+  const [categoryLoading, setCategoryLoading] = useState(false);
   
   const location = useLocation();
   const navigate = useNavigate();
@@ -325,6 +326,85 @@ const ClientCatalog = () => {
     setFilteredProducts(result);
   }, [searchTerm, selectedCategory, allProducts]);
 
+  // Função para verificar se uma categoria tem produtos disponíveis
+  const hasAvailableProducts = (categoryId: string) => {
+    if (categoryId === 'all') return true;
+    
+    const categoryProducts = allProducts.filter(product => {
+      if (product.category && typeof product.category === 'object' && product.category.id) {
+        return String(product.category.id) === String(categoryId);
+      }
+      return String(product.category) === String(categoryId);
+    });
+    
+    return categoryProducts.some(product => {
+      if (product.type === 'combo') {
+        const combo = combos.find((c: any) => c.id === product.id);
+        return combo && !isComboOutOfStock(combo);
+      }
+      return product.stock > 0;
+    });
+  };
+
+  // Filtrar categorias que têm produtos disponíveis
+  const availableCategories = React.useMemo(() => {
+    return categories.filter(category => hasAvailableProducts(category.id));
+  }, [categories, allProducts, combos]);
+
+  // Mapeamento de ícones para categorias
+  const getCategoryIcon = (categoryName: string) => {
+    const name = categoryName.toLowerCase();
+    if (name.includes('cerveja') || name.includes('beer')) return <Beer className="h-4 w-4" />;
+    if (name.includes('vinho') || name.includes('wine')) return <Wine className="h-4 w-4" />;
+    if (name.includes('energético') || name.includes('energetico') || name.includes('energy')) return <Coffee className="h-4 w-4" />;
+    if (name.includes('combo') || name.includes('pack')) return <ShoppingBag className="h-4 w-4" />;
+    return <Package className="h-4 w-4" />;
+  };
+
+  // Contar produtos disponíveis por categoria
+  const getCategoryProductCount = (categoryId: string) => {
+    if (categoryId === 'all') {
+      return allProducts.filter(product => {
+        if (product.type === 'combo') {
+          const combo = combos.find((c: any) => c.id === product.id);
+          return combo && !isComboOutOfStock(combo);
+        }
+        return product.stock > 0;
+      }).length;
+    }
+    
+    if (categoryId === 'combo') {
+      return combos.filter(combo => !isComboOutOfStock(combo)).length;
+    }
+    
+    const categoryProducts = allProducts.filter(product => {
+      if (product.category && typeof product.category === 'object' && product.category.id) {
+        return String(product.category.id) === String(categoryId);
+      }
+      return String(product.category) === String(categoryId);
+    });
+    
+    return categoryProducts.filter(product => {
+      if (product.type === 'combo') {
+        const combo = combos.find((c: any) => c.id === product.id);
+        return combo && !isComboOutOfStock(combo);
+      }
+      return product.stock > 0;
+    }).length;
+  };
+
+  // Função para navegar entre categorias com loading
+  const handleCategoryChange = (value: string) => {
+    setCategoryLoading(true);
+    if (value === 'all') {
+      navigate('/cliente-catalogo');
+    } else {
+      navigate(`/cliente-catalogo?cat=${value}`);
+    }
+    // Simular um pequeno delay para mostrar o loading
+    setTimeout(() => setCategoryLoading(false), 300);
+  };
+
   return (
     <div className="min-h-screen bg-element-gray-light pt-16 md:pt-0">
       <ClientSidebar />
@@ -370,31 +450,39 @@ const ClientCatalog = () => {
           <div className="mb-6">
             <Tabs
               value={selectedCategory}
-              onValueChange={(value) => {
-                if (value === 'all') {
-                  navigate('/cliente-catalogo');
-                } else {
-                  navigate(`/cliente-catalogo?cat=${value}`);
-                }
-              }}
+              onValueChange={handleCategoryChange}
               className="w-full"
             >
-              <TabsList className="w-full overflow-x-auto flex flex-nowrap justify-start">
-                {categories.map(category => (
+              <TabsList className="w-full overflow-x-auto flex flex-nowrap justify-start bg-white border border-gray-200 rounded-lg p-1 shadow-sm">
+                {availableCategories.map(category => (
                   <TabsTrigger 
                     key={category.id} 
                     value={String(category.id)}
-                    className="flex-shrink-0"
+                    className="flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-md transition-all duration-200 hover:bg-element-blue-neon/10 data-[state=active]:bg-element-blue-dark data-[state=active]:text-white data-[state=active]:shadow-md"
                   >
-                    {category.name}
+                    {getCategoryIcon(category.name)}
+                    <span className="font-medium">{category.name}</span>
+                    <Badge variant="secondary" className="ml-1 text-xs bg-element-gray-light text-element-gray-dark">
+                      {getCategoryProductCount(category.id)}
+                    </Badge>
                   </TabsTrigger>
                 ))}
-                {!categories.some(c => c.name.toLowerCase() === 'combos') && (
-                  <TabsTrigger key="combo" value="combo" className="flex-shrink-0">Combos</TabsTrigger>
+                {!availableCategories.some(c => c.name.toLowerCase() === 'combos') && (
+                  <TabsTrigger 
+                    key="combo" 
+                    value="combo" 
+                    className="flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-md transition-all duration-200 hover:bg-element-blue-neon/10 data-[state=active]:bg-element-blue-dark data-[state=active]:text-white data-[state=active]:shadow-md"
+                  >
+                    <ShoppingBag className="h-4 w-4" />
+                    <span className="font-medium">Combos</span>
+                    <Badge variant="secondary" className="ml-1 text-xs bg-element-gray-light text-element-gray-dark">
+                      {getCategoryProductCount('combo')}
+                    </Badge>
+                  </TabsTrigger>
                 )}
               </TabsList>
               
-              {categories.map(category => (
+              {availableCategories.map(category => (
                 <TabsContent 
                   key={category.id} 
                   value={String(category.id)}
@@ -407,21 +495,81 @@ const ClientCatalog = () => {
           </div>
           
           {/* Products Grid */}
-          <div className="mb-8">
-            {filteredProducts.length === 0 ? (
+          <div className="mb-8 animate-fade-in">
+            {categoryLoading ? (
               <div className="text-center py-12">
-                <p className="text-gray-500 mb-4">Nenhum produto encontrado</p>
-                <Button onClick={() => { setSearchTerm(""); }}>
-                  Limpar filtros
-                </Button>
+                <div className="max-w-md mx-auto">
+                  <div className="w-16 h-16 bg-element-gray-light rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse-soft">
+                    <Package className="h-8 w-8 text-element-gray-dark" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-element-gray-dark mb-2">
+                    Carregando produtos...
+                  </h3>
+                  <p className="text-element-gray-dark/70">
+                    Buscando produtos nesta categoria
+                  </p>
+                </div>
+              </div>
+            ) : filteredProducts.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="max-w-md mx-auto">
+                  <div className="w-16 h-16 bg-element-gray-light rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Package className="h-8 w-8 text-element-gray-dark" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-element-gray-dark mb-2">
+                    Nenhum produto encontrado
+                  </h3>
+                  <p className="text-element-gray-dark/70 mb-6">
+                    {searchTerm 
+                      ? `Não encontramos produtos para "${searchTerm}"`
+                      : selectedCategory !== 'all' 
+                        ? `Não há produtos disponíveis nesta categoria no momento`
+                        : 'Não há produtos disponíveis no momento'
+                    }
+                  </p>
+                  <div className="flex gap-2 justify-center">
+                    <Button 
+                      onClick={() => { 
+                        setSearchTerm(""); 
+                        navigate('/cliente-catalogo');
+                      }}
+                      variant="outline"
+                    >
+                      Limpar filtros
+                    </Button>
+                    <Button onClick={() => navigate('/cliente-catalogo')}>
+                      Ver todos os produtos
+                    </Button>
+                  </div>
+                </div>
               </div>
             ) : (
               <>
-                <p className="text-sm text-gray-500 mb-4">
-                  {filteredProducts.length} {filteredProducts.length === 1 ? "produto encontrado" : "produtos encontrados"}
-                </p>
+                <div className="flex items-center justify-between mb-4">
+                  <p className="text-sm text-element-gray-dark/70">
+                    {filteredProducts.length} {filteredProducts.length === 1 ? "produto encontrado" : "produtos encontrados"}
+                  </p>
+                  {searchTerm && (
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={() => setSearchTerm("")}
+                      className="text-element-blue-dark hover:text-element-blue-dark/80"
+                    >
+                      Limpar busca
+                    </Button>
+                  )}
+                </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                  {filteredProducts.map(renderProductCard)}
+                  {filteredProducts.map((product, index) => (
+                    <div
+                      key={product.id}
+                      className="animate-fade-in"
+                      style={{ animationDelay: `${index * 100}ms` }}
+                    >
+                      {renderProductCard(product)}
+                    </div>
+                  ))}
                 </div>
               </>
             )}

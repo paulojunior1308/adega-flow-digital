@@ -194,7 +194,7 @@ const ProductCard = ({ product }: { product: ProductProps }) => {
     <Card className="overflow-hidden transition-all duration-300 hover:shadow-lg border-element-gray-light hover:border-element-blue-neon h-full">
       <div className="relative">
         <AspectRatio ratio={4/3}>
-          <img src={product.image} alt={product.title} className="object-cover w-full h-full" />
+          <img src={product.image} alt={product.title} className="object-cover w-full h-full bg-white" />
         </AspectRatio>
         
         {product.discountPercentage && (

@@ -111,7 +111,7 @@ const Narguile = () => {
       <Card className="overflow-hidden transition-all duration-300 hover:shadow-lg border-element-gray-light hover:border-element-blue-neon h-full flex flex-col">
         <div className="relative">
           <AspectRatio ratio={4/3}>
-            <img src={getImageUrl(product.image)} alt={product.name} className="object-contain w-full h-full bg-white" />
+            <img src={getImageUrl(product.image)} alt={product.name} className="object-cover w-full h-full bg-white" />
           </AspectRatio>
         </div>
         <CardContent className="p-4 flex-grow">
