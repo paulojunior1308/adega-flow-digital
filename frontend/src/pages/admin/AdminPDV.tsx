@@ -36,6 +36,7 @@ interface CartItem {
   total: number;
   doseItems?: any[];
   isDoseItem?: boolean;
+  isComboItem?: boolean;
   isFractioned?: boolean;
   discountBy?: 'volume' | 'unit';
   choosableSelections?: Record<string, Record<string, number>>;
@@ -45,11 +46,19 @@ interface Dose {
   id: string;
   name: string;
   price: number;
-  items: {
-    productId: string;
-    quantity: number;
-    product: Product;
-  }[];
+  items: DoseItem[];
+}
+
+interface DoseItem {
+  productId: string;
+  quantity: number;
+  product: Product;
+  isChoosable?: boolean;
+  allowFlavorSelection?: boolean;
+  categoryId?: string;
+  nameFilter?: string;
+  discountBy?: 'volume' | 'unit';
+  volumeToDiscount?: number;
 }
 
 const AdminPDV = () => {
@@ -73,11 +82,12 @@ const AdminPDV = () => {
   const [cartOpen, setCartOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [showActions, setShowActions] = useState(false);
-  const [doses, setDoses] = useState<Dose[]>([]);
+  const [doses, setDoses] = useState<any[]>([]);
   const [doseModalOpen, setDoseModalOpen] = useState(false);
   const [doseToConfigure, setDoseToConfigure] = useState<Dose | null>(null);
   const [doseOptionsModalOpen, setDoseOptionsModalOpen] = useState(false);
   const [comandaModalOpen, setComandaModalOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
   
   // Buscar produtos e combos ao carregar
   useEffect(() => {
@@ -95,7 +105,13 @@ const AdminPDV = () => {
           isChoosable: item.allowFlavorSelection
         }))
       })));
-      setDoses(dosesRes.data);
+      setDoses(dosesRes.data.map((dose: any) => ({
+        ...dose,
+        items: dose.items.map((item: any) => ({
+          ...item,
+          isChoosable: item.allowFlavorSelection,
+        }))
+      })));
       setPinnedProducts(pinnedRes.data.filter((p: any) => p.stock > 0));
     });
   }, []);
@@ -159,247 +175,142 @@ const AdminPDV = () => {
   const discount = 0; 
   const total = subtotal - discount;
 
-  // Handle combo configuration
-  const handleComboConfirm = (selections: Record<string, Record<string, number>>) => {
+  const handleConfirm = (selections: Record<string, Record<string, number>>) => {
     if (!comboToConfigure) return;
-  
-    const allComboProducts: { product: Product; quantity: number }[] = [];
-  
-    // Adiciona itens fixos
-    comboToConfigure.items.forEach((item: any) => {
+
+    const { type, items, price: finalPrice, name } = comboToConfigure;
+    const allItemsFromConfig: { product: Product; quantity: number; discountBy?: 'volume' | 'unit' }[] = [];
+
+    // 1. Derivar o modo de seleção de cada categoria (volume ou unidade)
+    const categoryConfigMap: Record<string, { mode: 'volume' | 'unit' }> = {};
+    items.forEach((item: any) => {
+        if(item.isChoosable && item.categoryId && !categoryConfigMap[item.categoryId]) {
+            categoryConfigMap[item.categoryId] = { mode: item.discountBy === 'volume' ? 'volume' : 'unit' };
+        }
+    });
+
+    items.forEach((item: any) => {
       if (!item.isChoosable && item.product) {
-        allComboProducts.push({ product: item.product, quantity: item.quantity });
+        allItemsFromConfig.push({ product: item.product, quantity: item.quantity, discountBy: item.discountBy });
       }
     });
-  
-    // Adiciona itens escolhidos
+
     for (const categoryId in selections) {
+      const categoryMode = categoryConfigMap[categoryId]?.mode || 'unit';
       for (const productId in selections[categoryId]) {
         const quantity = selections[categoryId][productId];
         if (quantity > 0) {
           const product = products.find(p => p.id === productId);
           if (product) {
-            allComboProducts.push({ product, quantity });
+            // 2. Usar o modo derivado para garantir a consistência
+            allItemsFromConfig.push({ product, quantity, discountBy: categoryMode });
           }
         }
       }
     }
-  
-    // Calcular o preço total dos itens individuais para a proporção
-    const totalOriginalPrice = allComboProducts.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
-    const comboPrice = comboToConfigure.price;
-  
+
+    const totalOriginalPrice = allItemsFromConfig.reduce((sum, item) => sum + item.product.price * (item.discountBy === 'volume' ? 1 : item.quantity), 0);
+    
     let accumulatedPrice = 0;
-    const newItems: CartItem[] = allComboProducts.map((item, index) => {
-      const proportion = (item.product.price * item.quantity) / totalOriginalPrice;
-      let proportionalPrice = comboPrice * proportion;
-  
-      // Arredondamento
+    const newItems: CartItem[] = allItemsFromConfig.map((item, index) => {
+      const proportion = (item.product.price * (item.discountBy === 'volume' ? 1 : item.quantity)) / totalOriginalPrice;
+      let proportionalPrice = finalPrice * proportion;
+      
       proportionalPrice = Math.round(proportionalPrice * 100) / 100;
       accumulatedPrice += proportionalPrice;
-  
-      // No último item, ajusta para bater o preço exato do combo
-      if (index === allComboProducts.length - 1) {
-        const difference = comboPrice - accumulatedPrice;
-        proportionalPrice += difference;
+
+      if (index === allItemsFromConfig.length - 1) {
+        proportionalPrice += (finalPrice - accumulatedPrice);
       }
-  
+
       return {
-        id: `${comboToConfigure.id}-${item.product.id}-${Math.random().toString(36).substring(2, 8)}`,
+        id: `${comboToConfigure.id}-${item.product.id}-${Date.now()}`,
         productId: item.product.id,
         code: item.product.code,
-        name: `${item.product.name} (Combo: ${comboToConfigure.name})`,
+        name: `${item.product.name} (${type === 'combo' ? 'Combo' : 'Dose'}: ${name})`,
         quantity: item.quantity,
-        price: proportionalPrice / item.quantity, // Preço por unidade
+        price: proportionalPrice / item.quantity,
         total: proportionalPrice,
+        isComboItem: type === 'combo',
+        isDoseItem: type === 'dose',
+        isFractioned: item.product.isFractioned,
+        discountBy: item.discountBy,
       };
     });
-  
+
     setCartItems(prev => [...prev, ...newItems]);
     setComboModalOpen(false);
     setComboToConfigure(null);
-    toast({ description: `${comboToConfigure.name} adicionado ao carrinho.` });
+    toast({ description: `${name} adicionado ao carrinho.` });
   };
 
-  // Add item to cart
   const addToCart = (item: any, quantity: number = 1) => {
-    if (item.type === 'combo') {
-      // Se tiver itens escolhíveis, abre o modal
-      if (item.items?.some((i: any) => i.isChoosable || i.allowFlavorSelection)) {
+    if (item.type === 'combo' || item.type === 'dose') {
+      const hasChoosableItems = item.items?.some((i: any) => i.isChoosable || i.allowFlavorSelection);
+      if (hasChoosableItems) {
         setComboToConfigure(item);
         setComboModalOpen(true);
-        return;
-      }
-      // Se for um combo SÓ com itens fixos, desmembra e adiciona direto
-      else {
-        const allComboProducts = item.items.map((i: any) => ({ product: i.product, quantity: i.quantity }));
-        const totalOriginalPrice = allComboProducts.reduce((sum, p: any) => sum + p.product.price * p.quantity, 0);
-        const comboPrice = item.price;
+      } else {
+        // Lógica para adicionar direto no carrinho (para itens sem opções)
+        const allItems = item.items.map((i: any) => ({ product: i.product, quantity: i.quantity }));
+        const totalOriginalPrice = allItems.reduce((sum: number, p: any) => sum + p.product.price * p.quantity, 0);
+        const finalPrice = item.price;
 
         let accumulatedPrice = 0;
-        const newItems: CartItem[] = allComboProducts.map((p: any, index: number) => {
+        const newItems: CartItem[] = allItems.map((p: any, index: number) => {
           const proportion = (p.product.price * p.quantity) / totalOriginalPrice;
-          let proportionalPrice = comboPrice * proportion;
+          let proportionalPrice = finalPrice * proportion;
 
           proportionalPrice = Math.round(proportionalPrice * 100) / 100;
           accumulatedPrice += proportionalPrice;
           
-          if (index === allComboProducts.length - 1) {
-            const difference = comboPrice - accumulatedPrice;
-            proportionalPrice += difference;
+          if (index === allItems.length - 1) {
+            proportionalPrice += (finalPrice - accumulatedPrice);
           }
 
           return {
-            id: `${item.id}-${p.product.id}-${Math.random().toString(36).substring(2, 8)}`,
+            id: `${item.id}-${p.product.id}-${Date.now()}`,
             productId: p.product.id,
             code: p.product.code,
-            name: `${p.product.name} (Combo: ${item.name})`,
+            name: `${p.product.name} (${item.type === 'combo' ? 'Combo' : 'Dose'}: ${item.name})`,
             quantity: p.quantity,
             price: proportionalPrice / p.quantity,
             total: proportionalPrice,
+            isComboItem: item.type === 'combo',
+            isDoseItem: item.type === 'dose',
+            isFractioned: item.isFractioned,
+            discountBy: item.discountBy,
           };
         });
-
+  
         setCartItems(prev => [...prev, ...newItems]);
         toast({ description: `${item.name} adicionado ao carrinho.` });
-        return;
       }
-    } else if (item.type === 'dose') {
-      // Verifica se há itens escolhíveis
-      const hasChoosable = item.items.some((i: any) => i.isChoosable || i.allowFlavorSelection);
-      if (hasChoosable) {
-        setDoseToConfigure(item);
-        setDoseOptionsModalOpen(true);
-        return;
-      }
-      // Se não houver escolhíveis, adiciona a dose diretamente
-      const newItem: CartItem = {
-        id: item.id + '-dose-' + Math.random().toString(36).substring(2, 8),
-        productId: item.id,
-        code: item.code,
-        name: item.name,
-        quantity: quantity,
-        price: item.price,
-        total: item.price * quantity,
-        isDoseItem: true
-      };
-      setCartItems(prev => [...prev, newItem]);
-      toast({ description: `${item.name} (Dose) adicionada ao carrinho.` });
-      return;
-    }
+    } else { // Produto Simples
+      // Apenas incrementa se já existir um item avulso (não de combo ou dose)
+      const existingItem = cartItems.find(cartItem => 
+        cartItem.productId === item.id && 
+        !cartItem.isComboItem && 
+        !cartItem.isDoseItem
+      );
 
-    const estoqueDisponivel = item.stock ?? Infinity;
-    const quantidadeNoCarrinho = cartItems.find(ci => ci.id === item.id)?.quantity || 0;
-    
-    if (quantidadeNoCarrinho + quantity > estoqueDisponivel) {
-      toast({
-        variant: "destructive",
-        description: `Estoque insuficiente para ${item.name}. Disponível: ${estoqueDisponivel}, solicitado: ${quantidadeNoCarrinho + quantity}`
-      });
-      return;
-    }
-
-    const existingItemIndex = cartItems.findIndex(ci => ci.id === item.id);
-    if (existingItemIndex >= 0) {
-      const updatedItems = [...cartItems];
-      updatedItems[existingItemIndex].quantity += quantity;
-      updatedItems[existingItemIndex].total = updatedItems[existingItemIndex].price * updatedItems[existingItemIndex].quantity;
-      setCartItems(updatedItems);
-      toast({ description: `Quantidade de ${item.name} atualizada.` });
-    } else {
-      const newItem: CartItem = {
-        id: item.id,
-        productId: item.id,
-        code: item.code,
-        name: item.name,
-        quantity: quantity,
-        price: item.price,
-        total: item.price * quantity
-      };
-      setCartItems([...cartItems, newItem]);
-      toast({ description: `${item.name} adicionado ao carrinho.` });
-    }
-  };
-
-  // Handle dose configuration
-  const handleDoseConfirm = (choosableSelections: Record<string, Record<string, number>>) => {
-    if (!doseToConfigure) return;
-
-    // Montar lista de todos os produtos da dose (fixos + escolhidos)
-    const produtosDose: { productId: string, nome: string, quantidade: number, isFractioned?: boolean }[] = [];
-    
-    // Fixos
-    for (const item of doseToConfigure.items) {
-      if (!(item as any).allowFlavorSelection) {
-        const produto = products.find(p => p.id === item.productId);
-        produtosDose.push({
-          productId: item.productId,
-          nome: item.product?.name || '',
-          quantidade: Math.max(1, item.quantity),
-          isFractioned: produto?.isFractioned
-        });
+      if (existingItem) {
+        updateCartItemQuantity(existingItem.id, existingItem.quantity + quantity);
+      } else {
+        const newItem: CartItem = {
+          id: `${item.id}-${Date.now()}`,
+          productId: item.id,
+          code: item.code,
+          name: item.name,
+          quantity: quantity,
+          price: item.price,
+          total: item.price * quantity,
+          isFractioned: item.isFractioned,
+        };
+        setCartItems(prev => [...prev, newItem]);
+        toast({ description: `${item.name} adicionado ao carrinho.` });
       }
     }
-
-    // Escolhíveis
-    for (const [categoryId, selections] of Object.entries(choosableSelections)) {
-      for (const [productId, quantidade] of Object.entries(selections)) {
-        if (quantidade > 0) {
-          const produto = products.find(p => p.id === productId);
-          if (produto) {
-            produtosDose.push({
-              productId,
-              nome: produto.name,
-              quantidade: Number(quantidade),
-              isFractioned: produto.isFractioned
-            });
-          }
-        }
-      }
-    }
-
-    // Calcular preço base e distribuir entre os itens
-    const totalQuantidade = produtosDose.reduce((sum, p) => sum + p.quantidade, 0);
-    const precoBase = Math.floor((doseToConfigure.price / totalQuantidade) * 100) / 100;
-    const totalPrecoBase = precoBase * totalQuantidade;
-    const diferenca = doseToConfigure.price - totalPrecoBase;
-
-    // Criar itens com preços ajustados
-    const newItems: CartItem[] = produtosDose.map((d, idx) => {
-      const precoAjustado = idx === 0 
-        ? precoBase + (diferenca / d.quantidade) // Primeiro item absorve a diferença
-        : precoBase;
-
-      return {
-        id: d.productId + '-dose-' + Math.random().toString(36).substring(2, 8),
-        productId: d.productId,
-        code: d.productId.substring(0, 6),
-        name: `Dose de ${doseToConfigure.name} - ${d.nome}`,
-        quantity: d.quantidade,
-        price: precoAjustado,
-        total: precoAjustado * d.quantidade,
-        isDoseItem: true,
-        isFractioned: d.isFractioned,
-        discountBy: d.isFractioned ? 'volume' : 'unit',
-        choosableSelections: {
-          [doseToConfigure.id]: { [d.productId]: d.quantidade }
-        }
-      };
-    });
-
-    // Verificar se o total dos itens está correto
-    const totalItens = newItems.reduce((sum, item) => sum + item.total, 0);
-    if (Math.abs(totalItens - doseToConfigure.price) > 0.01) {
-      // Ajustar o primeiro item para garantir o total correto
-      const diferenca = doseToConfigure.price - totalItens;
-      newItems[0].total += diferenca;
-      newItems[0].price = newItems[0].total / newItems[0].quantity;
-    }
-
-    setCartItems(prev => [...prev, ...newItems]);
-    setDoseOptionsModalOpen(false);
-    setDoseToConfigure(null);
-    toast({ description: `${doseToConfigure.name} (Dose) adicionada ao carrinho.` });
   };
 
   // Update cart item quantity
@@ -523,69 +434,52 @@ const AdminPDV = () => {
   const finishTicket = async (paymentMethodId: string) => {
     if (cartItems.length === 0) {
       toast({
-        variant: "destructive",
-        description: "Adicione itens ao carrinho para finalizar.",
+        variant: 'destructive',
+        description: 'O carrinho está vazio.',
       });
       return;
     }
+
     try {
-      await api.post('/admin/pdv-sales', {
-        items: cartItems.map(item => {
-          if (item.isDoseItem) {
-            // É uma dose - mantém o preço original da dose
-            const dose = doses.find(d => d.id === item.productId);
-            return {
-              productId: item.productId,
-              quantity: item.quantity,
-              price: dose?.price || item.price, // Usa o preço da dose
-              isDoseItem: true,
-              isFractioned: item.isFractioned,
-              discountBy: item.discountBy,
-              choosableSelections: item.choosableSelections
-            };
-          }
-          // Produto normal
-          const produto = products.find(p => p.id === item.productId);
-          if (produto?.isFractioned) {
-            // Se a quantidade for exatamente 1 unidade, considera venda de unidade
-            if (item.quantity === 1) {
-              return {
-                productId: item.productId,
-                quantity: item.quantity,
-                price: item.price,
-                sellingByVolume: false
-              };
-            } else {
-              // Venda fracionada (por volume)
-              return {
-                productId: item.productId,
-                quantity: item.quantity,
-                price: item.price,
-                sellingByVolume: true
-              };
-            }
-          }
-          // Produto não fracionado
-          return {
-            productId: item.productId,
-            quantity: item.quantity,
-            price: item.price
-          };
-        }),
-        paymentMethodId
-      });
+      setLoading(true);
+      const saleData = {
+        items: cartItems.map(item => ({
+          productId: item.productId,
+          quantity: item.quantity,
+          price: item.price,
+          isDoseItem: !!item.isDoseItem,
+          isComboItem: !!item.isComboItem,
+          isFractioned: !!item.isFractioned,
+          discountBy: item.discountBy,
+          sellingByVolume: item.discountBy === 'volume',
+          // O campo choosableSelections é removido pois não é usado pelo backend aqui
+        })),
+        paymentMethodId: paymentMethodId,
+      };
+
+      console.log("Payload FINAL enviado:", JSON.stringify(saleData, null, 2));
+      await api.post('/admin/pdv-sales', saleData);
+
       toast({
         description: `Venda finalizada!`,
       });
+      // Resetar estado
       setCartItems([]);
+      setProductCode('');
+      setSearchQuery('');
       setTicketNumber(prev => prev + 1);
-    } catch (error: any) {
-      const msg = error?.response?.data?.error || "Erro ao finalizar pedido. Verifique o estoque.";
+      setCpfCnpjValue('');
+      setCpfCnpjDialogOpen(false);
+    } catch (error) {
+      console.error('Erro ao finalizar a venda:', error);
       toast({
-        title: "Erro ao finalizar pedido",
-        description: msg,
-        variant: "destructive"
+        title: 'Erro na Venda',
+        description:
+          'Não foi possível registrar a venda. Tente novamente.',
+        variant: 'destructive',
       });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -1006,12 +900,14 @@ const AdminPDV = () => {
         onOpenChange={setComandaModalOpen} 
         onTransferToCart={handleTransferFromComanda}
       />
+      {/* Combo/Dose Options Modal */}
       {comboToConfigure && (
         <ComboOptionsModal
           open={comboModalOpen}
           onOpenChange={setComboModalOpen}
           combo={comboToConfigure}
-          onConfirm={handleComboConfirm}
+          onConfirm={handleConfirm}
+          products={products}
         />
       )}
       <Drawer open={cartOpen} onOpenChange={() => setCartOpen(false)}>

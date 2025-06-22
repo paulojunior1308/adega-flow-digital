@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import AdminSidebar from '@/components/admin/AdminSidebar';
+import AdminLayout from '@/components/admin/AdminLayout';
 import { 
   Table, 
   TableBody, 
@@ -9,6 +9,7 @@ import {
   TableHeader, 
   TableRow 
 } from '@/components/ui/table';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { 
   Package, 
   Search, 
@@ -59,7 +60,6 @@ import {
   CommandGroup,
   CommandItem
 } from '@/components/ui/command';
-import AdminLayout from '@/components/admin/AdminLayout';
 
 // Product interface
 interface Product {
@@ -368,19 +368,22 @@ const AdminStock = () => {
     setLoadingStockEntry(true);
     try {
       await api.post('/admin/stock-entries', {
-        productId: stockEntryForm.productId,
-        quantity: Number(stockEntryForm.quantity),
-        unitCost: Number(stockEntryForm.unitCost),
-        notes: stockEntryForm.notes
+        ...stockEntryForm,
+        quantity: parseInt(stockEntryForm.quantity, 10),
+        unitCost: parseFloat(stockEntryForm.unitCost),
       });
-      toast({ title: 'Entrada registrada com sucesso!' });
+      toast({ title: 'Entrada de estoque registrada com sucesso!' });
+      setIsStockEntryDialogOpen(false);
       setStockEntryForm({ productId: '', quantity: '', unitCost: '', notes: '' });
       setProductSearchTerm('');
-      setIsStockEntryDialogOpen(false);
-      // Atualiza lista de produtos/estoque
+      setSelectedProductInfo(null);
       api.get('/admin/products').then(res => setProducts(res.data));
-    } catch (error) {
-      toast({ title: 'Erro ao registrar entrada', variant: 'destructive' });
+    } catch (err: any) {
+      toast({ 
+        title: 'Erro ao registrar entrada de estoque.', 
+        description: err.response?.data?.error || 'Tente novamente.',
+        variant: 'destructive' 
+      });
     } finally {
       setLoadingStockEntry(false);
     }
@@ -392,169 +395,201 @@ const AdminStock = () => {
   );
 
   return (
-    <AdminLayout>
-      <div className="space-y-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
-          <h1 className="text-2xl md:text-3xl font-bold text-element-blue-dark mb-4 sm:mb-0">
-            Controle de Estoque
-          </h1>
-          <Button onClick={() => setIsStockEntryDialogOpen(true)} className="bg-element-blue-dark hover:bg-element-blue-dark/90">
-            Registrar entrada de estoque
-          </Button>
-        </div>
-        
-        <div className="bg-white p-4 rounded-lg shadow-sm mb-6">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-element-gray-dark/60 h-4 w-4" />
-              <Input 
-                placeholder="Buscar produtos..." 
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
+    <div className="flex min-h-screen w-full bg-gray-100 dark:bg-gray-900">
+      <AdminLayout>
+      <div className="flex flex-col flex-1 sm:py-4 sm:pl-14 lg:pl-64">
+        <main className="flex-1 p-4 sm:p-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+            <div className="mb-4 sm:mb-0">
+              <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-200">Estoque de Produtos</h1>
+              <p className="text-gray-600 dark:text-gray-400">Gerencie seus produtos, estoque e preços.</p>
             </div>
-            
-            <div className="flex gap-2">
-              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Categoria" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all" key="all">Todas Categorias</SelectItem>
-                  {categories.map((category) => (
-                    <SelectItem key={category.id} value={category.name}>{category.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              
-              <Select value={stockFilter} onValueChange={setStockFilter}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Status Estoque" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all" key="all">Todos Status</SelectItem>
-                  <SelectItem value="low" key="low">Baixo Estoque</SelectItem>
-                  <SelectItem value="out" key="out">Esgotado</SelectItem>
-                  <SelectItem value="available" key="available">Disponível</SelectItem>
-                </SelectContent>
-              </Select>
-              
-              <Button variant="outline" className="flex items-center gap-2">
-                <SlidersHorizontal className="h-4 w-4" />
-                <span className="hidden md:inline">Mais Filtros</span>
-              </Button>
-            </div>
-            
-            <Button 
-              className="bg-element-blue-dark flex items-center gap-2"
-              onClick={() => navigate('/admin-cadastro-produtos')}
-            >
-              <Plus className="h-4 w-4" />
-              <span>Novo Produto</span>
-            </Button>
-          </div>
-        </div>
-        
-        <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-lg mb-6">
-          <div className="flex items-center gap-3">
-            <AlertCircle className="h-5 w-5 text-yellow-500" />
-            <div>
-              <h3 className="font-medium text-yellow-800">Alertas de Estoque</h3>
-              <p className="text-sm text-yellow-600">
-                {products.filter(p => p.stockStatus === 'low').length} produtos com estoque baixo | 
-                {products.filter(p => p.stockStatus === 'out').length} produtos esgotados
-              </p>
+            <div className="flex items-center gap-2">
+                <Button onClick={() => navigate('/admin-cadastro-produtos')}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Adicionar Produto
+                </Button>
+                <Button variant="outline" onClick={() => setIsStockEntryDialogOpen(true)}>
+                    <Archive className="h-4 w-4 mr-2" />
+                    Entrada de Estoque
+                </Button>
             </div>
           </div>
-        </div>
-        
-        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[300px]">
-                  <Button 
-                    variant="ghost" 
-                    onClick={() => requestSort('name')}
-                    className="flex items-center gap-1 font-medium hover:bg-transparent hover:underline"
-                  >
-                    Produto
-                    <ArrowUpDown className="h-4 w-4" />
-                  </Button>
-                </TableHead>
-                <TableHead>Categoria</TableHead>
-                <TableHead>
-                  <Button 
-                    variant="ghost" 
-                    onClick={() => requestSort('price')}
-                    className="flex items-center gap-1 font-medium hover:bg-transparent hover:underline"
-                  >
-                    Preço
-                    <ArrowUpDown className="h-4 w-4" />
-                  </Button>
-                </TableHead>
-                <TableHead>
-                  <Button 
-                    variant="ghost" 
-                    onClick={() => requestSort('stock')}
-                    className="flex items-center gap-1 font-medium hover:bg-transparent hover:underline"
-                  >
-                    Estoque
-                    <ArrowUpDown className="h-4 w-4" />
-                  </Button>
-                </TableHead>
-                <TableHead>Volume (ml)</TableHead>
-                <TableHead>Última Atualização</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredProducts.length > 0 ? (
-                filteredProducts.map((product) => (
-                  <TableRow key={product.id}>
-                    <TableCell className="font-medium">
-                      <div className="flex items-center gap-2">
-                        <Package className="h-4 w-4 text-element-blue-dark" />
-                        {product.name}
-                      </div>
-                    </TableCell>
-                    <TableCell>{product.category?.name || '-'}</TableCell>
-                    <TableCell>R$ {product.price.toFixed(2)}</TableCell>
-                    <TableCell className="font-medium">
-                      {product.stock === 0 ? (
-                        <span className="text-red-500">0</span>
-                      ) : (
-                        product.stock
-                      )}
-                    </TableCell>
-                    <TableCell>{product.isFractioned ? product.totalVolume : '-'}</TableCell>
-                    <TableCell>{product.updatedAt ? new Date(product.updatedAt).toLocaleDateString('pt-BR') : '-'}</TableCell>
-                    <TableCell>
-                      <Switch
-                        checked={product.active}
-                        onCheckedChange={(checked) => handleToggleActive(product.id, checked)}
+          
+          <div className="my-6 bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-center">
+              <div className="lg:col-span-2">
+                  <label htmlFor="search" className="text-sm font-medium text-gray-700 dark:text-gray-300 sr-only">Buscar</label>
+                  <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-5 w-5" />
+                      <Input 
+                          id="search"
+                          placeholder="Buscar por nome ou categoria..." 
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                          className="pl-10 w-full"
                       />
-                    </TableCell>
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <span className="sr-only">Abrir menu</span>
-                            <SlidersHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>Opções</DropdownMenuLabel>
-                          <DropdownMenuItem onClick={() => openUpdateDialog(product)}>
-                            Atualizar estoque
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => openEditDialog(product)}>
-                            Editar produto
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem className="text-red-600" onClick={async () => {
+                  </div>
+              </div>
+              <div>
+                  <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                      <SelectTrigger id="category" className="w-full">
+                          <SelectValue placeholder="Filtrar por Categoria" />
+                      </SelectTrigger>
+                      <SelectContent>
+                          <SelectItem value="all">Todas as Categorias</SelectItem>
+                          {categories.map((category) => (
+                              <SelectItem key={category.id} value={category.name}>{category.name}</SelectItem>
+                          ))}
+                      </SelectContent>
+                  </Select>
+              </div>
+              <div>
+                  <Select value={stockFilter} onValueChange={setStockFilter}>
+                      <SelectTrigger id="stock" className="w-full">
+                          <SelectValue placeholder="Filtrar por Estoque" />
+                      </SelectTrigger>
+                      <SelectContent>
+                          <SelectItem value="all">Todos os Status</SelectItem>
+                          <SelectItem value="available">Disponível</SelectItem>
+                          <SelectItem value="low">Estoque Baixo</SelectItem>
+                          <SelectItem value="out">Esgotado</SelectItem>
+                      </SelectContent>
+                  </Select>
+              </div>
+            </div>
+          </div>
+
+          {/* Tabela para telas maiores */}
+          <div className="hidden md:block bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-[80px]">Imagem</TableHead>
+                      <TableHead>
+                        <Button variant="ghost" onClick={() => requestSort('name')}>
+                          Nome <ArrowUpDown className="ml-2 h-4 w-4" />
+                        </Button>
+                      </TableHead>
+                      <TableHead>Categoria</TableHead>
+                      <TableHead>
+                        <Button variant="ghost" onClick={() => requestSort('price')}>
+                          Preço <ArrowUpDown className="ml-2 h-4 w-4" />
+                        </Button>
+                      </TableHead>
+                      <TableHead>
+                        <Button variant="ghost" onClick={() => requestSort('stock')}>
+                          Estoque <ArrowUpDown className="ml-2 h-4 w-4" />
+                        </Button>
+                      </TableHead>
+                      <TableHead>Volume (ml)</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Ativo</TableHead>
+                      <TableHead>
+                        <span className="sr-only">Ações</span>
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredProducts.map((product) => (
+                      <TableRow key={product.id}>
+                        <TableCell>
+                          <img
+                            alt={product.name}
+                            className="aspect-square rounded-md object-cover"
+                            height="64"
+                            src={product.image ? (product.image.startsWith('http') ? product.image : `${import.meta.env.VITE_API_URL}${product.image}`) : '/placeholder.svg'}
+                            width="64"
+                          />
+                        </TableCell>
+                        <TableCell className="font-medium">{product.name}</TableCell>
+                        <TableCell>{product.category?.name}</TableCell>
+                        <TableCell>R$ {product.price.toFixed(2)}</TableCell>
+                        <TableCell>{product.stock}</TableCell>
+                        <TableCell>{product.isFractioned ? product.totalVolume : '-'}</TableCell>
+                        <TableCell>{getStockStatusBadge(product.stockStatus)}</TableCell>
+                        <TableCell>
+                          <Switch
+                            checked={product.active}
+                            onCheckedChange={(active) => handleToggleActive(product.id, active)}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" className="h-8 w-8 p-0">
+                                <span className="sr-only">Abrir menu</span>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuLabel>Ações</DropdownMenuLabel>
+                              <DropdownMenuItem onClick={() => openEditDialog(product)}>Editar</DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => openUpdateDialog(product)}>Atualizar Estoque</DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem 
+                                className="text-red-500"
+                                onClick={async () => {
+                                  if (window.confirm('Tem certeza que deseja remover este produto?')) {
+                                    try {
+                                      await api.delete(`/admin/products/${product.id}`);
+                                      setProducts(products.filter(p => p.id !== product.id));
+                                      toast({ title: 'Produto removido com sucesso!' });
+                                    } catch (error: any) {
+                                      toast({ 
+                                        title: 'Erro ao remover produto.', 
+                                        description: error.response?.data?.error || 'Tente novamente mais tarde.',
+                                        variant: 'destructive' 
+                                      });
+                                    }
+                                  }
+                                }}
+                              >
+                                Deletar
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+          </div>
+
+          {/* Cards para telas menores */}
+          <div className="grid gap-4 md:hidden">
+            {filteredProducts.map((product) => (
+              <Card key={product.id} className="bg-white dark:bg-gray-800">
+                <CardHeader>
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-start gap-4">
+                       <img
+                          alt={product.name}
+                          className="aspect-square rounded-md object-cover"
+                          height="60"
+                          src={product.image ? (product.image.startsWith('http') ? product.image : `${import.meta.env.VITE_API_URL}${product.image}`) : '/placeholder.svg'}
+                          width="60"
+                        />
+                        <div>
+                          <CardTitle>{product.name}</CardTitle>
+                          <p className="text-sm text-muted-foreground">{product.category?.name}</p>
+                        </div>
+                    </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" className="h-8 w-8 p-0">
+                          <span className="sr-only">Abrir menu</span>
+                          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuLabel>Ações</DropdownMenuLabel>
+                        <DropdownMenuItem onClick={() => openEditDialog(product)}>Editar</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => openUpdateDialog(product)}>Atualizar Estoque</DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem 
+                          className="text-red-500"
+                          onClick={async () => {
                             if (window.confirm('Tem certeza que deseja remover este produto?')) {
                               try {
                                 await api.delete(`/admin/products/${product.id}`);
@@ -568,394 +603,417 @@ const AdminStock = () => {
                                 });
                               }
                             }
-                          }}>
-                            Remover produto
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8">
-                    <div className="flex flex-col items-center gap-2">
-                      <Archive className="h-8 w-8 text-element-gray-dark/50" />
-                      <p className="text-element-gray-dark/70">Nenhum produto encontrado</p>
-                      <p className="text-element-gray-dark/50 text-sm">Tente ajustar seus filtros</p>
+                          }}
+                        >
+                          Deletar
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                    <div className="grid grid-cols-2 gap-y-2 text-sm">
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-gray-600 dark:text-gray-400">Preço:</span>
+                        <span>R$ {product.price.toFixed(2)}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-gray-600 dark:text-gray-400">Estoque:</span>
+                        <span>{product.stock}</span>
+                      </div>
+                      {product.isFractioned && (
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-gray-600 dark:text-gray-400">Volume:</span>
+                          <span>{product.totalVolume} ml</span>
+                        </div>
+                      )}
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-gray-600 dark:text-gray-400">Status:</span>
+                        {getStockStatusBadge(product.stockStatus)}
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="font-semibold text-gray-600 dark:text-gray-400">Ativo:</span>
+                        <Switch
+                          checked={product.active}
+                          onCheckedChange={(active) => handleToggleActive(product.id, active)}
+                        />
+                      </div>
                     </div>
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
-        
-        <Dialog open={isUpdateDialogOpen} onOpenChange={setIsUpdateDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Atualizar Estoque</DialogTitle>
-              <DialogDescription>
-                Adicione ou remova unidades do estoque do produto {selectedProduct?.name}.
-                Valores negativos irão reduzir o estoque.
-              </DialogDescription>
-            </DialogHeader>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </main>
+      </div>
+      </AdminLayout>
+      
+      {/* Stock Update Dialog */}
+      <Dialog open={isUpdateDialogOpen} onOpenChange={setIsUpdateDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Atualizar Estoque</DialogTitle>
+            <DialogDescription>
+              Adicione ou remova unidades do estoque do produto {selectedProduct?.name}.
+              Valores negativos irão reduzir o estoque.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="grid gap-4 py-4">
+            <div className="flex items-center gap-2">
+              <Package className="h-5 w-5 text-element-blue-dark" />
+              <span className="font-medium">{selectedProduct?.name}</span>
+            </div>
             
-            <div className="grid gap-4 py-4">
-              <div className="flex items-center gap-2">
-                <Package className="h-5 w-5 text-element-blue-dark" />
-                <span className="font-medium">{selectedProduct?.name}</span>
+            <div className="grid grid-cols-2 gap-4 items-center">
+              <div className="text-sm">
+                <p>Estoque atual:</p>
+                <p className="font-medium text-lg">{selectedProduct?.stock} unidades</p>
               </div>
               
-              <div className="grid grid-cols-2 gap-4 items-center">
-                <div className="text-sm">
-                  <p>Estoque atual:</p>
-                  <p className="font-medium text-lg">{selectedProduct?.stock} unidades</p>
-                </div>
-                
-                <div>
-                  <label className="text-sm">Quantidade a adicionar/remover:</label>
-                  <Input 
-                    type="number"
-                    value={stockUpdateAmount.toString()}
-                    onChange={(e) => setStockUpdateAmount(parseInt(e.target.value) || 0)}
-                    className="mt-1"
-                  />
-                </div>
-              </div>
-              
-              <div className="p-3 bg-gray-50 rounded-md">
-                <p className="text-sm flex items-center">
-                  <span className="font-medium mr-2">Novo estoque total:</span> 
-                  <span className={`font-bold ${
-                    (selectedProduct?.stock || 0) + stockUpdateAmount < 0 
-                      ? 'text-red-500' 
-                      : 'text-element-blue-dark'
-                  }`}>
-                    {(selectedProduct?.stock || 0) + stockUpdateAmount} unidades
-                  </span>
-                </p>
+              <div>
+                <label className="text-sm">Quantidade a adicionar/remover:</label>
+                <Input 
+                  type="number"
+                  value={stockUpdateAmount.toString()}
+                  onChange={(e) => setStockUpdateAmount(parseInt(e.target.value) || 0)}
+                  className="mt-1"
+                />
               </div>
             </div>
             
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsUpdateDialogOpen(false)}>
-                Cancelar
-              </Button>
-              <Button 
-                onClick={() => handleStockUpdate(selectedProduct?.id || '', (selectedProduct?.stock || 0) + stockUpdateAmount)}
-                disabled={(selectedProduct?.stock || 0) + stockUpdateAmount < 0}
-                className="bg-element-blue-dark"
-              >
-                Salvar alterações
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+            <div className="p-3 bg-gray-50 rounded-md">
+              <p className="text-sm flex items-center">
+                <span className="font-medium mr-2">Novo estoque total:</span> 
+                <span className={`font-bold ${
+                  (selectedProduct?.stock || 0) + stockUpdateAmount < 0 
+                    ? 'text-red-500' 
+                    : 'text-element-blue-dark'
+                }`}>
+                  {(selectedProduct?.stock || 0) + stockUpdateAmount} unidades
+                </span>
+              </p>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsUpdateDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button 
+              onClick={() => handleStockUpdate(selectedProduct?.id || '', (selectedProduct?.stock || 0) + stockUpdateAmount)}
+              disabled={(selectedProduct?.stock || 0) + stockUpdateAmount < 0}
+              className="bg-element-blue-dark"
+            >
+              Salvar alterações
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Editar Produto</DialogTitle>
-              <DialogDescription>
-                Atualize as informações do produto {editingProduct?.name}.
-              </DialogDescription>
-            </DialogHeader>
-            
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Nome do Produto</label>
-                  <Input
-                    value={editForm.name}
-                    onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Categoria</label>
-                  <Select value={editForm.category} onValueChange={(value) => setEditForm({ ...editForm, category: value })}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione uma categoria" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categories.map((category) => (
-                        <SelectItem key={category.id} value={category.id}>{category.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Preço de Venda</label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={editForm.price}
-                    onChange={(e) => {
-                      setEditForm({ ...editForm, price: e.target.value });
-                      // Atualiza margem automaticamente
-                      const cost = parseFloat(editForm.costPrice || '0');
-                      const price = parseFloat(e.target.value || '0');
-                      if (!isNaN(cost) && !isNaN(price) && price > 0) {
-                        const margin = ((price - cost) / price) * 100;
-                        setEditForm((prev) => ({ ...prev, margin: margin.toFixed(2) }));
-                      }
-                    }}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Preço de Custo</label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={editForm.costPrice}
-                    onChange={(e) => {
-                      setEditForm({ ...editForm, costPrice: e.target.value });
-                      // Atualiza preço de venda automaticamente se houver margem
-                      const cost = parseFloat(e.target.value || '0');
-                      const margin = parseFloat(editForm.margin || '0');
-                      if (!isNaN(cost) && !isNaN(margin) && margin !== 0) {
-                        const salePrice = cost / (1 - (margin / 100));
-                        if (!isNaN(salePrice) && salePrice > 0) {
-                          setEditForm((prev) => ({ ...prev, price: salePrice.toFixed(2) }));
-                        }
-                      }
-                    }}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Margem (%)</label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={editForm.margin || ''}
-                    onChange={(e) => {
-                      setEditForm({ ...editForm, margin: e.target.value });
-                      // Atualiza preço de venda automaticamente
-                      const cost = parseFloat(editForm.costPrice || '0');
-                      const margin = parseFloat(e.target.value || '0');
-                      if (!isNaN(cost) && !isNaN(margin) && margin !== 0) {
-                        const salePrice = cost / (1 - (margin / 100));
-                        if (!isNaN(salePrice) && salePrice > 0) {
-                          setEditForm((prev) => ({ ...prev, price: salePrice.toFixed(2) }));
-                        }
-                      }
-                    }}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Estoque</label>
-                  <Input
-                    type="number"
-                    value={editForm.stock}
-                    onChange={(e) => setEditForm({ ...editForm, stock: e.target.value })}
-                  />
-                </div>
-              </div>
-
+      {/* Modal de Edição */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Editar Produto</DialogTitle>
+            <DialogDescription>
+              Atualize as informações do produto {editingProduct?.name}.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium">Descrição</label>
-                <textarea
-                  className="w-full min-h-[100px] p-2 border rounded-md"
-                  value={editForm.description}
-                  onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                <label className="text-sm font-medium">Nome do Produto</label>
+                <Input
+                  value={editForm.name}
+                  onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
                 />
               </div>
-
+              
               <div className="space-y-2">
-                <label className="text-sm font-medium">Imagem do Produto</label>
-                {editingProduct?.image && (
-                  <img src={editingProduct.image} alt="Imagem atual" className="h-24 mb-2 rounded object-contain border" />
-                )}
+                <label className="text-sm font-medium">Categoria</label>
+                <Select value={editForm.category} onValueChange={(value) => setEditForm({ ...editForm, category: value })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione uma categoria" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.map((category) => (
+                      <SelectItem key={category.id} value={category.id}>{category.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Preço de Venda</label>
                 <Input
-                  type="file"
-                  accept="image/*"
+                  type="number"
+                  step="0.01"
+                  value={editForm.price}
                   onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      setEditForm({ ...editForm, image: file });
+                    setEditForm({ ...editForm, price: e.target.value });
+                    // Atualiza margem automaticamente
+                    const cost = parseFloat(editForm.costPrice || '0');
+                    const price = parseFloat(e.target.value || '0');
+                    if (!isNaN(cost) && !isNaN(price) && price > 0) {
+                      const margin = ((price - cost) / price) * 100;
+                      setEditForm((prev) => ({ ...prev, margin: margin.toFixed(2) }));
                     }
                   }}
                 />
               </div>
-
               <div className="space-y-2">
-                <label className="text-sm font-medium flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={editForm.isFractioned}
-                    onChange={e => setEditForm({ ...editForm, isFractioned: e.target.checked })}
-                  />
-                  Produto Fracionado
-                </label>
-              </div>
-              {editForm.isFractioned && (
-                <>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Volume da Garrafa (ml)</label>
-                    <Input
-                      type="number"
-                      min={1}
-                      value={editForm.unitVolume || ''}
-                      onChange={e => {
-                        const value = e.target.value.replace(/[^\d.,]/g, '');
-                        setEditForm({ ...editForm, unitVolume: value });
-                      }}
-                      placeholder="Ex: 1000"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-sm font-medium">Volume Total (ml)</label>
-                    <Input
-                      type="text"
-                      value={
-                        editForm.stock && editForm.unitVolume
-                          ? String(Number(editForm.stock) * Number(editForm.unitVolume))
-                          : ''
+                <label className="text-sm font-medium">Preço de Custo</label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={editForm.costPrice}
+                  onChange={(e) => {
+                    setEditForm({ ...editForm, costPrice: e.target.value });
+                    // Atualiza preço de venda automaticamente se houver margem
+                    const cost = parseFloat(e.target.value || '0');
+                    const margin = parseFloat(editForm.margin || '0');
+                    if (!isNaN(cost) && !isNaN(margin) && margin !== 0) {
+                      const salePrice = cost / (1 - (margin / 100));
+                      if (!isNaN(salePrice) && salePrice > 0) {
+                        setEditForm((prev) => ({ ...prev, price: salePrice.toFixed(2) }));
                       }
-                      readOnly
-                      disabled
-                      placeholder="Volume total calculado"
-                    />
-                    <p className="text-xs text-gray-500">Volume total disponível em estoque (estoque x volume da garrafa)</p>
-                  </div>
-                </>
-              )}
-
+                    }
+                  }}
+                />
+              </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={editForm.active}
-                    onChange={e => setEditForm({ ...editForm, active: e.target.checked })}
-                  />
-                  Ativo
-                </label>
+                <label className="text-sm font-medium">Margem (%)</label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={editForm.margin || ''}
+                  onChange={(e) => {
+                    setEditForm({ ...editForm, margin: e.target.value });
+                    // Atualiza preço de venda automaticamente
+                    const cost = parseFloat(editForm.costPrice || '0');
+                    const margin = parseFloat(e.target.value || '0');
+                    if (!isNaN(cost) && !isNaN(margin) && margin !== 0) {
+                      const salePrice = cost / (1 - (margin / 100));
+                      if (!isNaN(salePrice) && salePrice > 0) {
+                        setEditForm((prev) => ({ ...prev, price: salePrice.toFixed(2) }));
+                      }
+                    }
+                  }}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Estoque</label>
+                <Input
+                  type="number"
+                  value={editForm.stock}
+                  onChange={(e) => setEditForm({ ...editForm, stock: e.target.value })}
+                />
               </div>
             </div>
-            
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
-                Cancelar
-              </Button>
-              <Button onClick={handleEditSave} className="bg-element-blue-dark">
-                Salvar alterações
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
 
-        <Dialog open={isStockEntryDialogOpen} onOpenChange={setIsStockEntryDialogOpen}>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Registrar entrada de estoque</DialogTitle>
-              <DialogDescription>
-                Registre uma nova entrada de estoque. O sistema calculará automaticamente o novo custo médio ponderado.
-              </DialogDescription>
-            </DialogHeader>
-            <form className="grid grid-cols-1 md:grid-cols-2 gap-4" onSubmit={handleStockEntrySubmit}>
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium mb-1">Produto*</label>
-                <Command>
-                  <CommandInput
-                    placeholder="Digite para buscar..."
-                    value={productSearchTerm}
-                    onValueChange={setProductSearchTerm}
-                  />
-                  <CommandList>
-                    <CommandEmpty>Nenhum produto encontrado.</CommandEmpty>
-                    <CommandGroup>
-                      {products.filter(product =>
-                        product.name.toLowerCase().includes(productSearchTerm.toLowerCase())
-                      ).map(product => (
-                        <CommandItem
-                          key={product.id}
-                          value={product.id}
-                          onSelect={() => {
-                            handleStockEntrySelect('productId', product.id);
-                            setProductSearchTerm(product.name);
-                          }}
-                        >
-                          {product.name}
-                        </CommandItem>
-                      ))}
-                    </CommandGroup>
-                  </CommandList>
-                </Command>
-              </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Descrição</label>
+              <textarea
+                className="w-full min-h-[100px] p-2 border rounded-md"
+                value={editForm.description}
+                onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+              />
+            </div>
 
-              {selectedProductInfo && (
-                <div className="md:col-span-2 p-4 bg-gray-50 rounded-lg">
-                  <h4 className="font-medium text-sm mb-2">Informações do Produto</h4>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <span className="text-gray-600">Nome:</span>
-                      <p className="font-medium">{selectedProductInfo.name}</p>
-                    </div>
-                    <div>
-                      <span className="text-gray-600">Estoque Atual:</span>
-                      <p className="font-medium">{selectedProductInfo.currentStock} unidades</p>
-                    </div>
-                    <div>
-                      <span className="text-gray-600">Custo Atual:</span>
-                      <p className="font-medium">R$ {selectedProductInfo.currentCost.toFixed(2)}</p>
-                    </div>
-                    {calculateNewCost() && (
-                      <div>
-                        <span className="text-gray-600">Novo Custo Médio:</span>
-                        <p className="font-medium text-green-600">R$ {calculateNewCost()!.toFixed(2)}</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Imagem do Produto</label>
+              {editingProduct?.image && (
+                <img src={editingProduct.image} alt="Imagem atual" className="h-24 mb-2 rounded object-contain border" />
               )}
+              <Input
+                type="file"
+                accept="image/*"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    setEditForm({ ...editForm, image: file });
+                  }
+                }}
+              />
+            </div>
 
-              <div>
-                <label className="block text-sm font-medium mb-1">Quantidade*</label>
-                <Input 
-                  type="number" 
-                  name="quantity" 
-                  value={stockEntryForm.quantity} 
-                  onChange={handleStockEntryChange} 
-                  required 
-                  min={1} 
+            <div className="space-y-2">
+              <label className="text-sm font-medium flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={editForm.isFractioned}
+                  onChange={e => setEditForm({ ...editForm, isFractioned: e.target.checked })}
                 />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Custo Unitário (R$)*</label>
-                <Input 
-                  type="number" 
-                  name="unitCost" 
-                  value={stockEntryForm.unitCost} 
-                  onChange={handleStockEntryChange} 
-                  required 
-                  min={0.01} 
-                  step={0.01} 
+                Produto Fracionado
+              </label>
+            </div>
+            {editForm.isFractioned && (
+              <>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Volume da Garrafa (ml)</label>
+                  <Input
+                    type="number"
+                    min={1}
+                    value={editForm.unitVolume || ''}
+                    onChange={e => {
+                      const value = e.target.value.replace(/[^\d.,]/g, '');
+                      setEditForm({ ...editForm, unitVolume: value });
+                    }}
+                    placeholder="Ex: 1000"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-sm font-medium">Volume Total (ml)</label>
+                  <Input
+                    type="text"
+                    value={
+                      editForm.stock && editForm.unitVolume
+                        ? String(Number(editForm.stock) * Number(editForm.unitVolume))
+                        : ''
+                    }
+                    readOnly
+                    disabled
+                    placeholder="Volume total calculado"
+                  />
+                  <p className="text-xs text-gray-500">Volume total disponível em estoque (estoque x volume da garrafa)</p>
+                </div>
+              </>
+            )}
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={editForm.active}
+                  onChange={e => setEditForm({ ...editForm, active: e.target.checked })}
                 />
-              </div>
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium mb-1">Observação</label>
-                <Textarea 
-                  name="notes" 
-                  value={stockEntryForm.notes} 
-                  onChange={handleStockEntryChange} 
-                  rows={2} 
+                Ativo
+              </label>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleEditSave} className="bg-element-blue-dark">
+              Salvar alterações
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isStockEntryDialogOpen} onOpenChange={setIsStockEntryDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Registrar entrada de estoque</DialogTitle>
+            <DialogDescription>
+              Registre uma nova entrada de estoque. O sistema calculará automaticamente o novo custo médio ponderado.
+            </DialogDescription>
+          </DialogHeader>
+          <form className="grid grid-cols-1 md:grid-cols-2 gap-4" onSubmit={handleStockEntrySubmit}>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium mb-1">Produto*</label>
+              <Command>
+                <CommandInput
+                  placeholder="Digite para buscar..."
+                  value={productSearchTerm}
+                  onValueChange={setProductSearchTerm}
                 />
+                <CommandList>
+                  <CommandEmpty>Nenhum produto encontrado.</CommandEmpty>
+                  <CommandGroup>
+                    {products.filter(product =>
+                      product.name.toLowerCase().includes(productSearchTerm.toLowerCase())
+                    ).map(product => (
+                      <CommandItem
+                        key={product.id}
+                        value={product.id}
+                        onSelect={() => {
+                          handleStockEntrySelect('productId', product.id);
+                          setProductSearchTerm(product.name);
+                        }}
+                      >
+                        {product.name}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </div>
+
+            {/* Informações do produto selecionado */}
+            {selectedProductInfo && (
+              <div className="md:col-span-2 p-4 bg-gray-50 rounded-lg">
+                <h4 className="font-medium text-sm mb-2">Informações do Produto</h4>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="text-gray-600">Nome:</span>
+                    <p className="font-medium">{selectedProductInfo.name}</p>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Estoque Atual:</span>
+                    <p className="font-medium">{selectedProductInfo.currentStock} unidades</p>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Custo Atual:</span>
+                    <p className="font-medium">R$ {selectedProductInfo.currentCost.toFixed(2)}</p>
+                  </div>
+                  {calculateNewCost() && (
+                    <div>
+                      <span className="text-gray-600">Novo Custo Médio:</span>
+                      <p className="font-medium text-green-600">R$ {calculateNewCost()!.toFixed(2)}</p>
+                    </div>
+                  )}
+                </div>
               </div>
-              <div className="md:col-span-2 flex justify-end">
-                <Button type="submit" disabled={loadingStockEntry} className="bg-element-blue-dark hover:bg-element-blue-dark/90">
-                  {loadingStockEntry ? 'Salvando...' : 'Registrar Entrada'}
-                </Button>
-              </div>
-            </form>
-            <DialogFooter />
-          </DialogContent>
-        </Dialog>
-      </div>
-    </AdminLayout>
+            )}
+
+            <div>
+              <label className="block text-sm font-medium mb-1">Quantidade*</label>
+              <Input 
+                type="number" 
+                name="quantity" 
+                value={stockEntryForm.quantity} 
+                onChange={handleStockEntryChange} 
+                required 
+                min={1} 
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Custo Unitário (R$)*</label>
+              <Input 
+                type="number" 
+                name="unitCost" 
+                value={stockEntryForm.unitCost} 
+                onChange={handleStockEntryChange} 
+                required 
+                min={0.01} 
+                step={0.01} 
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium mb-1">Observação</label>
+              <Textarea 
+                name="notes" 
+                value={stockEntryForm.notes} 
+                onChange={handleStockEntryChange} 
+                rows={2} 
+              />
+            </div>
+            <div className="md:col-span-2 flex justify-end">
+              <Button type="submit" disabled={loadingStockEntry} className="bg-element-blue-dark hover:bg-element-blue-dark/90">
+                {loadingStockEntry ? 'Salvando...' : 'Registrar Entrada'}
+              </Button>
+            </div>
+          </form>
+          <DialogFooter />
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 };
 

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -18,6 +18,8 @@ import {
 import api from '@/lib/api';
 import { useCart } from '@/hooks/useCart';
 import { Input } from '@/components/ui/input';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
 
 interface Product {
   id: string;
@@ -25,6 +27,7 @@ interface Product {
   price: number;
   stock: number;
   isFractioned?: boolean;
+  totalVolume?: number;
   category?: {
     id: string;
     name: string;
@@ -41,6 +44,7 @@ interface ComboItem {
   categoryId?: string;
   volumeToDiscount?: number;
   nameFilter?: string;
+  discountBy?: 'volume' | 'unit';
 }
 
 interface ComboOptionsModalProps {
@@ -49,80 +53,74 @@ interface ComboOptionsModalProps {
   combo: {
     id: string;
     name: string;
+    type?: 'combo' | 'dose';
     items: ComboItem[];
   };
   onConfirm: (choosableSelections: Record<string, Record<string, number>>) => void;
-  isDoseConfiguration?: boolean;
 }
 
-export function ComboOptionsModal({ open, onOpenChange, combo, onConfirm, isDoseConfiguration = false }: ComboOptionsModalProps) {
-  const [loading, setLoading] = React.useState(true);
-  const [options, setOptions] = React.useState<Record<string, Product[]>>({});
-  const [choosableSelections, setChoosableSelections] = React.useState<Record<string, Record<string, number>>>({});
-  const [searchTerms, setSearchTerms] = React.useState<Record<string, string>>({});
-  const { updateComboOption } = useCart();
+export function ComboOptionsModal({ open, onOpenChange, combo, onConfirm }: ComboOptionsModalProps) {
+  const [loading, setLoading] = useState(true);
+  const [options, setOptions] = useState<Record<string, Product[]>>({});
+  const [choosableSelections, setChoosableSelections] = useState<Record<string, Record<string, number>>>({});
 
-  // Agrupar itens escolhíveis por categoriaId
-  const choosableItems = combo.items.filter(item => item.isChoosable);
-  const fixedItems = combo.items.filter(item => !item.isChoosable);
-  const choosableByCategory: Record<string, { categoryName: string, quantity: number, items: ComboItem[] }> = {};
-  choosableItems.forEach(item => {
-    if (!item.categoryId) return;
-    if (!choosableByCategory[item.categoryId]) {
-      choosableByCategory[item.categoryId] = {
-        categoryName: item.product.category?.name || 'Categoria',
-        quantity: 0,
-        items: []
-      };
-    }
-    choosableByCategory[item.categoryId].quantity += item.quantity || 0;
-    choosableByCategory[item.categoryId].items.push(item);
-  });
+  // Agrupar itens escolhíveis por categoria
+  const choosableByCategory = React.useMemo(() => {
+    const grouped: Record<string, {
+      categoryName: string;
+      items: ComboItem[];
+      // Define o modo de seleção da categoria (volume ou unidade)
+      selectionMode: 'volume' | 'unit';
+      // Total a ser selecionado (seja em ml ou em unidades)
+      quantity: number;
+    }> = {};
 
-  // Preencher searchTerms ao abrir o modal OU quando o combo mudar
-  React.useEffect(() => {
-    if (open && combo) {
-      const initialSearchTerms: Record<string, string> = {};
-      combo.items.forEach(item => {
-        if (item.isChoosable && item.categoryId && item.nameFilter) {
-          initialSearchTerms[item.categoryId] = item.nameFilter;
+    combo.items
+      .filter(item => item.isChoosable)
+      .forEach(item => {
+        if (!item.categoryId) return;
+        if (!grouped[item.categoryId]) {
+          const firstItem = combo.items.find(i => i.categoryId === item.categoryId);
+          const isVolume = firstItem?.discountBy === 'volume';
+          grouped[item.categoryId] = {
+            categoryName: item.product.category?.name || 'Categoria',
+            items: [],
+            selectionMode: isVolume ? 'volume' : 'unit',
+            quantity: isVolume ? (firstItem?.volumeToDiscount || 0) : 0
+          };
+        }
+        grouped[item.categoryId].items.push(item);
+        if (grouped[item.categoryId].selectionMode === 'unit') {
+          grouped[item.categoryId].quantity += item.quantity || 0;
         }
       });
-      setSearchTerms(initialSearchTerms);
-      // Se houver outros estados relacionados, resetar aqui também
-    }
-    // eslint-disable-next-line
-  }, [open, combo]);
+    return grouped;
+  }, [combo.items]);
 
-  // Buscar produtos de cada categoria sempre que searchTerms mudar
-  React.useEffect(() => {
+  // Buscar opções de produtos para cada categoria
+  useEffect(() => {
     if (open) {
       const fetchOptions = async () => {
         setLoading(true);
         try {
           const categoryIds = Object.keys(choosableByCategory);
-          const optionsPromises = categoryIds.map(async (categoryId) => {
-            const searchTerm = searchTerms[categoryId] || '';
-            const response = await api.get(`/products?categoryId=${categoryId}${searchTerm ? `&search=${searchTerm}` : ''}`);
-            return { categoryId, options: response.data };
-          });
-          const results = await Promise.all(optionsPromises);
-          const optionsMap: Record<string, Product[]> = {};
-          results.forEach(({ categoryId, options }) => {
-            optionsMap[categoryId] = options;
-          });
-          setOptions(optionsMap);
+          const optionsPromises = categoryIds.map(id => api.get(`/products?categoryId=${id}`));
+          const responses = await Promise.all(optionsPromises);
           
-          // Inicializar seleções por categoria com valores zerados
-          const initialSelections: Record<string, Record<string, number>> = {};
-          categoryIds.forEach(categoryId => {
-            const categoryOptions = optionsMap[categoryId] || [];
-            initialSelections[categoryId] = {};
-            categoryOptions.forEach(option => {
-              initialSelections[categoryId][option.id] = 0;
+          const newOptions: Record<string, Product[]> = {};
+          const newSelections: Record<string, Record<string, number>> = {};
+          
+          responses.forEach((res, index) => {
+            const categoryId = categoryIds[index];
+            newOptions[categoryId] = res.data;
+            newSelections[categoryId] = {};
+            res.data.forEach((p: Product) => {
+              newSelections[categoryId][p.id] = 0;
             });
           });
-          setChoosableSelections(initialSelections);
+
+          setOptions(newOptions);
+          setChoosableSelections(newSelections);
         } catch (error) {
           console.error('Erro ao carregar opções:', error);
         } finally {
@@ -131,168 +129,117 @@ export function ComboOptionsModal({ open, onOpenChange, combo, onConfirm, isDose
       };
       fetchOptions();
     }
-  }, [open, combo.items, searchTerms]);
+  }, [open, choosableByCategory]);
 
-  // Resetar estados internos ao fechar o modal
-  React.useEffect(() => {
-    if (!open) {
-      setSearchTerms({});
-      setOptions({});
-      setChoosableSelections({});
-      setLoading(true);
-    }
-  }, [open]);
-
-  const handleQuantityChange = (categoryId: string, optionId: string, value: number) => {
-    const item = choosableItems.find(item => item.categoryId === categoryId);
-    const isFractionedCategory = !isDoseConfiguration && options[categoryId]?.some(option => option.isFractioned);
-    const totalEsperado = isFractionedCategory ? (item?.volumeToDiscount || 1) : (item?.quantity || 1);
+  const handleSelectionChange = (categoryId: string, productId: string, value: number | string) => {
+    const categoryConfig = choosableByCategory[categoryId];
     
-    setChoosableSelections((prev: Record<string, Record<string, number>>) => {
-      const newSelections: Record<string, Record<string, number>> = { ...prev };
-      if (!newSelections[categoryId]) {
-        newSelections[categoryId] = {};
-      }
+    setChoosableSelections(prev => {
+      const newSelections = { ...prev };
+      const categorySelections = { ...(newSelections[categoryId] || {}) };
 
-      if (isFractionedCategory && isDoseConfiguration) {
-        // Para categorias fracionadas, zerar todas as seleções e definir apenas a selecionada
-        Object.keys(newSelections[categoryId]).forEach(key => {
-          newSelections[categoryId][key] = 0;
+      if (categoryConfig.selectionMode === 'volume') {
+        // Lógica de Radio Button: zera os outros e seta o valor da categoria no item selecionado
+        Object.keys(categorySelections).forEach(key => {
+          categorySelections[key] = 0;
         });
-        newSelections[categoryId][optionId] = totalEsperado;
+        // Atribui o valor total esperado para a categoria ao item selecionado.
+        categorySelections[productId] = categoryConfig.quantity;
       } else {
-        // Para categorias não fracionadas (ou combos), atualizar apenas o valor selecionado
-        newSelections[categoryId][optionId] = Math.max(0, value);
-        
-        // Verificar se o total excede o esperado
-        const totalAtual = Object.values(newSelections[categoryId]).reduce((sum, q) => sum + q, 0);
-        if (totalAtual > totalEsperado) {
-          newSelections[categoryId][optionId] = Math.max(0, value - (totalAtual - totalEsperado));
-      }
-      }
+        // Lógica de Input Numérico: atualiza o valor, respeitando o máximo
+        const numericValue = Number(value);
+        const currentTotal = Object.entries(categorySelections)
+            .reduce((sum, [id, q]) => sum + (id === productId ? 0 : q), 0);
 
+        const maxAllowed = categoryConfig.quantity - currentTotal;
+        categorySelections[productId] = Math.max(0, Math.min(numericValue, maxAllowed));
+      }
+      
+      newSelections[categoryId] = categorySelections;
       return newSelections;
     });
   };
 
-  const handleSearchChange = (categoryId: string, value: string) => {
-    setSearchTerms(prev => ({
-      ...prev,
-      [categoryId]: value
-    }));
-  };
-
-  // Ajustar validação: soma das quantidades por categoria
-  const allQuantitiesValid = Object.entries(choosableByCategory).every(([categoryId, group]) => {
-    const total = Object.values(choosableSelections[categoryId] || {}).reduce((sum, q) => sum + q, 0);
-    
-    // Para doses, a validação é diferente (baseada em volume)
-    if (isDoseConfiguration) {
-      const item = choosableItems.find(item => item.categoryId === categoryId);
-      const isFractionedCategory = options[categoryId]?.some(option => option.isFractioned);
-      if (isFractionedCategory) {
-        return total === (item?.volumeToDiscount || 1);
-      }
-    }
-
-    return total === group.quantity;
+  // Validação do botão de confirmação
+  const allQuantitiesValid = Object.entries(choosableByCategory).every(([categoryId, config]) => {
+    const totalSelected = Object.values(choosableSelections[categoryId] || {}).reduce((sum, q) => sum + q, 0);
+    return totalSelected === config.quantity;
   });
-
-  // Função auxiliar para calcular o total selecionado para categorias não fracionadas
-  function getTotalSelected(categoryId: string) {
-    return Object.values(choosableSelections[categoryId] || {}).reduce((sum, q) => sum + q, 0);
-  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Configure seu {combo.name}</DialogTitle>
-          <DialogDescription>
-            Escolha os produtos para cada categoria
-          </DialogDescription>
+          <DialogDescription>Escolha os produtos para cada categoria</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6">
-          {loading ? (
-            <div className="text-center py-4">Carregando opções...</div>
-          ) : (
-            <>
-              {Object.entries(options).map(([categoryId, categoryOptions]) => {
-                const item = choosableItems.find(item => item.categoryId === categoryId);
-                const isFractionedCategory = isDoseConfiguration && categoryOptions.some(option => option.isFractioned);
-                const volumeToDiscount = item?.volumeToDiscount;
-                const totalSelecionado = isFractionedCategory
-                  ? Object.values(choosableSelections[categoryId] || {}).reduce((sum, q) => sum + q, 0)
-                  : getTotalSelected(categoryId);
-                const totalEsperado = isFractionedCategory ? (volumeToDiscount || 1) : (item?.quantity || 1);
-
-                return (
-                  <div key={categoryId} className="space-y-4">
-                    <h3 className="font-semibold">
-                      {isFractionedCategory
-                        ? `Escolha ${volumeToDiscount || 1}ml para ${choosableByCategory[categoryId]?.categoryName}`
-                        : `Escolha ${item?.quantity || 1} para ${choosableByCategory[categoryId]?.categoryName}`}
-                    </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {categoryOptions.map(option => (
-                        <div key={option.id} className="p-4 border rounded-lg">
-                          <div className="flex justify-between items-center">
-                            <span>
-                              {option.name} - R$ {option.price.toFixed(2)}
-                            </span>
-                            {isFractionedCategory ? (
-                              <input
-                                type="radio"
-                                name={`option-${categoryId}`}
-                                checked={!!choosableSelections[categoryId]?.[option.id]}
-                                onChange={() => {
-                                  const newSelections = { ...choosableSelections };
-                                  if (!newSelections[categoryId]) newSelections[categoryId] = {};
-                                  Object.keys(newSelections[categoryId]).forEach(key => {
-                                    newSelections[categoryId][key] = 0;
-                                  });
-                                  newSelections[categoryId][option.id] = volumeToDiscount || 0;
-                                  setChoosableSelections(newSelections);
-                                }}
-                                className="w-4 h-4"
-                              />
-                            ) : (
-                              <Input
-                                type="number"
-                                min={0}
-                                value={choosableSelections[categoryId]?.[option.id] || 0}
-                                onChange={e => handleQuantityChange(categoryId, option.id, Number(e.target.value))}
-                                className="w-16"
-                              />
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="text-sm text-gray-500">
-                      Total selecionado: {totalSelecionado} / {totalEsperado}{isFractionedCategory ? 'ml' : ''}
-                    </div>
-                    {totalSelecionado !== totalEsperado && (
-                      <div className="text-sm text-red-500">
-                        Selecione exatamente {totalEsperado}{isFractionedCategory ? 'ml' : ''} opção(ões).
+          {loading && <div className="text-center py-4">Carregando opções...</div>}
+          
+          {!loading && Object.entries(choosableByCategory).map(([categoryId, config]) => {
+            const categoryOptions = options[categoryId] || [];
+            const totalSelected = Object.values(choosableSelections[categoryId] || {}).reduce((sum, q) => sum + q, 0);
+            
+            return (
+              <div key={categoryId} className="space-y-4 p-4 border rounded-lg">
+                <h3 className="font-semibold">
+                  {config.selectionMode === 'volume'
+                    ? `Escolha ${config.quantity}ml para ${config.categoryName}`
+                    : `Escolha ${config.quantity} para ${config.categoryName}`}
+                </h3>
+                
+                {config.selectionMode === 'volume' ? (
+                  <RadioGroup
+                    onValueChange={(productId) => handleSelectionChange(categoryId, productId, 0)}
+                    className="grid grid-cols-1 md:grid-cols-2 gap-4"
+                  >
+                    {categoryOptions.map(option => (
+                      <Label
+                        key={option.id}
+                        htmlFor={option.id}
+                        className="flex items-center justify-between p-4 border rounded-lg cursor-pointer [&:has([data-state=checked])]:border-primary"
+                      >
+                        <span>{option.name} - R$ {option.price.toFixed(2)}</span>
+                        <RadioGroupItem value={option.id} id={option.id} />
+                      </Label>
+                    ))}
+                  </RadioGroup>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {categoryOptions.map(option => (
+                      <div key={option.id} className="p-4 border rounded-lg flex justify-between items-center">
+                        <span>{option.name} - R$ {option.price.toFixed(2)}</span>
+                        <Input
+                          type="number"
+                          className="w-20"
+                          value={choosableSelections[categoryId]?.[option.id] || 0}
+                          onChange={(e) => handleSelectionChange(categoryId, option.id, e.target.value)}
+                          min={0}
+                          max={config.quantity}
+                        />
                       </div>
-                    )}
+                    ))}
                   </div>
-                );
-              })}
-            </>
-          )}
+                )}
+
+                <div className="text-sm text-gray-500">
+                  Total selecionado: {totalSelected} / {config.quantity}
+                  {config.selectionMode === 'volume' && 'ml'}
+                </div>
+                {totalSelected !== config.quantity && (
+                  <div className="text-sm text-red-500">
+                    Selecione exatamente {config.quantity}{config.selectionMode === 'volume' ? 'ml' : ' opção(ões)'}.
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancelar
-          </Button>
-          <Button 
-            onClick={() => onConfirm(choosableSelections)}
-            disabled={!allQuantitiesValid}
-          >
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+          <Button onClick={() => onConfirm(choosableSelections)} disabled={!allQuantitiesValid || loading}>
             Confirmar
           </Button>
         </DialogFooter>

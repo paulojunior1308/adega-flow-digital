@@ -1,14 +1,21 @@
+
 import React, { useState, useEffect } from 'react';
 import AdminLayout from '@/components/admin/AdminLayout';
 import {
-  ShoppingCart,
-  DollarSign,
-  TrendingUp,
-  TrendingDown,
-  Plus,
-  Minus,
-  RefreshCw
-} from 'lucide-react';
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
+} from '@/components/ui/table';
+import {
+  Card,
+  CardContent,
+} from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { ShoppingCart, Search, Plus, Minus, ListPlus, X, ArrowRight, RefreshCcw, DollarSign, QrCode, CreditCard, IdCard } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -260,26 +267,337 @@ const AdminCashRegister = () => {
   };
 
   return (
-    <AdminLayout>
-      <div className="space-y-6">
-        <h1 className="text-2xl md:text-3xl font-bold text-element-blue-dark">
-          Controle de Caixa
-        </h1>
-        
-        <div className="flex flex-col overflow-hidden">
-          {/* Header */}
-          <div className="bg-white shadow-sm p-4 flex justify-between items-center">
-            <div className="flex items-center gap-2">
-              <ShoppingCart className="h-6 w-6 text-element-blue-dark" />
-              <h2 className="text-xl font-medium text-element-blue-dark">Caixa</h2>
-            </div>
-            {/* ... resto do conteúdo ... */}
+    <div className="flex h-screen bg-gray-100">
+      <AdminLayout>
+      <div className="flex-1 flex flex-col overflow-hidden p-0 ml-0 lg:ml-64">
+        {/* Header */}
+        <div className="bg-white shadow-sm p-4 flex justify-between items-center">
+          <div className="flex items-center gap-2">
+            <ShoppingCart className="h-6 w-6 text-element-blue-dark" />
+            <h1 className="text-xl font-medium text-element-blue-dark">Caixa Administrativo</h1>
           </div>
-          
-          {/* ... resto do conteúdo da página ... */}
+          <Button 
+            onClick={() => setQuickProductsOpen(true)} 
+            variant="outline" 
+            className="flex items-center gap-2"
+          >
+            <ListPlus className="h-4 w-4" />
+            Produtos Rápidos
+          </Button>
         </div>
+
+        {/* Main content */}
+        <div className="flex flex-1 overflow-hidden">
+          {/* Left side - Product search */}
+          <div className="flex-1 flex flex-col p-4 overflow-y-auto">
+            {/* Pinned Products - Quick access buttons */}
+            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-2 mb-4">
+              {pinnedProducts.map(product => (
+                <button
+                  key={product.id}
+                  className="text-left p-3 border rounded-md hover:border-cyan-400 transition-colors bg-white"
+                  onClick={() => addToCart(product)}
+                >
+                  <div className="text-sm font-medium truncate">{product.code} - {product.name}</div>
+                  <div className="text-sm text-green-600">R$ {product.price.toFixed(2)}</div>
+                </button>
+              ))}
+              {pinnedProducts.length === 0 && (
+                <div className="col-span-full text-center p-3 text-gray-500 bg-white border rounded-md">
+                  Selecione produtos na opção "Produtos Rápidos" para aparecerem aqui
+                </div>
+              )}
+            </div>
+
+            {/* Search bar */}
+            <div className="flex gap-2 mb-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <Input 
+                  type="text" 
+                  placeholder="Buscar por nome ou código..." 
+                  className="pl-9"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
+              <div className="w-32">
+                <Input 
+                  type="text" 
+                  placeholder="Cód.Prod" 
+                  value={productCode}
+                  onChange={(e) => setProductCode(e.target.value)}
+                />
+              </div>
+              <div className="w-16">
+                <Input 
+                  type="number" 
+                  min="1" 
+                  value={productQuantity}
+                  onChange={(e) => setProductQuantity(parseInt(e.target.value) || 1)}
+                />
+              </div>
+              <Button onClick={handleAddProductByCode} className="px-3">
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
+
+            {/* Search results */}
+            <div className="flex-1 overflow-y-auto">
+              {searchQuery.trim() !== '' && (
+                <div className="grid grid-cols-1 gap-2">
+                  {filteredProducts.map(product => (
+                    <button
+                      key={product.id}
+                      className="text-left p-3 border rounded-md hover:border-cyan-400 transition-colors bg-white w-full"
+                      onClick={() => addToCart(product)}
+                    >
+                      <div className="font-medium">{product.code} - {product.name}</div>
+                      <div className="text-green-600 mt-1">R$ {product.price.toFixed(2)}</div>
+                    </button>
+                  ))}
+                  {filteredProducts.length === 0 && (
+                    <div className="text-center py-4 text-gray-500">
+                      Nenhum produto encontrado para "{searchQuery}"
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Right side - Cart */}
+          <div className="w-96 bg-white shadow-md flex flex-col overflow-hidden">
+            {/* Ticket header */}
+            <div className="p-4 bg-gray-100 flex justify-between items-center">
+              <div className="font-medium">Tíquete: {ticketNumber}</div>
+              <div className="text-green-600 font-medium">ABERTO</div>
+            </div>
+
+            {/* Cart items */}
+            <div className="flex-1 overflow-y-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-12">Item</TableHead>
+                    <TableHead className="w-16">Cód.</TableHead>
+                    <TableHead>Produto</TableHead>
+                    <TableHead className="w-20 text-center">Qtd</TableHead>
+                    <TableHead className="w-20 text-right">Preço</TableHead>
+                    <TableHead className="w-20 text-right">Total</TableHead>
+                    <TableHead className="w-8"></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {cartItems.length > 0 ? (
+                    cartItems.map((item, index) => (
+                      <TableRow key={item.id} className="hover:bg-gray-50">
+                        <TableCell>{index + 1}</TableCell>
+                        <TableCell>{item.code}</TableCell>
+                        <TableCell className="font-medium">{item.name}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center justify-center">
+                            <Button 
+                              variant="outline" 
+                              size="icon" 
+                              className="h-6 w-6 rounded-full p-0"
+                              onClick={() => updateCartItemQuantity(item.id, item.quantity - 1)}
+                            >
+                              <Minus className="h-3 w-3" />
+                            </Button>
+                            <span className="mx-2">{item.quantity}</span>
+                            <Button 
+                              variant="outline" 
+                              size="icon" 
+                              className="h-6 w-6 rounded-full p-0"
+                              onClick={() => updateCartItemQuantity(item.id, item.quantity + 1)}
+                            >
+                              <Plus className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right">R$ {item.price.toFixed(2)}</TableCell>
+                        <TableCell className="text-right">R$ {item.total.toFixed(2)}</TableCell>
+                        <TableCell>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-6 w-6 p-0 text-red-500"
+                            onClick={() => removeItem(item.id)}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-8 text-gray-500">
+                        Nenhum item adicionado
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+
+            {/* Totals */}
+            <div className="p-4 border-t">
+              <div className="flex justify-between mb-1">
+                <div>Valor:</div>
+                <div className="font-medium text-green-600">R$ {subtotal.toFixed(2)}</div>
+              </div>
+              <div className="flex justify-between mb-1">
+                <div>Desconto:</div>
+                <div className="font-medium text-red-600">R$ {discount.toFixed(2)}</div>
+              </div>
+              <div className="flex justify-between">
+                <div>Total:</div>
+                <div className="font-medium text-element-blue-dark text-lg">R$ {total.toFixed(2)}</div>
+              </div>
+            </div>
+
+            {/* Removed the "Finalizar Tíquete" button that was here */}
+          </div>
+        </div>
+
+        {/* Bottom Buttons */}
+        <div className="grid grid-cols-6 gap-1 bg-gray-200 p-1">
+          <Button 
+            variant="outline" 
+            className="bg-cyan-400 hover:bg-cyan-500 text-white flex flex-col items-center justify-center py-4 h-auto"
+            onClick={() => cartItems.length > 0 && removeItem(cartItems[cartItems.length - 1].id)}
+          >
+            <X className="h-5 w-5 mb-1" />
+            <span className="text-xs">Cancelar Item</span>
+          </Button>
+          
+          <Button 
+            variant="outline" 
+            className="bg-cyan-400 hover:bg-cyan-500 text-white flex flex-col items-center justify-center py-4 h-auto"
+            onClick={cancelTicket}
+          >
+            <X className="h-5 w-5 mb-1" />
+            <span className="text-xs">Cancelar Tíquete</span>
+          </Button>
+          
+          <Button 
+            variant="outline" 
+            className="bg-cyan-400 hover:bg-cyan-500 text-white flex flex-col items-center justify-center py-4 h-auto"
+            onClick={cancelOperation}
+          >
+            <RefreshCcw className="h-5 w-5 mb-1" />
+            <span className="text-xs">Extornar</span>
+          </Button>
+          
+          <Button 
+            variant="outline" 
+            className="bg-cyan-400 hover:bg-cyan-500 text-white flex flex-col items-center justify-center py-4 h-auto"
+            onClick={() => finishTicket('Dinheiro')}
+          >
+            <DollarSign className="h-5 w-5 mb-1" />
+            <span className="text-xs">Dinheiro</span>
+          </Button>
+          
+          <Button 
+            variant="outline" 
+            className="bg-cyan-400 hover:bg-cyan-500 text-white flex flex-col items-center justify-center py-4 h-auto"
+            onClick={() => finishTicket('PIX')}
+          >
+            <QrCode className="h-5 w-5 mb-1" />
+            <span className="text-xs">PIX</span>
+          </Button>
+          
+          <Button 
+            variant="outline" 
+            className="bg-cyan-400 hover:bg-cyan-500 text-white flex flex-col items-center justify-center py-4 h-auto"
+            onClick={() => finishTicket('Cartão Débito')}
+          >
+            <CreditCard className="h-5 w-5 mb-1" />
+            <span className="text-xs">Cartão Débito</span>
+          </Button>
+          
+          <Button 
+            variant="outline" 
+            className="bg-cyan-400 hover:bg-cyan-500 text-white flex flex-col items-center justify-center py-4 h-auto col-start-1"
+            onClick={() => finishTicket('Cartão Crédito')}
+          >
+            <CreditCard className="h-5 w-5 mb-1" />
+            <span className="text-xs">Cartão Crédito</span>
+          </Button>
+          
+          <Button 
+            variant="outline" 
+            className="bg-cyan-400 hover:bg-cyan-500 text-white flex flex-col items-center justify-center py-4 h-auto"
+            onClick={() => setCpfCnpjDialogOpen(true)}
+          >
+            <IdCard className="h-5 w-5 mb-1" />
+            <span className="text-xs">CPF/CNPJ</span>
+          </Button>
+        </div>
+
+        {/* Quick Products Modal */}
+        <Dialog open={quickProductsOpen} onOpenChange={setQuickProductsOpen}>
+          <DialogContent className="sm:max-w-[600px]">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <ListPlus className="h-5 w-5" />
+                Selecionar Produtos Rápidos
+              </DialogTitle>
+            </DialogHeader>
+            <div className="grid grid-cols-3 gap-4 py-4">
+              {products.map((product) => (
+                <div 
+                  key={product.id} 
+                  className={`border rounded-lg p-4 transition-colors ${product.pinned ? 'border-yellow-400 bg-yellow-50' : 'hover:border-yellow-400'}`}
+                >
+                  <div className="flex justify-between items-start mb-2">
+                    <span className="text-sm font-medium">{product.name}</span>
+                    <Checkbox 
+                      id={`product-${product.id}`} 
+                      checked={product.pinned}
+                      onCheckedChange={() => togglePinProduct(product.id)}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </div>
+                  <div className="text-sm text-gray-600">R$ {product.price.toFixed(2)}</div>
+                </div>
+              ))}
+            </div>
+            <Button 
+              onClick={() => setQuickProductsOpen(false)} 
+              className="w-full bg-cyan-400 hover:bg-cyan-500 text-white"
+            >
+              Fechar
+            </Button>
+          </DialogContent>
+        </Dialog>
+
+        {/* CPF/CNPJ Modal */}
+        <Dialog open={cpfCnpjDialogOpen} onOpenChange={setCpfCnpjDialogOpen}>
+          <DialogContent className="sm:max-w-[400px]">
+            <DialogHeader>
+              <DialogTitle>Adicionar CPF/CNPJ</DialogTitle>
+            </DialogHeader>
+            <div className="py-4">
+              <Input
+                placeholder="Digite o CPF/CNPJ"
+                value={cpfCnpjValue}
+                onChange={(e) => setCpfCnpjValue(e.target.value)}
+                className="mb-4"
+              />
+              <Button 
+                onClick={handleCpfCnpjSubmit} 
+                className="w-full bg-cyan-400 hover:bg-cyan-500 text-white"
+              >
+                Adicionar
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </AdminLayout>
+    </div>
   );
 };
 

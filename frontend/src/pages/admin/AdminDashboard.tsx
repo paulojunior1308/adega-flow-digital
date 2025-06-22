@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import AdminSidebar from '@/components/admin/AdminSidebar';
+import AdminLayout from '@/components/admin/AdminLayout';
 import { 
   TrendingUp, 
   Package, 
@@ -27,7 +27,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import api from '@/lib/axios';
-import AdminLayout from '@/components/admin/AdminLayout';
 
 // We would normally use recharts for these charts
 const StatCard = ({ 
@@ -427,45 +426,53 @@ const AdminDashboard = () => {
   };
 
   return (
-    <AdminLayout>
-      <div className="space-y-6">
-        <h1 className="text-2xl md:text-3xl font-bold text-element-blue-dark">Dashboard</h1>
-        
-        {/* Cards de estatísticas */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard 
-            title="Vendas do Dia"
-            value={`R$ ${vendasDoDia.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
-            change=""
-            changeType="up"
-            icon={<TrendingUp className="h-6 w-6 text-element-blue-dark" />} 
-          />
-          <StatCard 
-            title="Lucro Líquido"
-            value={financeReport ? `R$ ${financeReport.net_profit?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0,00'}` : 'R$ 0,00'}
-            change=""
-            changeType={financeReport && financeReport.net_profit >= 0 ? "up" : "down"}
-            icon={<DollarSign className="h-6 w-6 text-green-500" />} 
-          />
-          <StatCard 
-            title="Despesas"
-            value={financeReport ? `R$ ${financeReport.total_expenses?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0,00'}` : 'R$ 0,00'}
-            change=""
-            changeType="down"
-            icon={<Archive className="h-6 w-6 text-orange-500" />} 
-          />
-          <StatCard 
-            title="Pedidos Pendentes"
-            value={pedidosPendentes.toString()}
-            change=""
-            changeType="up"
-            icon={<Package className="h-6 w-6 text-element-blue-dark" />} 
-          />
-        </div>
-        
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Gráfico de Vendas */}
-          <div className="lg:col-span-2">
+    <div className="min-h-screen bg-element-gray-light">
+      <AdminLayout>
+      
+      {renderOrderDetailsDialog()}
+      
+      <div className="lg:pl-64 min-h-screen">
+        <div className="p-4 md:p-6 lg:p-8">
+          {/* Header */}
+          <div className="mb-8">
+            <h1 className="text-2xl md:text-3xl font-bold text-element-blue-dark mb-2">Dashboard</h1>
+            <p className="text-element-gray-dark">Visão geral do seu negócio</p>
+          </div>
+          
+          {/* Stats */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            <StatCard 
+              title="Vendas do Dia"
+              value={`R$ ${vendasDoDia.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
+              change=""
+              changeType="up"
+              icon={<TrendingUp className="h-6 w-6 text-element-blue-dark" />} 
+            />
+            <StatCard 
+              title="Lucro Líquido"
+              value={financeReport ? `R$ ${financeReport.net_profit?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0,00'}` : 'R$ 0,00'}
+              change=""
+              changeType={financeReport && financeReport.net_profit >= 0 ? "up" : "down"}
+              icon={<DollarSign className="h-6 w-6 text-green-500" />} 
+            />
+            <StatCard 
+              title="Despesas"
+              value={financeReport ? `R$ ${financeReport.total_expenses?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0,00'}` : 'R$ 0,00'}
+              change=""
+              changeType="down"
+              icon={<Archive className="h-6 w-6 text-orange-500" />} 
+            />
+            <StatCard 
+              title="Pedidos Pendentes"
+              value={pedidosPendentes.toString()}
+              change=""
+              changeType="up"
+              icon={<Package className="h-6 w-6 text-element-blue-dark" />} 
+            />
+          </div>
+          
+          {/* Charts and Tables */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
             <div className="element-card p-6">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-lg font-semibold text-element-blue-dark">Últimas Vendas</h2>
@@ -513,11 +520,29 @@ const AdminDashboard = () => {
                 )}
               </div>
             </div>
-          </div>
-          
-          {/* Produtos com Baixo Estoque */}
-          <div>
             <div className="element-card p-6">
+              <h2 className="text-lg font-semibold text-element-blue-dark mb-6">Produtos Mais Vendidos</h2>
+              <div className="space-y-4">
+                {bestSellers.slice(0, 4).map((item, idx) => {
+                  const prod = productsMap[item.productId] || {};
+                  return (
+                    <div className="flex items-center" key={item.productId}>
+                      <div className="w-12 h-12 bg-element-gray-light rounded-md flex items-center justify-center mr-4">
+                        <span className="font-bold text-element-blue-dark">{idx + 1}</span>
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="font-medium">{prod.name || item.productId}</h4>
+                        <div className="flex items-center justify-between">
+                          <p className="text-sm text-element-gray-dark/70">{item._sum.quantity} unidades</p>
+                          <p className="text-sm font-medium">R$ {prod.price ? prod.price.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : '--'}/un</p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            <div className="element-card p-6 lg:col-span-2">
               <h2 className="text-lg font-semibold text-element-blue-dark mb-6">Estoque Baixo</h2>
               <div className="space-y-4">
                 {lowStock.length === 0 ? (
@@ -541,57 +566,55 @@ const AdminDashboard = () => {
               </div>
             </div>
           </div>
-        </div>
-        
-        {/* Pedidos Recentes */}
-        <div className="element-card p-6 mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-element-blue-dark">Pedidos Recentes</h2>
-            <Link to="/admin-pedidos" className="element-link text-sm">Ver todos</Link>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="min-w-full">
-              <thead>
-                <tr className="border-b border-element-gray-light">
-                  <th className="py-3 text-left text-sm font-medium text-element-gray-dark/70">ID</th>
-                  <th className="py-3 text-left text-sm font-medium text-element-gray-dark/70">Cliente</th>
-                  <th className="py-3 text-left text-sm font-medium text-element-gray-dark/70">Valor</th>
-                  <th className="py-3 text-left text-sm font-medium text-element-gray-dark/70">Status</th>
-                  <th className="py-3 text-left text-sm font-medium text-element-gray-dark/70">Hora</th>
-                  <th className="py-3 text-left text-sm font-medium text-element-gray-dark/70">Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {orders.map((order) => (
-                  <tr key={order.id} className="border-b border-element-gray-light">
-                    <td className="py-3 text-sm">{order.id}</td>
-                    <td className="py-3 text-sm">{order.customer}</td>
-                    <td className="py-3 text-sm">R$ {order.total.toFixed(2)}</td>
-                    <td className="py-3 text-sm">
-                      {getStatusLabel(order.status)}
-                    </td>
-                    <td className="py-3 text-sm">
-                      {new Date(order.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                    </td>
-                    <td className="py-3">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => openOrderDetails(order)}
-                      >
-                        Detalhes
-                      </Button>
-                    </td>
+          {/* Pedidos pendentes */}
+          <div className="element-card p-6 mb-8">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-element-blue-dark">Pedidos Recentes</h2>
+              <Link to="/admin-pedidos" className="element-link text-sm">Ver todos</Link>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="min-w-full">
+                <thead>
+                  <tr className="border-b border-element-gray-light">
+                    <th className="py-3 text-left text-sm font-medium text-element-gray-dark/70">ID</th>
+                    <th className="py-3 text-left text-sm font-medium text-element-gray-dark/70">Cliente</th>
+                    <th className="py-3 text-left text-sm font-medium text-element-gray-dark/70">Valor</th>
+                    <th className="py-3 text-left text-sm font-medium text-element-gray-dark/70">Status</th>
+                    <th className="py-3 text-left text-sm font-medium text-element-gray-dark/70">Hora</th>
+                    <th className="py-3 text-left text-sm font-medium text-element-gray-dark/70">Ações</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {orders.map((order) => (
+                    <tr key={order.id} className="border-b border-element-gray-light">
+                      <td className="py-3 text-sm">{order.id}</td>
+                      <td className="py-3 text-sm">{order.customer}</td>
+                      <td className="py-3 text-sm">R$ {order.total.toFixed(2)}</td>
+                      <td className="py-3 text-sm">
+                        {getStatusLabel(order.status)}
+                      </td>
+                      <td className="py-3 text-sm">
+                        {new Date(order.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                      </td>
+                      <td className="py-3">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => openOrderDetails(order)}
+                        >
+                          Detalhes
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>
-      
-      {renderOrderDetailsDialog()}
     </AdminLayout>
+    </div>
   );
 };
 

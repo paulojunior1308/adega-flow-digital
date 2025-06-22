@@ -97,14 +97,11 @@ const AdminUsers = () => {
   };
 
   return (
-    <AdminLayout>
-      <div className="space-y-6">
-        <h1 className="text-2xl md:text-3xl font-bold text-element-blue-dark">
-          Gerenciamento de Usuários
-        </h1>
-        
+    <div className="flex h-screen bg-gray-100">
+      <AdminLayout>
+      <div className="flex-1 p-6 overflow-y-auto ml-0 lg:ml-64">
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-bold text-element-blue-dark">Usuários Cadastrados</h2>
+          <h1 className="text-2xl font-bold text-element-blue-dark">Usuários do Sistema</h1>
           <Button className="bg-element-blue-neon text-element-gray-dark hover:bg-element-blue-neon/80" onClick={handleOpenModal}>
             <UserPlus className="h-4 w-4 mr-2" />
             + Novo Usuário
@@ -205,7 +202,8 @@ const AdminUsers = () => {
           </DialogContent>
         </Dialog>
       </div>
-    </AdminLayout>
+      </AdminLayout>
+    </div>
   );
 };
 

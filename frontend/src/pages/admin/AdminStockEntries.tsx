@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import api from '@/lib/axios';
 import { useToast } from '@/hooks/use-toast';
 
-const AdminStockEntries = () => {
+export default function AdminStockEntries() {
   const [products, setProducts] = useState<any[]>([]);
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const [entries, setEntries] = useState<any[]>([]);
@@ -62,13 +62,11 @@ const AdminStockEntries = () => {
   };
 
   return (
-    <AdminLayout>
-      <div className="space-y-6">
-        <h1 className="text-2xl md:text-3xl font-bold text-element-blue-dark">
-          Entradas de Estoque
-        </h1>
-        
+    <div className="flex h-screen bg-element-gray-light">
+      <AdminLayout>
+      <div className="flex-1 p-8 overflow-y-auto">
         <div className="max-w-4xl mx-auto">
+          <h1 className="text-2xl font-bold mb-6 text-element-blue-dark">Entradas de Estoque</h1>
           <Card className="mb-8">
             <CardHeader>
               <CardTitle>Registrar nova entrada</CardTitle>
@@ -160,8 +158,7 @@ const AdminStockEntries = () => {
           </Card>
         </div>
       </div>
-    </AdminLayout>
+      </AdminLayout>
+    </div>
   );
-};
-
-export default AdminStockEntries; 
+} 

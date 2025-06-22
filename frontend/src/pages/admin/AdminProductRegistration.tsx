@@ -234,11 +234,16 @@ const AdminProductRegistration = () => {
   };
 
   return (
-    <AdminLayout>
-      <div className="space-y-6">
-        <h1 className="text-2xl md:text-3xl font-bold text-element-blue-dark">
-          Cadastro de Produtos
-        </h1>
+    <div className="min-h-screen bg-element-gray-light flex">
+      <AdminLayout>
+      
+      <div className="flex-1 p-8 ml-0 lg:ml-64">
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold text-element-blue-dark">Cadastro de Produtos</h1>
+          <p className="text-element-gray-dark">
+            Cadastre novos produtos para o estoque da Element Adega.
+          </p>
+        </div>
         
         <div className="bg-white p-6 rounded-lg shadow-sm">
           <Form {...form}>
@@ -559,6 +564,7 @@ const AdminProductRegistration = () => {
         </div>
       </div>
     </AdminLayout>
+    </div>
   );
 };
 

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { Dispatch, SetStateAction } from 'react';
 import { NavLink } from 'react-router-dom';
 import { 
   Home, 
@@ -22,7 +22,7 @@ interface AdminSidebarProps {
   isCollapsed: boolean;
   toggleSidebar: () => void;
   isMobileOpen: boolean;
-  setIsMobileOpen: (isOpen: boolean) => void;
+  setIsMobileOpen: Dispatch<SetStateAction<boolean>>;
 }
 
 const AdminSidebar = ({ isCollapsed, toggleSidebar, isMobileOpen, setIsMobileOpen }: AdminSidebarProps) => {
@@ -89,13 +89,13 @@ const AdminSidebar = ({ isCollapsed, toggleSidebar, isMobileOpen, setIsMobileOpe
     }
   ];
   
-  const closeMobileMenu = () => setIsMobileOpen(false);
-  
   return (
     <>
+      {/* Mobile Menu Button is handled by AdminLayout now, so it's removed from here */}
+      
       {/* Desktop Sidebar */}
       <aside className={`
-        fixed top-0 left-0 h-full bg-element-blue-dark shadow-lg transition-all duration-300 z-40
+        fixed top-0 left-0 h-full bg-element-blue-dark shadow-lg transition-all duration-300 z-10
         ${isCollapsed ? 'w-20' : 'w-64'}
         hidden lg:block
       `}>
@@ -114,7 +114,7 @@ const AdminSidebar = ({ isCollapsed, toggleSidebar, isMobileOpen, setIsMobileOpe
               onClick={toggleSidebar}
               className="p-2 rounded-md hover:bg-element-blue-dark/50 text-white"
             >
-              {isCollapsed ? <Menu className="h-5 w-5" /> : <X className="h-5 w-5" />}
+              <Menu className="h-5 w-5" />
             </button>
           </div>
           
@@ -150,10 +150,8 @@ const AdminSidebar = ({ isCollapsed, toggleSidebar, isMobileOpen, setIsMobileOpe
       
       {/* Mobile Sidebar */}
       {isMobileOpen && (
-        <div className="fixed inset-0 z-50 lg:hidden">
-          {/* Overlay */}
-          <div className="absolute inset-0 bg-black/50" onClick={closeMobileMenu}></div>
-          
+        <div className="fixed inset-0 z-40 lg:hidden">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setIsMobileOpen(false)}></div>
           <aside className="absolute left-0 top-0 h-full w-64 bg-element-blue-dark shadow-lg animate-slide-in-right flex flex-col">
             <div className="flex items-center justify-between p-4 border-b border-element-blue-neon/20">
               <div className="bg-white p-1 rounded flex items-center justify-center mr-2 mt-2 mb-2 ml-2">
@@ -164,7 +162,7 @@ const AdminSidebar = ({ isCollapsed, toggleSidebar, isMobileOpen, setIsMobileOpe
                 />
               </div>
               <button 
-                onClick={closeMobileMenu}
+                onClick={() => setIsMobileOpen(false)}
                 className="p-2 rounded-md hover:bg-white/10 text-white ml-auto mt-2"
                 aria-label="Fechar menu"
               >
@@ -182,7 +180,7 @@ const AdminSidebar = ({ isCollapsed, toggleSidebar, isMobileOpen, setIsMobileOpe
                       flex items-center p-3 rounded-lg transition-colors
                       ${isActive ? 'bg-element-blue-neon text-element-gray-dark' : 'hover:bg-white/10 text-white'}
                     `}
-                    onClick={closeMobileMenu}
+                    onClick={() => setIsMobileOpen(false)}
                   >
                     <span className="flex items-center justify-center w-5 h-5">{item.icon}</span>
                     <span className="ml-3">{item.label}</span>
@@ -195,7 +193,7 @@ const AdminSidebar = ({ isCollapsed, toggleSidebar, isMobileOpen, setIsMobileOpe
               <NavLink
                 to="/login"
                 className="flex items-center p-3 rounded-lg text-white hover:bg-white/10 transition-colors"
-                onClick={closeMobileMenu}
+                onClick={() => setIsMobileOpen(false)}
               >
                 <span className="flex items-center justify-center w-5 h-5"><LogOutIcon className="h-5 w-5" /></span>
                 <span className="ml-3">Sair</span>

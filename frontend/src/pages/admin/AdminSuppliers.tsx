@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { 
   Table, 
@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, Plus, Edit, Trash2, Building2 } from 'lucide-react';
+import { Search, Plus } from 'lucide-react';
 import api from '@/lib/axios';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 
@@ -90,73 +90,68 @@ const AdminSuppliers = () => {
 
   return (
     <AdminLayout>
-      <div className="space-y-6">
-        <h1 className="text-2xl md:text-3xl font-bold text-element-blue-dark">
-          Cadastro de Fornecedores
-        </h1>
-        
-        <div className="flex justify-between items-center mb-6">
-          <Button className="bg-element-blue-neon text-element-gray-dark hover:bg-element-blue-neon/80" onClick={openNew}>
-            <Plus className="h-4 w-4 mr-2" />
-            Novo Fornecedor
-          </Button>
-        </div>
-
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>Buscar Fornecedor</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex gap-4">
-              <div className="flex-1">
-                <Input placeholder="Digite o nome, contato ou categoria" value={search} onChange={e => setSearch(e.target.value)} />
-              </div>
-              <Button className="bg-element-blue-dark">
-                <Search className="h-4 w-4 mr-2" />
-                Buscar
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Fornecedores Cadastrados</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>ID</TableHead>
-                  <TableHead>Nome</TableHead>
-                  <TableHead>Contato</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Telefone</TableHead>
-                  <TableHead>Categoria</TableHead>
-                  <TableHead>Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredSuppliers.map((supplier) => (
-                  <TableRow key={supplier.id}>
-                    <TableCell className="font-medium">#{supplier.id}</TableCell>
-                    <TableCell>{supplier.name}</TableCell>
-                    <TableCell>{supplier.contact ?? '-'}</TableCell>
-                    <TableCell>{supplier.email}</TableCell>
-                    <TableCell>{supplier.phone}</TableCell>
-                    <TableCell>{supplier.category ?? '-'}</TableCell>
-                    <TableCell className="space-x-2">
-                      <Button variant="outline" size="sm" onClick={() => openDetails(supplier)}>Detalhes</Button>
-                      <Button variant="outline" size="sm" onClick={() => openEdit(supplier)}>Editar</Button>
-                      <Button variant="destructive" size="sm" onClick={() => setDeleteId(supplier.id)}>Excluir</Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Cadastro de Fornecedores</h1>
+        <Button onClick={openNew}>
+          <Plus className="h-4 w-4 mr-2" />
+          Novo Fornecedor
+        </Button>
       </div>
+
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle>Buscar Fornecedor</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex gap-4">
+            <div className="flex-1">
+              <Input placeholder="Digite o nome, contato ou categoria" value={search} onChange={e => setSearch(e.target.value)} />
+            </div>
+            <Button>
+              <Search className="h-4 w-4 mr-2" />
+              Buscar
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Fornecedores Cadastrados</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>ID</TableHead>
+                <TableHead>Nome</TableHead>
+                <TableHead>Contato</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Telefone</TableHead>
+                <TableHead>Categoria</TableHead>
+                <TableHead>Ações</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredSuppliers.map((supplier) => (
+                <TableRow key={supplier.id}>
+                  <TableCell className="font-medium">#{supplier.id.substring(0, 6)}</TableCell>
+                  <TableCell>{supplier.name}</TableCell>
+                  <TableCell>{supplier.contact ?? '-'}</TableCell>
+                  <TableCell>{supplier.email}</TableCell>
+                  <TableCell>{supplier.phone}</TableCell>
+                  <TableCell>{supplier.category ?? '-'}</TableCell>
+                  <TableCell className="space-x-2">
+                    <Button variant="outline" size="sm" onClick={() => openDetails(supplier)}>Detalhes</Button>
+                    <Button variant="outline" size="sm" onClick={() => openEdit(supplier)}>Editar</Button>
+                    <Button variant="destructive" size="sm" onClick={() => setDeleteId(supplier.id)}>Excluir</Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
 
       {/* Modal Novo Fornecedor */}
       <Dialog open={modalType === 'new'} onOpenChange={isOpen => { if (!isOpen) closeModal(); }}>

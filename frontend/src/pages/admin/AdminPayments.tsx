@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import AdminLayout from '@/components/admin/AdminLayout';
 import {
   Table,
@@ -36,7 +36,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
-import { CreditCard, DollarSign, Plus, Edit, Trash2, Check, X } from 'lucide-react';
+import { CreditCard, Plus, Edit, Trash2, Check, X } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/hooks/use-toast';
 import api from '@/lib/axios';
@@ -50,7 +50,7 @@ const AdminPayments = () => {
     api.get('/admin/payment-methods').then(res => setPaymentMethods(res.data));
   };
 
-  useEffect(() => {
+  React.useEffect(() => {
     fetchMethods();
   }, []);
 
@@ -82,12 +82,11 @@ const AdminPayments = () => {
   };
 
   return (
-    <AdminLayout>
-      <div className="space-y-6">
-        <h1 className="text-2xl md:text-3xl font-bold text-element-blue-dark">
-          Meios de Pagamento
-        </h1>
-        
+    <div className="flex h-screen bg-gray-100">
+      <AdminLayout>
+      <div className="flex-1 p-6 overflow-y-auto ml-0 lg:ml-64">
+        <h1 className="text-2xl font-bold text-element-blue-dark mb-6">Meios de Pagamento</h1>
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
           <Card>
             <CardHeader>
@@ -339,6 +338,7 @@ const AdminPayments = () => {
         </Card>
       </div>
     </AdminLayout>
+    </div>
   );
 };
 

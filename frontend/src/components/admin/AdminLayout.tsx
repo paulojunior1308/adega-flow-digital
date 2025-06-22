@@ -11,7 +11,7 @@ const AdminLayout = ({ children, noPadding = false }: { children: React.ReactNod
   };
 
   return (
-    <div className="min-h-screen bg-element-gray-light">
+    <div className="flex min-h-screen bg-gray-100 dark:bg-gray-900">
       <AdminSidebar 
         isCollapsed={isSidebarCollapsed} 
         toggleSidebar={toggleSidebar}
@@ -19,23 +19,24 @@ const AdminLayout = ({ children, noPadding = false }: { children: React.ReactNod
         setIsMobileOpen={setIsMobileOpen}
       />
       
-      {/* Mobile Header */}
-      <header className="lg:hidden fixed top-0 left-0 right-0 z-20 flex items-center justify-between h-16 px-4 bg-white shadow-sm">
-        <button 
-          onClick={() => setIsMobileOpen(true)}
-          className="p-2 rounded-md text-element-gray-dark"
-          aria-label="Abrir menu"
-        >
-          <Menu className="h-6 w-6" />
-        </button>
-        {/* Futuramente, podemos adicionar o título da página aqui */}
-      </header>
+      <div className="flex-1 flex flex-col w-full">
+        {/* Mobile Header */}
+        <header className="lg:hidden flex items-center h-16 px-4 bg-white dark:bg-gray-800 border-b dark:border-gray-700 fixed top-0 w-full z-10">
+          <button 
+            onClick={() => setIsMobileOpen(true)}
+            className="p-2 rounded-md text-gray-700 dark:text-gray-200"
+            aria-label="Abrir menu"
+          >
+            <Menu className="h-6 w-6" />
+          </button>
+        </header>
 
-      <main className={`transition-all duration-300 lg:pl-${isSidebarCollapsed ? '20' : '64'} pt-16 lg:pt-0`}>
-        <div className={noPadding ? '' : "p-4 sm:p-6 lg:p-8"}>
-          {children}
-        </div>
-      </main>
+        <main className={`transition-all duration-300 pt-16 lg:pt-0 ${!isSidebarCollapsed ? 'lg:pl-64' : 'lg:pl-20'}`}>
+          <div className={noPadding ? '' : "p-4 sm:p-6 lg:p-8"}>
+            {children}
+          </div>
+        </main>
+      </div>
     </div>
   );
 };
