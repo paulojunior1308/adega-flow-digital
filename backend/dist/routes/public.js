@@ -12,7 +12,7 @@ router.get('/payment-methods', async (req, res) => {
 });
 router.get('/products', async (req, res) => {
     try {
-        const { categoryId, search } = req.query;
+        const { categoryId, search, nameFilter } = req.query;
         const where = { active: true, stock: { gt: 0 } };
         if (categoryId)
             where.categoryId = categoryId;
@@ -21,6 +21,9 @@ router.get('/products', async (req, res) => {
                 { name: { contains: search, mode: 'insensitive' } },
                 { description: { contains: search, mode: 'insensitive' } }
             ];
+        }
+        if (nameFilter) {
+            where.name = { contains: nameFilter, mode: 'insensitive' };
         }
         const products = await prisma_1.default.product.findMany({
             where,
@@ -91,6 +94,30 @@ router.get('/combos', async (req, res) => {
     catch (error) {
         console.error('Erro ao listar combos:', error);
         res.status(500).json({ error: 'Erro ao listar combos' });
+    }
+});
+router.get('/doses', async (req, res) => {
+    try {
+        const doses = await prisma_1.default.dose.findMany({
+            where: { active: true },
+            include: {
+                items: {
+                    include: {
+                        product: {
+                            include: {
+                                category: true
+                            }
+                        }
+                    }
+                }
+            },
+            orderBy: { createdAt: 'desc' }
+        });
+        res.json(doses);
+    }
+    catch (error) {
+        console.error('Erro ao listar doses:', error);
+        res.status(500).json({ error: 'Erro ao listar doses' });
     }
 });
 exports.default = router;

@@ -57,6 +57,7 @@ interface ComboOptionsModalProps {
     items: ComboItem[];
   };
   onConfirm: (choosableSelections: Record<string, Record<string, number>>) => void;
+  isDoseConfiguration?: boolean;
 }
 
 export function ComboOptionsModal({ open, onOpenChange, combo, onConfirm }: ComboOptionsModalProps) {
@@ -73,6 +74,7 @@ export function ComboOptionsModal({ open, onOpenChange, combo, onConfirm }: Comb
       selectionMode: 'volume' | 'unit';
       // Total a ser selecionado (seja em ml ou em unidades)
       quantity: number;
+      nameFilter?: string | null;
     }> = {};
 
     combo.items
@@ -86,7 +88,8 @@ export function ComboOptionsModal({ open, onOpenChange, combo, onConfirm }: Comb
             categoryName: item.product.category?.name || 'Categoria',
             items: [],
             selectionMode: isVolume ? 'volume' : 'unit',
-            quantity: isVolume ? (firstItem?.volumeToDiscount || 0) : 0
+            quantity: isVolume ? (firstItem?.volumeToDiscount || 0) : 0,
+            nameFilter: firstItem?.nameFilter,
           };
         }
         grouped[item.categoryId].items.push(item);
@@ -112,9 +115,18 @@ export function ComboOptionsModal({ open, onOpenChange, combo, onConfirm }: Comb
           
           responses.forEach((res, index) => {
             const categoryId = categoryIds[index];
-            newOptions[categoryId] = res.data;
+            const config = choosableByCategory[categoryId];
+            let products = res.data as Product[];
+
+            if (config.nameFilter) {
+              products = products.filter(p =>
+                p.name.toLowerCase().includes(config.nameFilter!.toLowerCase())
+              );
+            }
+
+            newOptions[categoryId] = products;
             newSelections[categoryId] = {};
-            res.data.forEach((p: Product) => {
+            products.forEach((p: Product) => {
               newSelections[categoryId][p.id] = 0;
             });
           });
