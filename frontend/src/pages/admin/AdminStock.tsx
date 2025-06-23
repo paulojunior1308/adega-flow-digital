@@ -136,7 +136,7 @@ const AdminStock = () => {
   useEffect(() => {
     api.get('/admin/products').then(res => setProducts(res.data));
     
-    api.get('/admin/categories').then(res => {
+    api.get('/admin/categories?active=true').then(res => {
       setCategories(res.data);
     });
   }, []);

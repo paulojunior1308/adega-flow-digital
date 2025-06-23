@@ -131,7 +131,7 @@ export default function AdminPromotionsAndCombos() {
   React.useEffect(() => {
     fetchData();
     // Buscar categorias para combos escolhíveis
-    api.get('/admin/categories').then(res => setCategories(res.data));
+    api.get('/admin/categories?active=true').then(res => setCategories(res.data));
   }, [fetchData]);
 
   const filteredProducts = products.filter(product => 

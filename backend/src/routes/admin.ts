@@ -15,6 +15,7 @@ import { supplierController } from '../controllers/supplier';
 import { paymentMethodController } from '../controllers/paymentMethod';
 import { financeController } from '../controllers/finance';
 import { stockEntryController } from '../controllers/stockEntry';
+import { categoryController } from '../controllers/category';
 
 const router = express.Router();
 
@@ -91,7 +92,12 @@ router.patch('/promotions/:id/active', async (req, res) => {
 });
 
 // Rota para listar categorias
-router.get('/categories', productController.listCategories);
+router.get('/categories', categoryController.list);
+router.get('/categories/:id', categoryController.get);
+router.post('/categories', categoryController.create);
+router.put('/categories/:id', categoryController.update);
+router.delete('/categories/:id', categoryController.delete);
+router.patch('/categories/:id/active', categoryController.updateActive);
 
 // Rotas de fornecedores
 router.get('/suppliers', supplierController.list);

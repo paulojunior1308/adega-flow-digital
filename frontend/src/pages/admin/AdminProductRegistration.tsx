@@ -117,7 +117,7 @@ const AdminProductRegistration = () => {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const response = await api.get('/admin/categories');
+        const response = await api.get('/admin/categories?active=true');
         setCategories(response.data);
       } catch (error) {
         console.error('Erro ao buscar categorias:', error);

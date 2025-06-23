@@ -15,7 +15,8 @@ import {
   Truck,
   Tag,
   TrendingUp,
-  LogOut as LogOutIcon
+  LogOut as LogOutIcon,
+  FolderOpen
 } from 'lucide-react';
 
 interface AdminSidebarProps {
@@ -41,6 +42,11 @@ const AdminSidebar = ({ isCollapsed, toggleSidebar, isMobileOpen, setIsMobileOpe
       icon: <Plus className="h-5 w-5" />, 
       label: 'Cadastrar Produtos', 
       path: '/admin-cadastro-produtos' 
+    },
+    { 
+      icon: <FolderOpen className="h-5 w-5" />, 
+      label: 'Categorias', 
+      path: '/admin-categorias' 
     },
     { 
       icon: <Package className="h-5 w-5" />, 

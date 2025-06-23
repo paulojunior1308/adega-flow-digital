@@ -18,6 +18,7 @@ const supplier_1 = require("../controllers/supplier");
 const paymentMethod_1 = require("../controllers/paymentMethod");
 const finance_1 = require("../controllers/finance");
 const stockEntry_1 = require("../controllers/stockEntry");
+const category_1 = require("../controllers/category");
 const router = express_1.default.Router();
 const storage = multer_1.default.diskStorage({
     destination: (req, file, cb) => {
@@ -73,7 +74,12 @@ router.patch('/promotions/:id/active', async (req, res) => {
         res.status(404).json({ error: 'Promoção não encontrada' });
     }
 });
-router.get('/categories', product_1.productController.listCategories);
+router.get('/categories', category_1.categoryController.list);
+router.get('/categories/:id', category_1.categoryController.get);
+router.post('/categories', category_1.categoryController.create);
+router.put('/categories/:id', category_1.categoryController.update);
+router.delete('/categories/:id', category_1.categoryController.delete);
+router.patch('/categories/:id/active', category_1.categoryController.updateActive);
 router.get('/suppliers', supplier_1.supplierController.list);
 router.post('/suppliers', supplier_1.supplierController.create);
 router.get('/suppliers/:id', supplier_1.supplierController.get);
