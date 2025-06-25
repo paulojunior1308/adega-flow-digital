@@ -7,13 +7,16 @@ import {
   ShoppingCart,
   Archive,
   Calendar,
-  Download
+  Download,
+  FileText
 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import api from '@/lib/axios';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 interface FinanceReport {
   total_sales: number;
@@ -100,51 +103,64 @@ const AdminFinance = () => {
         </div>
 
         {/* Filtros de Período */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Calendar className="h-5 w-5" />
-              Filtros de Período
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-col md:flex-row gap-4 md:items-end">
-              <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
-                <div className='flex-1'>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Data Inicial
-                  </label>
-                  <input
-                    type="date"
-                    value={dateRange.startDate}
-                    onChange={(e) => setDateRange(prev => ({ ...prev, startDate: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-dark bg-white dark:bg-gray-800"
-                  />
-                </div>
-                <div className='flex-1'>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Data Final
-                  </label>
-                  <input
-                    type="date"
-                    value={dateRange.endDate}
-                    onChange={(e) => setDateRange(prev => ({ ...prev, endDate: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-dark bg-white dark:bg-gray-800"
-                  />
-                </div>
-              </div>
-              <div className="flex gap-2 w-full md:w-auto">
-                <Button onClick={handleDateFilter} className="flex-1 md:flex-auto bg-primary hover:bg-primary/90">
-                  Filtrar
-                </Button>
-                <Button onClick={handleExport} variant="outline" className="flex-1 md:flex-auto items-center gap-2">
-                  <Download className="h-4 w-4" />
-                  Exportar
-                </Button>
-              </div>
+        <div className="mb-6">
+          <div className="flex flex-wrap items-center gap-2 bg-white dark:bg-gray-800 p-3 rounded-lg shadow-sm">
+            <div className="flex items-center gap-2">
+              <Calendar className="h-4 w-4 text-gray-500" />
+              <label className="text-sm font-medium mr-1">Data Inicial</label>
+              <input
+                type="date"
+                className="border rounded px-2 py-1 text-sm focus:outline-none"
+                value={dateRange.startDate}
+                onChange={e => setDateRange(prev => ({ ...prev, startDate: e.target.value }))}
+                max={dateRange.endDate || undefined}
+                placeholder="dd/mm/aaaa"
+                style={{ minWidth: 120 }}
+              />
             </div>
-          </CardContent>
-        </Card>
+            <div className="flex items-center gap-2 ml-2">
+              <Calendar className="h-4 w-4 text-gray-500" />
+              <label className="text-sm font-medium mr-1">Data Final</label>
+              <input
+                type="date"
+                className="border rounded px-2 py-1 text-sm focus:outline-none"
+                value={dateRange.endDate}
+                onChange={e => setDateRange(prev => ({ ...prev, endDate: e.target.value }))}
+                min={dateRange.startDate || undefined}
+                placeholder="dd/mm/aaaa"
+                style={{ minWidth: 120 }}
+              />
+            </div>
+            <Button onClick={handleDateFilter} className="ml-2 bg-primary hover:bg-primary/90">
+              Filtrar
+            </Button>
+            <div className="flex gap-2 ml-auto">
+              <Button onClick={() => {
+                if (!report) return;
+                const doc = new jsPDF();
+                doc.setFontSize(16);
+                doc.text('Relatório Financeiro', 14, 16);
+                doc.setFontSize(10);
+                autoTable(doc, {
+                  head: [['Total de Vendas', 'Custo Total', 'Lucro Bruto', 'Despesas', 'Lucro Líquido']],
+                  body: [[
+                    report ? formatCurrency(report.total_sales) : 'R$ 0,00',
+                    report ? formatCurrency(report.total_cost) : 'R$ 0,00',
+                    report ? formatCurrency(report.gross_profit) : 'R$ 0,00',
+                    report ? formatCurrency(report.total_expenses) : 'R$ 0,00',
+                    report ? formatCurrency(report.net_profit) : 'R$ 0,00',
+                  ]],
+                  startY: 22,
+                  styles: { fontSize: 9 },
+                  headStyles: { fillColor: [41, 128, 185] },
+                });
+                doc.save('relatorio_financeiro.pdf');
+              }} className="flex items-center gap-1 bg-blue-700 hover:bg-blue-800 text-white px-3 py-1 rounded text-sm font-medium">
+                <FileText className="h-4 w-4" /> Exportar PDF
+              </Button>
+            </div>
+          </div>
+        </div>
 
         {/* Cards Principais */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">

@@ -124,4 +124,10 @@ router.get('/finance/report', financeController.report);
 router.post('/stock-entries', stockEntryController.create);
 router.get('/stock-entries', stockEntryController.list);
 
+// Rota para baixa manual de estoque
+router.post('/stock-out', stockEntryController.stockOut);
+
+// Rota para listar movimentações de estoque
+router.get('/stock-movements', stockEntryController.listMovements);
+
 export default router; 

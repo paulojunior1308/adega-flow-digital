@@ -59,6 +59,7 @@ model Product {
   promotions  Promotion[] @relation("ProductToPromotion")
   doseItems   DoseItem[]
   stockEntries StockEntry[]
+  stockMovements StockMovement[]
 }
 
 model Category {
@@ -367,6 +368,19 @@ model StockEntry {
   supplier     Supplier? @relation(fields: [supplierId], references: [id]) // opcional
   createdAt    DateTime @default(now())
   notes        String?
+}
+
+model StockMovement {
+  id          String   @id @default(uuid())
+  createdAt   DateTime @default(now())
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id])
+  type        String   // 'in' para entrada, 'out' para saída
+  quantity    Int
+  unitCost    Float
+  totalCost   Float
+  notes       String?
+  origin      String?  // 'manual', 'venda_online', 'venda_pdv', etc
 }
 
 enum Role {

@@ -17,7 +17,10 @@ import {
   AlertCircle, 
   Plus,
   ArrowUpDown,
-  Archive
+  Archive,
+  Calendar,
+  FileDown,
+  FileText
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -60,6 +63,10 @@ import {
   CommandGroup,
   CommandItem
 } from '@/components/ui/command';
+import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import { format } from 'date-fns';
 
 // Product interface
 interface Product {
@@ -130,6 +137,10 @@ const AdminStock = () => {
     currentStock: number;
     newCost?: number;
   } | null>(null);
+  const [stockEntries, setStockEntries] = useState<any[]>([]);
+  const [stockMovements, setStockMovements] = useState<any[]>([]);
+  const [startDate, setStartDate] = useState<string>('');
+  const [endDate, setEndDate] = useState<string>('');
 
   const { toast } = useToast();
 
@@ -139,6 +150,10 @@ const AdminStock = () => {
     api.get('/admin/categories?active=true').then(res => {
       setCategories(res.data);
     });
+    // Buscar movimentações de estoque (entradas)
+    api.get('/admin/stock-entries').then(res => setStockEntries(res.data));
+    // Buscar movimentações de estoque (entradas e saídas)
+    api.get('/admin/stock-movements').then(res => setStockMovements(res.data));
   }, []);
 
   // Function to handle sorting
@@ -394,26 +409,186 @@ const AdminStock = () => {
     product.name.toLowerCase().includes(productSearchTerm.toLowerCase())
   );
 
+  // Função para exportar XLSX
+  const exportToXLSX = () => {
+    const data = filteredProducts.map(product => ({
+      Nome: product.name,
+      Categoria: product.category?.name,
+      Preço: product.price,
+      'Preço de Custo': product.costPrice ?? '',
+      Estoque: product.stock,
+      Status: product.stockStatus,
+      Volume: product.isFractioned ? product.totalVolume : '-',
+      Ativo: product.active ? 'Sim' : 'Não',
+      'Estoque Baixo': (product.stockStatus === 'low' || product.stockStatus === 'out') ? 'Sim' : 'Não',
+    }));
+    const worksheet = XLSX.utils.json_to_sheet(data);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Estoque');
+    XLSX.writeFile(workbook, 'relatorio_estoque.xlsx');
+  };
+
+  // Função para exportar PDF
+  const exportToPDF = () => {
+    const doc = new jsPDF();
+    doc.setFontSize(16);
+    doc.text('Relatório de Estoque', 14, 16);
+    doc.setFontSize(10);
+    const tableData = filteredProducts.map(product => [
+      product.name,
+      product.category?.name,
+      product.price,
+      product.costPrice ?? '',
+      product.stock,
+      product.stockStatus,
+      product.isFractioned ? product.totalVolume : '-',
+      product.active ? 'Sim' : 'Não',
+      (product.stockStatus === 'low' || product.stockStatus === 'out') ? 'Sim' : 'Não',
+    ]);
+    autoTable(doc, {
+      head: [['Nome', 'Categoria', 'Preço', 'Preço de Custo', 'Estoque', 'Status', 'Volume', 'Ativo', 'Estoque Baixo']],
+      body: tableData,
+      startY: 22,
+      styles: { fontSize: 9 },
+      headStyles: { fillColor: [41, 128, 185] },
+    });
+    doc.save('relatorio_estoque.pdf');
+  };
+
+  // Função para filtrar movimentações por data
+  const filteredStockMovements = React.useMemo(() => {
+    if (!startDate && !endDate) return stockMovements;
+    return stockMovements.filter((entry: any) => {
+      const entryDate = new Date(entry.createdAt);
+      const start = startDate ? new Date(startDate) : null;
+      const end = endDate ? new Date(endDate) : null;
+      if (start && entryDate < start) return false;
+      if (end) {
+        // Incluir o dia final inteiro
+        const endOfDay = new Date(end);
+        endOfDay.setHours(23,59,59,999);
+        if (entryDate > endOfDay) return false;
+      }
+      return true;
+    });
+  }, [stockMovements, startDate, endDate]);
+
+  // Função para exportar movimentação (XLSX ou PDF)
+  const exportMovimentacao = (type: 'xlsx' | 'pdf') => {
+    const data = filteredStockMovements.map(entry => ({
+      Data: new Date(entry.createdAt).toLocaleString('pt-BR'),
+      Produto: entry.product?.name,
+      Tipo: entry.type === 'out' ? 'Saída' : 'Entrada',
+      Quantidade: entry.quantity,
+      'Custo Unitário': entry.unitCost,
+      Total: entry.totalCost,
+      Observação: entry.notes || '-',
+      Origem: entry.origin || '-',
+    }));
+    if (type === 'xlsx') {
+      const worksheet = XLSX.utils.json_to_sheet(data);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Movimentacao');
+      XLSX.writeFile(workbook, 'movimentacao_estoque.xlsx');
+    } else {
+      const doc = new jsPDF();
+      doc.setFontSize(16);
+      doc.text('Movimentação de Estoque', 14, 16);
+      doc.setFontSize(10);
+      const tableData = filteredStockMovements.map(entry => [
+        new Date(entry.createdAt).toLocaleString('pt-BR'),
+        entry.product?.name,
+        entry.type === 'out' ? 'Saída' : 'Entrada',
+        entry.quantity,
+        entry.unitCost,
+        entry.totalCost,
+        entry.notes || '-',
+        entry.origin || '-',
+      ]);
+      autoTable(doc, {
+        head: [['Data', 'Produto', 'Tipo', 'Quantidade', 'Custo Unitário', 'Total', 'Observação', 'Origem']],
+        body: tableData,
+        startY: 22,
+        styles: { fontSize: 9 },
+        headStyles: { fillColor: [41, 128, 185] },
+      });
+      doc.save('movimentacao_estoque.pdf');
+    }
+  };
+
   return (
     <div className="flex min-h-screen w-full bg-gray-100 dark:bg-gray-900">
       <AdminLayout>
       <div className="flex flex-col flex-1 sm:py-4 sm:pl-14 lg:pl-64">
         <main className="flex-1 p-4 sm:p-6">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-            <div className="mb-4 sm:mb-0">
-              <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-200">Estoque de Produtos</h1>
-              <p className="text-gray-600 dark:text-gray-400">Gerencie seus produtos, estoque e preços.</p>
-            </div>
-            <div className="flex items-center gap-2">
-                <Button onClick={() => navigate('/admin-cadastro-produtos')}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Adicionar Produto
+          <div className="mb-4 sm:mb-0">
+            <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-200 flex items-center justify-between">
+              Estoque de Produtos
+            </h1>
+            <p className="text-gray-600 dark:text-gray-400">Gerencie seus produtos, estoque e preços.</p>
+          </div>
+
+          {/* Linha de filtros de data e exportação */}
+          <div className="my-4">
+            <div className="flex flex-wrap items-center gap-2 bg-white dark:bg-gray-800 p-3 rounded-lg shadow-sm">
+              <div className="flex items-center gap-2">
+                <Calendar className="h-4 w-4 text-gray-500" />
+                <label className="text-sm font-medium mr-1">Data Inicial</label>
+                <input
+                  type="date"
+                  className="border rounded px-2 py-1 text-sm focus:outline-none"
+                  value={startDate}
+                  onChange={e => setStartDate(e.target.value)}
+                  max={endDate || undefined}
+                  placeholder="dd/mm/aaaa"
+                  style={{ minWidth: 120 }}
+                />
+              </div>
+              <div className="flex items-center gap-2 ml-2">
+                <Calendar className="h-4 w-4 text-gray-500" />
+                <label className="text-sm font-medium mr-1">Data Final</label>
+                <input
+                  type="date"
+                  className="border rounded px-2 py-1 text-sm focus:outline-none"
+                  value={endDate}
+                  onChange={e => setEndDate(e.target.value)}
+                  min={startDate || undefined}
+                  placeholder="dd/mm/aaaa"
+                  style={{ minWidth: 120 }}
+                />
+              </div>
+              {(startDate || endDate) && (
+                <Button variant="ghost" size="sm" onClick={() => { setStartDate(''); setEndDate(''); }}>
+                  Limpar Filtro
                 </Button>
-                <Button variant="outline" onClick={() => setIsStockEntryDialogOpen(true)}>
-                    <Archive className="h-4 w-4 mr-2" />
-                    Entrada de Estoque
-                </Button>
+              )}
+              <div className="flex gap-2 ml-auto">
+                <button
+                  onClick={() => exportMovimentacao('xlsx')}
+                  className="flex items-center gap-1 bg-green-700 hover:bg-green-800 text-white px-3 py-1 rounded text-sm font-medium"
+                >
+                  <FileDown className="h-4 w-4" /> Exportar XLSX
+                </button>
+                <button
+                  onClick={() => exportMovimentacao('pdf')}
+                  className="flex items-center gap-1 bg-blue-700 hover:bg-blue-800 text-white px-3 py-1 rounded text-sm font-medium"
+                >
+                  <FileText className="h-4 w-4" /> Exportar PDF
+                </button>
+              </div>
             </div>
+          </div>
+
+          {/* Linha de botões de ação */}
+          <div className="flex justify-end gap-2 mb-4">
+            <Button onClick={() => navigate('/admin-cadastro-produtos')}>
+              <Plus className="h-4 w-4 mr-2" />
+              Adicionar Produto
+            </Button>
+            <Button variant="outline" onClick={() => setIsStockEntryDialogOpen(true)}>
+              <Archive className="h-4 w-4 mr-2" />
+              Entrada de Estoque
+            </Button>
           </div>
           
           <div className="my-6 bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">

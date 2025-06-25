@@ -513,6 +513,23 @@ export const adminController = {
       console.log(`=== ESTOQUE ATUALIZADO ===\n`);
     }
 
+    // Registrar saída de estoque em StockMovement
+    for (const item of reallyValidItems) {
+      const produto = await prisma.product.findUnique({ where: { id: item.productId } });
+      if (!produto) continue;
+      await prisma.stockMovement.create({
+        data: {
+          productId: item.productId,
+          type: 'out',
+          quantity: item.quantity,
+          unitCost: produto.costPrice,
+          totalCost: (produto.costPrice || 0) * item.quantity,
+          notes: 'Venda PDV',
+          origin: 'venda_pdv'
+        }
+      });
+    }
+
     console.log('[PDV][LOG] Finalizando venda. Payload recebido:', JSON.stringify(items, null, 2));
     res.status(201).json(sale);
   },
@@ -523,9 +540,16 @@ export const adminController = {
       include: {
         user: { select: { id: true, name: true, email: true } },
         items: { include: { product: true } },
+        paymentMethod: true,
       },
       orderBy: { createdAt: 'desc' },
     });
+    if (sales.length > 0) {
+      console.log('Primeira venda retornada pelo Prisma:');
+      console.log(JSON.stringify(sales[0], null, 2));
+    } else {
+      console.log('Nenhuma venda encontrada.');
+    }
     res.json(sales);
   },
 }; 
