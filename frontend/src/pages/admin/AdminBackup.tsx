@@ -200,8 +200,9 @@ const AdminBackup = () => {
                 <div className="space-y-2">
                   <h4 className="font-semibold text-element-gray-dark">Dados de Vendas</h4>
                   <ul className="text-sm text-element-gray-dark/70 space-y-1">
-                    <li>• Histórico de pedidos</li>
-                    <li>• Itens dos pedidos</li>
+                    <li>• Histórico de pedidos online</li>
+                    <li>• Vendas do PDV</li>
+                    <li>• Itens das vendas</li>
                     <li>• Métodos de pagamento</li>
                   </ul>
                 </div>
@@ -212,6 +213,9 @@ const AdminBackup = () => {
                     <li>• Combos e promoções</li>
                     <li>• Fornecedores</li>
                     <li>• Movimentações de estoque</li>
+                    <li>• Fluxo de caixa</li>
+                    <li>• Contas a pagar</li>
+                    <li>• Clientes cadastrados</li>
                   </ul>
                 </div>
               </div>

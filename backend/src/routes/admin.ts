@@ -149,6 +149,16 @@ router.get('/backup', async (req, res) => {
     const orderItems = await prisma.orderItem.findMany();
     const stockEntries = await prisma.stockEntry.findMany();
     const notifications = await prisma.notification.findMany();
+    
+    // Tabelas de vendas e financeiro (que estavam faltando)
+    const clients = await prisma.client.findMany();
+    const sales = await prisma.sale.findMany();
+    const saleItems = await prisma.saleItem.findMany();
+    const cashFlows = await prisma.cashFlow.findMany();
+    const accountPayables = await prisma.accountPayable.findMany();
+    const stockMovements = await prisma.stockMovement.findMany();
+    // const comandas = await prisma.comanda.findMany();
+    // const comandaItems = await prisma.comandaItem.findMany();
 
     // Gerar SQL completo com estrutura + dados
     let sqlContent = `-- Backup completo do banco de dados - ${new Date().toISOString()}\n`;
@@ -333,6 +343,124 @@ router.get('/backup', async (req, res) => {
     sqlContent += `    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,\n`;
     sqlContent += `    "updatedAt" TIMESTAMP(3) NOT NULL,\n`;
     sqlContent += `    FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE\n`;
+    sqlContent += `);\n\n`;
+    
+    // Tabela Client
+    sqlContent += `CREATE TABLE "Client" (\n`;
+    sqlContent += `    "id" TEXT PRIMARY KEY,\n`;
+    sqlContent += `    "name" TEXT NOT NULL,\n`;
+    sqlContent += `    "email" TEXT UNIQUE,\n`;
+    sqlContent += `    "phone" TEXT,\n`;
+    sqlContent += `    "document" TEXT UNIQUE,\n`;
+    sqlContent += `    "address" TEXT,\n`;
+    sqlContent += `    "active" BOOLEAN NOT NULL DEFAULT true,\n`;
+    sqlContent += `    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,\n`;
+    sqlContent += `    "updatedAt" TIMESTAMP(3) NOT NULL\n`;
+    sqlContent += `);\n\n`;
+    
+    // Tabela Sale
+    sqlContent += `CREATE TABLE "Sale" (\n`;
+    sqlContent += `    "id" TEXT PRIMARY KEY,\n`;
+    sqlContent += `    "status" TEXT NOT NULL DEFAULT 'PENDING',\n`;
+    sqlContent += `    "total" DOUBLE PRECISION NOT NULL,\n`;
+    sqlContent += `    "discount" DOUBLE PRECISION NOT NULL DEFAULT 0,\n`;
+    sqlContent += `    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,\n`;
+    sqlContent += `    "updatedAt" TIMESTAMP(3) NOT NULL,\n`;
+    sqlContent += `    "userId" TEXT NOT NULL,\n`;
+    sqlContent += `    "clientId" TEXT,\n`;
+    sqlContent += `    "paymentMethodId" TEXT,\n`;
+    sqlContent += `    FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT,\n`;
+    sqlContent += `    FOREIGN KEY ("clientId") REFERENCES "Client"("id") ON DELETE SET NULL,\n`;
+    sqlContent += `    FOREIGN KEY ("paymentMethodId") REFERENCES "PaymentMethod"("id") ON DELETE SET NULL\n`;
+    sqlContent += `);\n\n`;
+    
+    // Tabela SaleItem
+    sqlContent += `CREATE TABLE "SaleItem" (\n`;
+    sqlContent += `    "id" TEXT PRIMARY KEY,\n`;
+    sqlContent += `    "quantity" INTEGER NOT NULL,\n`;
+    sqlContent += `    "price" DOUBLE PRECISION NOT NULL,\n`;
+    sqlContent += `    "costPrice" DOUBLE PRECISION NOT NULL,\n`;
+    sqlContent += `    "discount" DOUBLE PRECISION NOT NULL DEFAULT 0,\n`;
+    sqlContent += `    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,\n`;
+    sqlContent += `    "saleId" TEXT NOT NULL,\n`;
+    sqlContent += `    "productId" TEXT NOT NULL,\n`;
+    sqlContent += `    "isDoseItem" BOOLEAN NOT NULL DEFAULT false,\n`;
+    sqlContent += `    "isFractioned" BOOLEAN NOT NULL DEFAULT false,\n`;
+    sqlContent += `    "discountBy" TEXT,\n`;
+    sqlContent += `    "choosableSelections" JSONB,\n`;
+    sqlContent += `    FOREIGN KEY ("saleId") REFERENCES "Sale"("id") ON DELETE CASCADE,\n`;
+    sqlContent += `    FOREIGN KEY ("productId") REFERENCES "Product"("id") ON DELETE RESTRICT\n`;
+    sqlContent += `);\n\n`;
+    
+    // Tabela CashFlow
+    sqlContent += `CREATE TABLE "CashFlow" (\n`;
+    sqlContent += `    "id" TEXT PRIMARY KEY,\n`;
+    sqlContent += `    "type" TEXT NOT NULL,\n`;
+    sqlContent += `    "amount" DOUBLE PRECISION NOT NULL,\n`;
+    sqlContent += `    "description" TEXT NOT NULL,\n`;
+    sqlContent += `    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,\n`;
+    sqlContent += `    "userId" TEXT NOT NULL,\n`;
+    sqlContent += `    FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT\n`;
+    sqlContent += `);\n\n`;
+    
+    // Tabela AccountPayable
+    sqlContent += `CREATE TABLE "AccountPayable" (\n`;
+    sqlContent += `    "id" TEXT PRIMARY KEY,\n`;
+    sqlContent += `    "description" TEXT NOT NULL,\n`;
+    sqlContent += `    "value" DOUBLE PRECISION NOT NULL,\n`;
+    sqlContent += `    "dueDate" TIMESTAMP(3) NOT NULL,\n`;
+    sqlContent += `    "status" TEXT NOT NULL DEFAULT 'PENDING',\n`;
+    sqlContent += `    "type" TEXT NOT NULL,\n`;
+    sqlContent += `    "observations" TEXT,\n`;
+    sqlContent += `    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,\n`;
+    sqlContent += `    "updatedAt" TIMESTAMP(3) NOT NULL\n`;
+    sqlContent += `);\n\n`;
+    
+    // Tabela StockMovement
+    sqlContent += `CREATE TABLE "StockMovement" (\n`;
+    sqlContent += `    "id" TEXT PRIMARY KEY,\n`;
+    sqlContent += `    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,\n`;
+    sqlContent += `    "productId" TEXT NOT NULL,\n`;
+    sqlContent += `    "type" TEXT NOT NULL,\n`;
+    sqlContent += `    "quantity" INTEGER NOT NULL,\n`;
+    sqlContent += `    "unitCost" DOUBLE PRECISION NOT NULL,\n`;
+    sqlContent += `    "totalCost" DOUBLE PRECISION NOT NULL,\n`;
+    sqlContent += `    "notes" TEXT,\n`;
+    sqlContent += `    "origin" TEXT,\n`;
+    sqlContent += `    FOREIGN KEY ("productId") REFERENCES "Product"("id") ON DELETE RESTRICT\n`;
+    sqlContent += `);\n\n`;
+    
+    // Tabela Comanda
+    sqlContent += `CREATE TABLE "Comanda" (\n`;
+    sqlContent += `    "id" TEXT PRIMARY KEY,\n`;
+    sqlContent += `    "number" INTEGER UNIQUE NOT NULL,\n`;
+    sqlContent += `    "customerName" TEXT NOT NULL,\n`;
+    sqlContent += `    "tableNumber" TEXT,\n`;
+    sqlContent += `    "isOpen" BOOLEAN NOT NULL DEFAULT true,\n`;
+    sqlContent += `    "total" DOUBLE PRECISION NOT NULL DEFAULT 0,\n`;
+    sqlContent += `    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,\n`;
+    sqlContent += `    "updatedAt" TIMESTAMP(3) NOT NULL,\n`;
+    sqlContent += `    "createdBy" TEXT NOT NULL,\n`;
+    sqlContent += `    FOREIGN KEY ("createdBy") REFERENCES "User"("id") ON DELETE RESTRICT\n`;
+    sqlContent += `);\n\n`;
+    
+    // Tabela ComandaItem
+    sqlContent += `CREATE TABLE "ComandaItem" (\n`;
+    sqlContent += `    "id" TEXT PRIMARY KEY,\n`;
+    sqlContent += `    "comandaId" TEXT NOT NULL,\n`;
+    sqlContent += `    "productId" TEXT NOT NULL,\n`;
+    sqlContent += `    "code" TEXT NOT NULL,\n`;
+    sqlContent += `    "name" TEXT NOT NULL,\n`;
+    sqlContent += `    "quantity" INTEGER NOT NULL,\n`;
+    sqlContent += `    "price" DOUBLE PRECISION NOT NULL,\n`;
+    sqlContent += `    "total" DOUBLE PRECISION NOT NULL,\n`;
+    sqlContent += `    "isDoseItem" BOOLEAN NOT NULL DEFAULT false,\n`;
+    sqlContent += `    "isFractioned" BOOLEAN NOT NULL DEFAULT false,\n`;
+    sqlContent += `    "discountBy" TEXT,\n`;
+    sqlContent += `    "choosableSelections" JSONB,\n`;
+    sqlContent += `    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,\n`;
+    sqlContent += `    FOREIGN KEY ("comandaId") REFERENCES "Comanda"("id") ON DELETE CASCADE,\n`;
+    sqlContent += `    FOREIGN KEY ("productId") REFERENCES "Product"("id") ON DELETE RESTRICT\n`;
     sqlContent += `);\n\n`;
     
     // Tabela Order
@@ -625,6 +753,69 @@ router.get('/backup', async (req, res) => {
     });
     sqlContent += `\n`;
     
+    // Inserir dados das tabelas de vendas e financeiro
+    sqlContent += `-- Inserir Clients\n`;
+    clients.forEach(client => {
+      sqlContent += `INSERT INTO "Client" ("id", "name", "email", "phone", "document", "address", "active", "createdAt", "updatedAt") VALUES (`;
+      sqlContent += `'${client.id}'::uuid, '${client.name.replace(/'/g, "''")}', `;
+      sqlContent += `${client.email ? `'${client.email.replace(/'/g, "''")}'` : 'NULL'}, `;
+      sqlContent += `${client.phone ? `'${client.phone.replace(/'/g, "''")}'` : 'NULL'}, `;
+      sqlContent += `${client.document ? `'${client.document.replace(/'/g, "''")}'` : 'NULL'}, `;
+      sqlContent += `${client.address ? `'${client.address.replace(/'/g, "''")}'` : 'NULL'}, `;
+      sqlContent += `${client.active}, '${client.createdAt.toISOString()}'::timestamp, '${client.updatedAt.toISOString()}'::timestamp);\n`;
+    });
+    sqlContent += `\n`;
+    
+    sqlContent += `-- Inserir Sales\n`;
+    sales.forEach(sale => {
+      sqlContent += `INSERT INTO "Sale" ("id", "status", "total", "discount", "createdAt", "updatedAt", "userId", "clientId", "paymentMethodId") VALUES (`;
+      sqlContent += `'${sale.id}'::uuid, '${sale.status}', ${sale.total}, ${sale.discount}, `;
+      sqlContent += `'${sale.createdAt.toISOString()}'::timestamp, '${sale.updatedAt.toISOString()}'::timestamp, `;
+      sqlContent += `'${sale.userId}'::uuid, `;
+      sqlContent += `${sale.clientId ? `'${sale.clientId}'::uuid` : 'NULL'}, `;
+      sqlContent += `${sale.paymentMethodId ? `'${sale.paymentMethodId}'::uuid` : 'NULL'});\n`;
+    });
+    sqlContent += `\n`;
+    
+    sqlContent += `-- Inserir SaleItems\n`;
+    saleItems.forEach(saleItem => {
+      sqlContent += `INSERT INTO "SaleItem" ("id", "quantity", "price", "costPrice", "discount", "createdAt", "saleId", "productId", "isDoseItem", "isFractioned", "discountBy", "choosableSelections") VALUES (`;
+      sqlContent += `'${saleItem.id}'::uuid, ${saleItem.quantity}, ${saleItem.price}, ${saleItem.costPrice}, ${saleItem.discount}, `;
+      sqlContent += `'${saleItem.createdAt.toISOString()}'::timestamp, '${saleItem.saleId}'::uuid, '${saleItem.productId}'::uuid, `;
+      sqlContent += `${saleItem.isDoseItem}, ${saleItem.isFractioned}, `;
+      sqlContent += `${saleItem.discountBy ? `'${saleItem.discountBy}'` : 'NULL'}, `;
+      sqlContent += `${saleItem.choosableSelections ? `'${JSON.stringify(saleItem.choosableSelections).replace(/'/g, "''")}'` : 'NULL'});\n`;
+    });
+    sqlContent += `\n`;
+    
+    sqlContent += `-- Inserir CashFlows\n`;
+    cashFlows.forEach(cashFlow => {
+      sqlContent += `INSERT INTO "CashFlow" ("id", "type", "amount", "description", "createdAt", "userId") VALUES (`;
+      sqlContent += `'${cashFlow.id}'::uuid, '${cashFlow.type}', ${cashFlow.amount}, '${cashFlow.description.replace(/'/g, "''")}', `;
+      sqlContent += `'${cashFlow.createdAt.toISOString()}'::timestamp, '${cashFlow.userId}'::uuid);\n`;
+    });
+    sqlContent += `\n`;
+    
+    sqlContent += `-- Inserir AccountPayables\n`;
+    accountPayables.forEach(accountPayable => {
+      sqlContent += `INSERT INTO "AccountPayable" ("id", "description", "value", "dueDate", "status", "type", "observations", "createdAt", "updatedAt") VALUES (`;
+      sqlContent += `'${accountPayable.id}'::uuid, '${accountPayable.description.replace(/'/g, "''")}', ${accountPayable.value}, `;
+      sqlContent += `'${accountPayable.dueDate.toISOString()}'::timestamp, '${accountPayable.status}', '${accountPayable.type}', `;
+      sqlContent += `${accountPayable.observations ? `'${accountPayable.observations.replace(/'/g, "''")}'` : 'NULL'}, `;
+      sqlContent += `'${accountPayable.createdAt.toISOString()}'::timestamp, '${accountPayable.updatedAt.toISOString()}'::timestamp);\n`;
+    });
+    sqlContent += `\n`;
+    
+    sqlContent += `-- Inserir StockMovements\n`;
+    stockMovements.forEach(stockMovement => {
+      sqlContent += `INSERT INTO "StockMovement" ("id", "createdAt", "productId", "type", "quantity", "unitCost", "totalCost", "notes", "origin") VALUES (`;
+      sqlContent += `'${stockMovement.id}'::uuid, '${stockMovement.createdAt.toISOString()}'::timestamp, '${stockMovement.productId}'::uuid, `;
+      sqlContent += `'${stockMovement.type}', ${stockMovement.quantity}, ${stockMovement.unitCost}, ${stockMovement.totalCost}, `;
+      sqlContent += `${stockMovement.notes ? `'${stockMovement.notes.replace(/'/g, "''")}'` : 'NULL'}, `;
+      sqlContent += `${stockMovement.origin ? `'${stockMovement.origin.replace(/'/g, "''")}'` : 'NULL'});\n`;
+    });
+    sqlContent += `\n`;
+    
     // Reabilitar triggers
     sqlContent += `-- Reabilitar triggers\n`;
     sqlContent += `SET session_replication_role = DEFAULT;\n\n`;
@@ -646,6 +837,12 @@ router.get('/backup', async (req, res) => {
     sqlContent += `-- OrderItems: ${orderItems.length}\n`;
     sqlContent += `-- StockEntries: ${stockEntries.length}\n`;
     sqlContent += `-- Notifications: ${notifications.length}\n`;
+    sqlContent += `-- Clients: ${clients.length}\n`;
+    sqlContent += `-- Sales: ${sales.length}\n`;
+    sqlContent += `-- SaleItems: ${saleItems.length}\n`;
+    sqlContent += `-- CashFlows: ${cashFlows.length}\n`;
+    sqlContent += `-- AccountPayables: ${accountPayables.length}\n`;
+    sqlContent += `-- StockMovements: ${stockMovements.length}\n`;
     sqlContent += `-- Backup concluído!\n`;
 
     // Configurar headers para download
