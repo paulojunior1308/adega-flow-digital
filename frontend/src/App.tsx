@@ -36,6 +36,7 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import MotoboyDashboard from '@/pages/motoboy/MotoboyDashboard';
 import UsersList from "@/pages/admin/AdminUsers";
 import AdminPromotionsAndCombos from "@/pages/admin/AdminPromotionsAndCombos";
+import AdminBackup from "@/pages/admin/AdminBackup";
 
 const queryClient = new QueryClient();
 
@@ -83,6 +84,7 @@ const App = () => (
           <Route path="/motoboy" element={<ProtectedRoute allowedRoles={['MOTOBOY']}><MotoboyDashboard /></ProtectedRoute>} />
           <Route path="/admin-usuarios" element={<ProtectedRoute allowedRoles={['ADMIN']}><UsersList /></ProtectedRoute>} />
           <Route path="/admin-promocoes-combos" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminPromotionsAndCombos /></ProtectedRoute>} />
+          <Route path="/admin-backup" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminBackup /></ProtectedRoute>} />
         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

@@ -24,6 +24,7 @@ model User {
   orders    Order[]
   sales     Sale[]
   notifications Notification[]
+  comandas  Comanda[]
 }
 
 model Product {
@@ -60,6 +61,7 @@ model Product {
   doseItems   DoseItem[]
   stockEntries StockEntry[]
   stockMovements StockMovement[]
+  comandaItems ComandaItem[]
 }
 
 model Category {
@@ -381,6 +383,38 @@ model StockMovement {
   totalCost   Float
   notes       String?
   origin      String?  // 'manual', 'venda_online', 'venda_pdv', etc
+}
+
+model Comanda {
+  id           String        @id @default(uuid())
+  number       Int           @unique
+  customerName String
+  tableNumber  String?       // Número da mesa (opcional)
+  isOpen       Boolean       @default(true)
+  total        Float         @default(0)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  items        ComandaItem[]
+  createdBy    String        // ID do admin que criou
+  user         User          @relation(fields: [createdBy], references: [id])
+}
+
+model ComandaItem {
+  id        String   @id @default(uuid())
+  comandaId String
+  productId String
+  code      String
+  name      String
+  quantity  Int
+  price     Float
+  total     Float
+  isDoseItem Boolean @default(false)
+  isFractioned Boolean @default(false)
+  discountBy String? // 'volume' ou 'unit'
+  choosableSelections Json?
+  createdAt DateTime @default(now())
+  comanda   Comanda @relation(fields: [comandaId], references: [id], onDelete: Cascade)
+  product   Product @relation(fields: [productId], references: [id])
 }
 
 enum Role {

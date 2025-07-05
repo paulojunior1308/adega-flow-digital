@@ -16,6 +16,7 @@ import { motoboyMiddleware } from '../middlewares/motoboy';
 import prisma from '../config/prisma';
 import publicRoutes from './public';
 import doseRoutes from './dose.routes';
+import comandaRoutes from './comanda';
 
 const router = express.Router();
 
@@ -65,5 +66,8 @@ router.use('/', clientRoutes);
 
 // Rotas de doses protegidas para admin
 router.use('/admin/doses', authorizeRoles('ADMIN'), doseRoutes);
+
+// Rotas de comandas protegidas para admin
+router.use('/admin', authorizeRoles('ADMIN'), comandaRoutes);
 
 export default router; 

@@ -6,6 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import api from '@/lib/axios';
 import { ComboOptionsModal } from '@/components/home/ComboOptionsModal';
+import socket from '@/lib/socket';
 
 // Types definition
 interface Product {
@@ -31,16 +32,22 @@ interface ComandaItem {
   isDoseItem?: boolean;
   isFractioned?: boolean;
   discountBy?: 'volume' | 'unit';
+  comboInstanceId?: string;
 }
 
 interface Comanda {
   id: string;
   number: number;
   customerName: string;
+  tableNumber?: string;
   items: ComandaItem[];
   total: number;
   createdAt: Date;
+  updatedAt: Date;
   isOpen: boolean;
+  user?: {
+    name: string;
+  };
 }
 
 interface ComandaModalProps {
@@ -73,28 +80,113 @@ export function ComandaModal({
   const { toast } = useToast();
   const [nextComandaNumber, setNextComandaNumber] = useState(1);
 
-  // Carregar comandas do localStorage
+  // Carregar comandas da API
   useEffect(() => {
-    const savedComandas = localStorage.getItem('comandas');
-    if (savedComandas) {
-      const parsed = JSON.parse(savedComandas);
-      // Converter strings de data para objetos Date
-      const comandasWithDates = parsed.map((c: any) => ({
+    if (open) {
+      loadComandas();
+    }
+  }, [open]);
+
+  // Função para carregar comandas
+  const loadComandas = async () => {
+    try {
+      const response = await api.get('/admin/comandas');
+      const comandasWithDates = response.data.map((c: any) => ({
         ...c,
-        createdAt: new Date(c.createdAt)
+        createdAt: new Date(c.createdAt),
+        updatedAt: new Date(c.updatedAt)
       }));
       setComandas(comandasWithDates);
-
-      // Encontrar o maior número de comanda para continuar a sequência
-      const maxNumber = Math.max(...comandasWithDates.map((c: Comanda) => c.number), 0);
-      setNextComandaNumber(maxNumber + 1);
+    } catch (error) {
+      console.error('Erro ao carregar comandas:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível carregar as comandas.",
+        variant: "destructive",
+      });
     }
-  }, []);
+  };
 
-  // Salvar comandas no localStorage sempre que houver mudanças
+  // WebSocket para sincronização em tempo real
   useEffect(() => {
-    localStorage.setItem('comandas', JSON.stringify(comandas));
-  }, [comandas]);
+    if (!open) return;
+
+    // Ouvir eventos de comandas
+    const handleComandaCreated = (data: { comanda: Comanda }) => {
+      const comandaWithDates = {
+        ...data.comanda,
+        createdAt: new Date(data.comanda.createdAt),
+        updatedAt: new Date(data.comanda.updatedAt)
+      };
+      setComandas(prev => {
+        const exists = prev.some(c => c.id === comandaWithDates.id);
+        if (!exists) {
+          return [comandaWithDates, ...prev];
+        }
+        return prev;
+      });
+    };
+
+    const handleComandaUpdated = (data: { comanda: Comanda }) => {
+      const comandaWithDates = {
+        ...data.comanda,
+        createdAt: new Date(data.comanda.createdAt),
+        updatedAt: new Date(data.comanda.updatedAt)
+      };
+      setComandas(prev => prev.map(c => 
+        c.id === comandaWithDates.id ? comandaWithDates : c
+      ));
+      
+      // Se a comanda atual foi atualizada, atualizar também
+      if (currentComanda?.id === comandaWithDates.id) {
+        setCurrentComanda(comandaWithDates);
+      }
+    };
+
+    const handleComandaClosed = (data: { comanda: Comanda }) => {
+      const comandaWithDates = {
+        ...data.comanda,
+        createdAt: new Date(data.comanda.createdAt),
+        updatedAt: new Date(data.comanda.updatedAt)
+      };
+      setComandas(prev => prev.map(c => 
+        c.id === comandaWithDates.id ? comandaWithDates : c
+      ));
+    };
+
+    const handleComandaReopened = (data: { comanda: Comanda }) => {
+      const comandaWithDates = {
+        ...data.comanda,
+        createdAt: new Date(data.comanda.createdAt),
+        updatedAt: new Date(data.comanda.updatedAt)
+      };
+      setComandas(prev => prev.map(c => 
+        c.id === comandaWithDates.id ? comandaWithDates : c
+      ));
+    };
+
+    const handleComandaDeleted = (data: { comandaId: string }) => {
+      setComandas(prev => prev.filter(c => c.id !== data.comandaId));
+      if (currentComanda?.id === data.comandaId) {
+        setCurrentComanda(null);
+        setShowComandaList(true);
+      }
+    };
+
+    socket.on('comanda-created', handleComandaCreated);
+    socket.on('comanda-updated', handleComandaUpdated);
+    socket.on('comanda-closed', handleComandaClosed);
+    socket.on('comanda-reopened', handleComandaReopened);
+    socket.on('comanda-deleted', handleComandaDeleted);
+
+    return () => {
+      socket.off('comanda-created', handleComandaCreated);
+      socket.off('comanda-updated', handleComandaUpdated);
+      socket.off('comanda-closed', handleComandaClosed);
+      socket.off('comanda-reopened', handleComandaReopened);
+      socket.off('comanda-deleted', handleComandaDeleted);
+    };
+  }, [open, currentComanda]);
 
   // Buscar produtos, combos e doses ao carregar
   useEffect(() => {
@@ -162,7 +254,7 @@ export function ComandaModal({
   const subtotal = currentComanda?.items.reduce((sum, item) => sum + item.total, 0) || 0;
 
   // Create new comanda
-  const createNewComanda = () => {
+  const createNewComanda = async () => {
     if (!customerName.trim()) {
       toast({
         title: "Nome obrigatório",
@@ -172,25 +264,33 @@ export function ComandaModal({
       return;
     }
 
-    const newComanda: Comanda = {
-      id: Math.random().toString(36).substring(2, 8),
-      number: nextComandaNumber,
-      customerName: customerName.trim(),
-      items: [],
-      total: 0,
-      createdAt: new Date(),
-      isOpen: true
-    };
+    try {
+      const response = await api.post('/admin/comandas', {
+        customerName: customerName.trim(),
+        tableNumber: null // Pode ser adicionado depois se necessário
+      });
 
-    setComandas(prev => [...prev, newComanda]);
-    setCurrentComanda(newComanda);
-    setCustomerName('');
-    setNextComandaNumber(prev => prev + 1);
-    setShowComandaList(false);
-    toast({
-      title: "Comanda criada",
-      description: `Comanda #${newComanda.number} criada para ${newComanda.customerName}.`,
-    });
+      const newComanda = {
+        ...response.data,
+        createdAt: new Date(response.data.createdAt),
+        updatedAt: new Date(response.data.updatedAt)
+      };
+
+      setCurrentComanda(newComanda);
+      setCustomerName('');
+      setShowComandaList(false);
+      toast({
+        title: "Comanda criada",
+        description: `Comanda #${newComanda.number} criada para ${newComanda.customerName}.`,
+      });
+    } catch (error) {
+      console.error('Erro ao criar comanda:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível criar a comanda.",
+        variant: "destructive",
+      });
+    }
   };
 
   // Open existing comanda
@@ -200,26 +300,31 @@ export function ComandaModal({
   };
 
   // Close comanda
-  const closeComanda = (comandaId: string) => {
-    setComandas(prev => prev.map(comanda => 
-      comanda.id === comandaId 
-        ? { ...comanda, isOpen: false }
-        : comanda
-    ));
+  const closeComanda = async (comandaId: string) => {
+    try {
+      await api.put(`/admin/comandas/${comandaId}/close`);
+      
+      if (currentComanda?.id === comandaId) {
+        setCurrentComanda(null);
+        setShowComandaList(true);
+      }
 
-    if (currentComanda?.id === comandaId) {
-      setCurrentComanda(null);
-      setShowComandaList(true);
+      toast({
+        title: "Comanda fechada",
+        description: "A comanda foi fechada com sucesso.",
+      });
+    } catch (error) {
+      console.error('Erro ao fechar comanda:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível fechar a comanda.",
+        variant: "destructive",
+      });
     }
-
-    toast({
-      title: "Comanda fechada",
-      description: "A comanda foi fechada com sucesso.",
-    });
   };
 
   // Add item to comanda
-  const addToComanda = (item: any, quantity: number = 1) => {
+  const addToComanda = async (item: any, quantity: number = 1) => {
     if (!currentComanda) {
       toast({
         title: "Nenhuma comanda selecionada",
@@ -242,62 +347,44 @@ export function ComandaModal({
     }
 
     // Para produtos simples
-    const existingItem = currentComanda.items.find(cartItem => 
-      cartItem.productId === item.id && 
-      cartItem.name === `${item.name} (Avulso)`
-    );
-
-    if (existingItem) {
-      // Atualizar quantidade se já existe
-      updateComandaItemQuantity(existingItem.id, existingItem.quantity + quantity);
-    } else {
-      // Adicionar novo item
-      const newItem = {
-        id: Math.random().toString(36).substring(2, 8),
+    try {
+      await api.post(`/admin/comandas/${currentComanda.id}/items`, {
         productId: item.id,
-        code: item.code,
+        code: item.code || item.id.substring(0, 6),
         name: `${item.name} (Avulso)`,
-        price: item.price,
         quantity: quantity,
-        total: item.price * quantity,
-        isAvulso: true
-      };
-
-      setCurrentComanda(prev => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          items: [...prev.items, newItem]
-        };
+        price: item.price,
+        isDoseItem: false,
+        isFractioned: item.isFractioned || false,
+        discountBy: null,
+        choosableSelections: null
       });
-
-      // Atualizar a lista de comandas
-      setComandas(prev => prev.map(comanda => 
-        comanda.id === currentComanda.id 
-          ? { ...comanda, items: [...comanda.items, newItem] }
-          : comanda
-      ));
+    } catch (error) {
+      console.error('Erro ao adicionar item:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível adicionar o item à comanda.",
+        variant: "destructive",
+      });
     }
   };
 
   // Handle combo configuration
-  const handleComboConfirm = (choosableSelections: Record<string, Record<string, number>>) => {
+  const handleComboConfirm = async (choosableSelections: Record<string, Record<string, number>>) => {
     if (!currentComanda || !comboToConfigure) return;
 
-    const produtosCombo: { productId: string, nome: string, precoOriginal: number, quantidade: number }[] = [];
-    
+    // Montar lista de produtos do combo (fixos e escolhidos)
+    const produtosCombo: { product: Product, quantidade: number, discountBy?: 'volume' | 'unit' }[] = [];
     // Fixos
     for (const item of comboToConfigure.items) {
-      if (!item.isChoosable) {
+      if (!item.isChoosable && item.product) {
         produtosCombo.push({
-          productId: item.productId,
-          nome: item.product?.name || '',
-          precoOriginal: item.product?.price || 0,
-          quantidade: Math.max(1, item.quantity)
+          product: item.product,
+          quantidade: Math.max(1, item.quantity),
+          discountBy: item.discountBy
         });
       }
     }
-
     // Escolhíveis
     for (const [categoryId, selections] of Object.entries(choosableSelections)) {
       for (const [productId, quantidade] of Object.entries(selections)) {
@@ -305,81 +392,44 @@ export function ComandaModal({
           const product = products.find(p => p.id === productId);
           if (product) {
             produtosCombo.push({
-              productId: product.id,
-              nome: product.name,
-              precoOriginal: product.price,
-              quantidade: Number(quantidade)
+              product,
+              quantidade: Number(quantidade),
+              discountBy: undefined
             });
           }
         }
       }
     }
 
-    // Calcular valor total original e fator de desconto
-    const totalOriginal = produtosCombo.reduce((sum, p) => sum + p.precoOriginal * p.quantidade, 0);
-    const fatorDesconto = comboToConfigure.price / totalOriginal;
-
-    // Criar itens com preços ajustados
-    const comboItems: ComandaItem[] = [];
-    let totalAjustado = 0;
-
-    // Processar todos os itens exceto o último
-    for (let i = 0; i < produtosCombo.length - 1; i++) {
-      const produto = produtosCombo[i];
-      const precoAjustado = Math.floor((produto.precoOriginal * fatorDesconto) * 100) / 100;
-      const total = precoAjustado * produto.quantidade;
-      totalAjustado += total;
-
-      comboItems.push({
-        id: Math.random().toString(36).substring(2, 8),
-        productId: produto.productId,
-        code: produto.productId.substring(0, 6),
-        name: `Combo ${comboToConfigure.name} - ${produto.nome}`,
-        quantity: produto.quantidade,
-        price: precoAjustado,
-        total
-      });
+    // Calcular valor proporcional igual ao PDV
+    const totalOriginalPrice = produtosCombo.reduce((sum, item) => sum + item.product.price * (item.discountBy === 'volume' ? 1 : item.quantidade), 0);
+    let accumulatedPrice = 0;
+    for (let i = 0; i < produtosCombo.length; i++) {
+      const item = produtosCombo[i];
+      const proportion = (item.product.price * (item.discountBy === 'volume' ? 1 : item.quantidade)) / totalOriginalPrice;
+      let proportionalPrice = comboToConfigure.price * proportion;
+      proportionalPrice = Math.round(proportionalPrice * 100) / 100;
+      accumulatedPrice += proportionalPrice;
+      if (i === produtosCombo.length - 1) {
+        proportionalPrice += (comboToConfigure.price - accumulatedPrice);
+      }
+      const precoUnitario = proportionalPrice / item.quantidade;
+      try {
+        await api.post(`/admin/comandas/${currentComanda.id}/items`, {
+          productId: item.product.id,
+          code: item.product.code || item.product.id.substring(0, 6),
+          name: `Combo ${comboToConfigure.name} - ${item.product.name}`,
+          quantity: item.quantidade,
+          price: precoUnitario,
+          isDoseItem: false,
+          isFractioned: item.product.isFractioned,
+          discountBy: item.discountBy,
+          choosableSelections: null
+        });
+      } catch (error) {
+        console.error('Erro ao adicionar item do combo:', error);
+      }
     }
-
-    // Processar o último item ajustando o valor para bater com o total do combo
-    const ultimoProduto = produtosCombo[produtosCombo.length - 1];
-    const valorRestante = comboToConfigure.price - totalAjustado;
-    const precoUnitarioUltimo = Math.floor((valorRestante / ultimoProduto.quantidade) * 100) / 100;
-
-    comboItems.push({
-      id: Math.random().toString(36).substring(2, 8),
-      productId: ultimoProduto.productId,
-      code: ultimoProduto.productId.substring(0, 6),
-      name: `Combo ${comboToConfigure.name} - ${ultimoProduto.nome}`,
-      quantity: ultimoProduto.quantidade,
-      price: precoUnitarioUltimo,
-      total: valorRestante
-    });
-
-    // Calcular preço proporcional para cada item
-    let runningTotal = 0;
-    for (let i = 0; i < comboItems.length - 1; i++) {
-        const item = comboItems[i];
-        const adjustedPrice = item.price * fatorDesconto;
-        item.price = adjustedPrice;
-        item.total = item.price * item.quantity;
-        runningTotal += item.total;
-    }
-    // Ajustar o último item para bater o total exato
-    const lastItem = comboItems[comboItems.length - 1];
-    const lastItemTotal = comboToConfigure.price - runningTotal;
-    lastItem.price = lastItemTotal / lastItem.quantity;
-    lastItem.total = lastItemTotal;
-
-
-    setCurrentComanda(prev => {
-      if (!prev) return prev;
-      return {
-        ...prev,
-        items: [...prev.items, ...comboItems],
-        total: prev.total + comboToConfigure.price
-      };
-    });
 
     setComboModalOpen(false);
     setComboToConfigure(null);
@@ -389,7 +439,7 @@ export function ComandaModal({
     });
   };
 
-  const handleDoseConfirm = (choosableSelections: Record<string, Record<string, number>>) => {
+  const handleDoseConfirm = async (choosableSelections: Record<string, Record<string, number>>) => {
     if (!currentComanda || !doseToConfigure) return;
 
     const produtosDose: { productId: string, nome: string, precoOriginal: number, quantidade: number, isFractioned?: boolean }[] = [];
@@ -428,7 +478,6 @@ export function ComandaModal({
     const totalOriginal = produtosDose.reduce((sum, p) => sum + p.precoOriginal * p.quantidade, 0);
     const fatorDesconto = totalOriginal > 0 ? doseToConfigure.price / totalOriginal : 0;
 
-    const doseItems: ComandaItem[] = [];
     let totalAcumulado = 0;
 
     for (let i = 0; i < produtosDose.length; i++) {
@@ -447,32 +496,24 @@ export function ComandaModal({
         
         const precoUnitario = precoFinalItem / produto.quantidade;
 
-        doseItems.push({
-            id: `${produto.productId}-${Math.random().toString(36).substring(2, 8)}`,
+        try {
+          await api.post(`/admin/comandas/${currentComanda.id}/items`, {
             productId: produto.productId,
             code: produto.productId.substring(0, 6),
             name: `Dose de ${doseToConfigure.name} - ${produto.nome}`,
             quantity: produto.quantidade,
             price: precoUnitario,
-            total: precoFinalItem,
             isDoseItem: true,
             isFractioned: produto.isFractioned,
+            discountBy: produto.isFractioned ? 'volume' : 'unit',
             choosableSelections: {
                 [doseToConfigure.id]: { [produto.productId]: produto.quantidade }
             }
-        });
+          });
+        } catch (error) {
+          console.error('Erro ao adicionar item da dose:', error);
+        }
     }
-
-    setCurrentComanda(prev => {
-      if (!prev) return prev;
-      const newItems = [...prev.items, ...doseItems];
-      const newTotal = newItems.reduce((sum, item) => sum + item.total, 0);
-      return {
-        ...prev,
-        items: newItems,
-        total: newTotal
-      };
-    });
 
     setDoseModalOpen(false);
     setDoseToConfigure(null);
@@ -482,7 +523,7 @@ export function ComandaModal({
   };
 
   // Update item quantity
-  const updateComandaItemQuantity = (itemId: string, newQuantity: number) => {
+  const updateComandaItemQuantity = async (itemId: string, newQuantity: number) => {
     if (!currentComanda) return;
 
     if (newQuantity <= 0) {
@@ -490,35 +531,41 @@ export function ComandaModal({
       return;
     }
 
-    const updatedItems = currentComanda.items.map(item =>
-      item.id === itemId
-        ? { ...item, quantity: newQuantity, total: newQuantity * item.price }
-        : item
-    );
-
-    setCurrentComanda(prev => prev ? { ...prev, items: updatedItems } : null);
-    setComandas(prev => prev.map(c => 
-      c.id === currentComanda.id ? { ...c, items: updatedItems } : c
-    ));
+    try {
+      await api.put(`/admin/comandas/${currentComanda.id}/items/${itemId}`, {
+        quantity: newQuantity
+      });
+    } catch (error) {
+      console.error('Erro ao atualizar quantidade:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível atualizar a quantidade.",
+        variant: "destructive",
+      });
+    }
   };
 
   // Remove item from comanda
-  const removeComandaItem = (itemId: string) => {
+  const removeComandaItem = async (itemId: string) => {
     if (!currentComanda) return;
 
-    const updatedItems = currentComanda.items.filter(item => item.id !== itemId);
-    
-    setCurrentComanda(prev => prev ? { ...prev, items: updatedItems } : null);
-    setComandas(prev => prev.map(c => 
-      c.id === currentComanda.id ? { ...c, items: updatedItems } : c
-    ));
+    try {
+      await api.delete(`/admin/comandas/${currentComanda.id}/items/${itemId}`);
+    } catch (error) {
+      console.error('Erro ao remover item:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível remover o item.",
+        variant: "destructive",
+      });
+    }
   };
 
   // Add product by code
-  const handleAddProductByCode = () => {
+  const handleAddProductByCode = async () => {
     const product = products.find(p => p.code === productCode);
     if (product) {
-      addToComanda(product, productQuantity);
+      await addToComanda(product, productQuantity);
       setProductCode('');
       setProductQuantity(1);
     } else {
@@ -531,37 +578,138 @@ export function ComandaModal({
   };
 
   // Transfer items to cart
-  const handleTransferToCart = () => {
+  const handleTransferToCart = async () => {
     if (!currentComanda || currentComanda.items.length === 0) return;
 
-    // Transferir todos os itens de uma vez para o carrinho
-    onTransferToCart(currentComanda.items);
+    try {
+      const itemsToTransfer: any[] = [];
+      // Agrupar combos por nome do combo
+      const combosMap: Record<string, { comboName: string, items: any[] }> = {};
+      currentComanda.items.forEach(item => {
+        if (item.name.toLowerCase().includes('combo')) {
+          // Extrai o nome do combo (ex: "Combo Combo de Jack Daniel's - Produto")
+          const match = item.name.match(/Combo (.+?)( - |$)/i);
+          const comboName = match ? match[1].trim() : item.name;
+          if (!combosMap[comboName]) {
+            combosMap[comboName] = { comboName, items: [] };
+          }
+          combosMap[comboName].items.push(item);
+        } else {
+          // Produto avulso ou dose
+          let type: 'product' | 'combo' = 'product';
+          let isComboItem = false;
+          let isDoseItem = false;
+          if (item.name.toLowerCase().includes('dose')) isDoseItem = true;
+          itemsToTransfer.push({
+            ...item,
+            id: `${item.productId}-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+            type,
+            isComboItem,
+            isDoseItem,
+            total: item.price * item.quantity,
+          });
+        }
+      });
 
-    // Fechar a comanda
-    closeComanda(currentComanda.id);
-    
-    // Fechar o modal
-    onOpenChange(false);
+      // Para cada combo, buscar o combo original pelo nome e montar os itens proporcionais igual ao PDV
+      Object.values(combosMap).forEach(({ comboName, items }) => {
+        const comboOriginal = combos.find((c: any) => c.name === comboName);
+        if (!comboOriginal) {
+          items.forEach(i => itemsToTransfer.push(i));
+          return;
+        }
+        // Descobrir a quantidade de combos: menor quantidade entre os produtos do combo presentes na comanda
+        const comboProductIds = comboOriginal.items.map((i: any) => i.product.id);
+        const quantities = comboProductIds.map(pid => {
+          const item = items.find(i => i.productId === pid);
+          return item ? item.quantity : 0;
+        });
+        const comboQty = Math.min(...quantities.filter(q => q > 0));
+        if (!comboQty || comboQty === 0) return; // Não transferir se não houver todos os produtos do combo
+        // Valor total do combo (forçado): preço do combo original * quantidade de combos
+        const finalPrice = comboOriginal.price * comboQty;
+        // Montar os itens do combo igual ao PDV
+        const allItems: { product: Product; quantity: number; discountBy?: 'volume' | 'unit' }[] = [];
+        comboOriginal.items.forEach((item: any) => {
+          if (!item.product) return;
+          allItems.push({
+            product: item.product,
+            quantity: item.quantity * comboQty,
+            discountBy: item.discountBy
+          });
+        });
+        const totalOriginalPrice = allItems.reduce((sum, item) => sum + item.product.price * (item.discountBy === 'volume' ? 1 : item.quantity), 0);
+        let accumulatedPrice = 0;
+        allItems.forEach((item, index) => {
+          const proportion = (item.product.price * (item.discountBy === 'volume' ? 1 : item.quantity)) / totalOriginalPrice;
+          let proportionalPrice = finalPrice * proportion;
+          proportionalPrice = Math.round(proportionalPrice * 100) / 100;
+          accumulatedPrice += proportionalPrice;
+          if (index === allItems.length - 1) {
+            proportionalPrice += (finalPrice - accumulatedPrice);
+          }
+          itemsToTransfer.push({
+            id: `${comboOriginal.id}-${item.product.id}-${Date.now()}`,
+            productId: item.product.id,
+            code: item.product.code,
+            name: `${item.product.name} (Combo: ${comboOriginal.name})`,
+            quantity: item.quantity,
+            price: proportionalPrice / item.quantity,
+            total: proportionalPrice,
+            isComboItem: true,
+            isDoseItem: false,
+            isFractioned: item.product.isFractioned,
+            discountBy: item.discountBy,
+            type: 'combo',
+          });
+        });
+      });
 
-    toast({
-      title: "Itens transferidos",
-      description: `${currentComanda.items.length} itens foram transferidos para o carrinho.`,
-    });
+      // Transferir todos os itens de uma vez para o carrinho
+      onTransferToCart(itemsToTransfer);
+
+      // Fechar a comanda
+      await closeComanda(currentComanda.id);
+      
+      // Fechar o modal
+      onOpenChange(false);
+
+      toast({
+        title: "Itens transferidos",
+        description: `${currentComanda.items.length} itens foram transferidos para o carrinho.`,
+      });
+    } catch (error) {
+      console.error('Erro ao transferir itens:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível transferir os itens.",
+        variant: "destructive",
+      });
+    }
   };
 
   // Reset comanda
-  const handleResetComanda = () => {
+  const handleResetComanda = async () => {
     if (!currentComanda) return;
 
-    setCurrentComanda(prev => prev ? { ...prev, items: [] } : null);
-    setComandas(prev => prev.map(c => 
-      c.id === currentComanda.id ? { ...c, items: [] } : c
-    ));
-    
-    toast({
-      title: "Comanda resetada",
-      description: "Todos os itens foram removidos da comanda.",
-    });
+    try {
+      // Remover todos os itens da comanda
+      for (const item of currentComanda.items) {
+        await api.delete(`/admin/comandas/${currentComanda.id}/items/${item.id}`);
+      }
+      
+      toast({
+        title: "Comanda resetada",
+        description: "Todos os itens foram removidos da comanda.",
+      });
+    } catch (error) {
+      console.error('Erro ao resetar comanda:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível resetar a comanda.",
+        variant: "destructive",
+      });
+    }
   };
 
   // Show comanda list
@@ -621,7 +769,7 @@ export function ComandaModal({
                           Abrir
                         </Button>
                         <Button 
-                          onClick={() => closeComanda(comanda.id)} 
+                          onClick={async () => await closeComanda(comanda.id)} 
                           size="sm" 
                           variant="outline"
                         >
@@ -686,7 +834,7 @@ export function ComandaModal({
                         <button
                           key={product.id}
                           className="text-left p-3 border rounded-md hover:border-cyan-400 transition-colors bg-white w-full"
-                          onClick={() => addToComanda(product)}
+                          onClick={async () => await addToComanda(product)}
                           disabled={product.stock === 0}
                         >
                           <div className="font-medium">{product.code} - {product.name}</div>
@@ -753,7 +901,7 @@ export function ComandaModal({
                         <Button
                           variant="outline"
                           size="icon"
-                          onClick={() => updateComandaItemQuantity(item.id, item.quantity - 1)}
+                          onClick={async () => await updateComandaItemQuantity(item.id, item.quantity - 1)}
                         >
                           <Minus className="h-4 w-4" />
                         </Button>
@@ -761,14 +909,14 @@ export function ComandaModal({
                         <Button
                           variant="outline"
                           size="icon"
-                          onClick={() => updateComandaItemQuantity(item.id, item.quantity + 1)}
+                          onClick={async () => await updateComandaItemQuantity(item.id, item.quantity + 1)}
                         >
                           <Plus className="h-4 w-4" />
                         </Button>
                         <Button
                           variant="outline"
                           size="icon"
-                          onClick={() => removeComandaItem(item.id)}
+                          onClick={async () => await removeComandaItem(item.id)}
                         >
                           <X className="h-4 w-4" />
                         </Button>

@@ -367,48 +367,58 @@ export const adminController = {
     }
 
     // Cria a venda
-    const sale = await prisma.sale.create({
-      data: {
-        userId,
-        total: reallyValidItems.reduce((sum: number, item: any) => {
-          // Se for item de dose, usa o preço da dose
-          if (item.isDoseItem) {
-            return sum + (item.price * item.quantity);
-          }
-          // Se não for dose, usa o preço normal
-          return sum + (item.price * item.quantity);
-        }, 0),
-        paymentMethodId,
-        status: 'COMPLETED',
-        items: {
-          create: await Promise.all(reallyValidItems.map(async (item: any) => {
-            const produto = await prisma.product.findUnique({ where: { id: item.productId } });
-            
-            // Determina a quantidade a ser registrada
-            let quantityToRecord = item.quantity;
-            
-            // Se for produto fracionado e não for dose, registra o volume total da garrafa
-            if (produto?.isFractioned && !item.isDoseItem) {
-              quantityToRecord = produto.unitVolume || 1000; // Volume total da garrafa
+    let sale;
+    try {
+      sale = await prisma.sale.create({
+        data: {
+          userId,
+          total: reallyValidItems.reduce((sum: number, item: any) => {
+            // Se for item de dose, usa o preço da dose
+            if (item.isDoseItem) {
+              return sum + (item.price * item.quantity);
             }
-            
-            return {
-              productId: item.productId,
-              quantity: quantityToRecord,
-              price: item.price,
-              costPrice: produto?.costPrice || 0,
-              isDoseItem: item.isDoseItem || false,
-              isFractioned: item.isFractioned || false,
-              discountBy: item.discountBy,
-              choosableSelections: item.choosableSelections
-            };
-          }))
+            // Se não for dose, usa o preço normal
+            return sum + (item.price * item.quantity);
+          }, 0),
+          paymentMethodId,
+          status: 'COMPLETED',
+          items: {
+            create: await Promise.all(reallyValidItems.map(async (item: any) => {
+              const produto = await prisma.product.findUnique({ where: { id: item.productId } });
+              
+              if (!produto) {
+                throw new Error(`Produto não encontrado: ${item.productId}`);
+              }
+              
+              // Determina a quantidade a ser registrada
+              let quantityToRecord = item.quantity;
+              
+              // Se for produto fracionado e não for dose, registra o volume total da garrafa
+              if (produto.isFractioned && !item.isDoseItem) {
+                quantityToRecord = produto.unitVolume || 1000; // Volume total da garrafa
+              }
+              
+              return {
+                productId: item.productId,
+                quantity: quantityToRecord,
+                price: item.price,
+                costPrice: produto.costPrice ? Number(produto.costPrice) : 0,
+                isDoseItem: item.isDoseItem || false,
+                isFractioned: item.isFractioned || false,
+                discountBy: item.discountBy,
+                choosableSelections: item.choosableSelections
+              };
+            }))
+          }
+        },
+        include: {
+          items: true
         }
-      },
-      include: {
-        items: true
-      }
-    });
+      });
+    } catch (error: any) {
+      console.error('Erro ao criar venda:', error);
+      return res.status(400).json({ error: `Erro ao criar venda: ${error.message || 'Erro desconhecido'}` });
+    }
 
     // Atualiza o estoque
     for (const item of reallyValidItems) {
@@ -522,8 +532,8 @@ export const adminController = {
           productId: item.productId,
           type: 'out',
           quantity: item.quantity,
-          unitCost: produto.costPrice,
-          totalCost: (produto.costPrice || 0) * item.quantity,
+          unitCost: produto.costPrice ? Number(produto.costPrice) : 0,
+          totalCost: (produto.costPrice ? Number(produto.costPrice) : 0) * item.quantity,
           notes: 'Venda PDV',
           origin: 'venda_pdv'
         }

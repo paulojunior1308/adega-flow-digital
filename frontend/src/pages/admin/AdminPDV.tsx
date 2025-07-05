@@ -40,6 +40,7 @@ interface CartItem {
   isFractioned?: boolean;
   discountBy?: 'volume' | 'unit';
   choosableSelections?: Record<string, Record<string, number>>;
+  comboInstanceId?: string;
 }
 
 interface Dose {
@@ -398,22 +399,26 @@ const AdminPDV = () => {
 
   // Transfer items from comanda to main cart
   const handleTransferFromComanda = (comandaItems: CartItem[]) => {
-    const newItemsFromComanda = comandaItems.map(item => {
-      const product = products.find(p => p.id === item.productId);
-      const discountBy: 'volume' | 'unit' = product?.isFractioned ? 'volume' : 'unit';
-      return {
-        ...item,
-        id: Math.random().toString(36).substring(2, 8), // Gera novo ID para o carrinho
-        // Define como o estoque será baixado
-        discountBy: discountBy,
-      };
-    });
-
     const updatedCartItems = [...cartItems];
 
-    newItemsFromComanda.forEach(newItem => {
+    // Agrupar combos por nome para gerar um comboInstanceId único para cada grupo
+    const comboGroups: Record<string, string> = {};
+
+    comandaItems.forEach(item => {
+      let newItem = { ...item };
+      // Se for combo, gera um comboInstanceId único por grupo de combo
+      if (item.name.toLowerCase().includes('combo')) {
+        if (!comboGroups[item.name]) {
+          comboGroups[item.name] = Math.random().toString(36).substring(2, 10);
+        }
+        newItem.comboInstanceId = comboGroups[item.name];
+      }
+      // Corrige o total do item
+      newItem.total = newItem.price * newItem.quantity;
+
+      // Adiciona ao carrinho
       const existingItemIndex = updatedCartItems.findIndex(cartItem => 
-        cartItem.productId === newItem.productId && cartItem.name === newItem.name
+        cartItem.productId === newItem.productId && cartItem.name === newItem.name && (!newItem.comboInstanceId || cartItem.comboInstanceId === newItem.comboInstanceId)
       );
 
       if (existingItemIndex > -1) {
@@ -422,7 +427,6 @@ const AdminPDV = () => {
         existingItem.quantity += newItem.quantity;
         existingItem.total = existingItem.quantity * existingItem.price;
       } else {
-        // Se não existe, adiciona
         updatedCartItems.push(newItem);
       }
     });
