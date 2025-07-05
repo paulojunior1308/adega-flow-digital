@@ -366,6 +366,14 @@ export const adminController = {
       }
     }
 
+    // LOG dos itens realmente válidos
+    console.log('=== DEBUG PDV ===');
+    console.log('Itens realmente válidos para venda:', JSON.stringify(reallyValidItems, null, 2));
+    for (const item of reallyValidItems) {
+      const produto = await prisma.product.findUnique({ where: { id: item.productId } });
+      console.log(`Produto encontrado para item:`, item.productId, produto);
+    }
+
     // Cria a venda
     let sale;
     try {
@@ -373,11 +381,9 @@ export const adminController = {
         data: {
           userId,
           total: reallyValidItems.reduce((sum: number, item: any) => {
-            // Se for item de dose, usa o preço da dose
             if (item.isDoseItem) {
               return sum + (item.price * item.quantity);
             }
-            // Se não for dose, usa o preço normal
             return sum + (item.price * item.quantity);
           }, 0),
           paymentMethodId,
@@ -385,19 +391,26 @@ export const adminController = {
           items: {
             create: await Promise.all(reallyValidItems.map(async (item: any) => {
               const produto = await prisma.product.findUnique({ where: { id: item.productId } });
-              
+              console.log('--- DEBUG ITEM ---');
+              console.log('Item:', item);
+              console.log('Produto do banco:', produto);
               if (!produto) {
                 throw new Error(`Produto não encontrado: ${item.productId}`);
               }
-              
-              // Determina a quantidade a ser registrada
               let quantityToRecord = item.quantity;
-              
-              // Se for produto fracionado e não for dose, registra o volume total da garrafa
               if (produto.isFractioned && !item.isDoseItem) {
-                quantityToRecord = produto.unitVolume || 1000; // Volume total da garrafa
+                quantityToRecord = produto.unitVolume || 1000;
               }
-              
+              console.log('Dados para SaleItem:', {
+                productId: item.productId,
+                quantity: quantityToRecord,
+                price: item.price,
+                costPrice: produto.costPrice ? Number(produto.costPrice) : 0,
+                isDoseItem: item.isDoseItem || false,
+                isFractioned: item.isFractioned || false,
+                discountBy: item.discountBy,
+                choosableSelections: item.choosableSelections
+              });
               return {
                 productId: item.productId,
                 quantity: quantityToRecord,
