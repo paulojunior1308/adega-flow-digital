@@ -12,6 +12,7 @@ import { ComboOptionsModal } from '@/components/home/ComboOptionsModal';
 import { Drawer, DrawerContent } from '@/components/ui/drawer';
 import { ComandaModal } from '@/components/admin/ComandaModal';
 import { Label } from '@/components/ui/label';
+import { v4 as uuidv4 } from 'uuid';
 
 // Types definition
 interface Product {
@@ -41,6 +42,9 @@ interface CartItem {
   discountBy?: 'volume' | 'unit';
   choosableSelections?: Record<string, Record<string, number>>;
   comboInstanceId?: string;
+  offerId?: string;
+  offerItems?: { productId: string; quantity: number; price: number; name: string; code: string; offerInstanceId: string }[];
+  type?: string;
 }
 
 interface Dose {
@@ -77,6 +81,7 @@ const AdminPDV = () => {
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   const [paymentMethods, setPaymentMethods] = useState<{id: string, name: string}[]>([]);
   const [combos, setCombos] = useState<any[]>([]);
+  const [offers, setOffers] = useState<any[]>([]);
   const [comboModalOpen, setComboModalOpen] = useState(false);
   const [comboToConfigure, setComboToConfigure] = useState<any>(null);
   const { toast } = useToast();
@@ -96,8 +101,9 @@ const AdminPDV = () => {
       api.get('/admin/products'),
       api.get('/admin/combos'),
       api.get('/admin/doses'),
+      api.get('/admin/offers'),
       api.get('/admin/products', { params: { pinned: true } })
-    ]).then(([productsRes, combosRes, dosesRes, pinnedRes]) => {
+    ]).then(([productsRes, combosRes, dosesRes, offersRes, pinnedRes]) => {
       setProducts(productsRes.data.filter((p: any) => p.stock > 0));
       setCombos(combosRes.data.map((combo: any) => ({
         ...combo,
@@ -113,6 +119,7 @@ const AdminPDV = () => {
           isChoosable: item.allowFlavorSelection,
         }))
       })));
+      setOffers(offersRes.data);
       setPinnedProducts(pinnedRes.data.filter((p: any) => p.stock > 0));
     });
   }, []);
@@ -133,8 +140,15 @@ const AdminPDV = () => {
       code: d.id.substring(0, 6),
       name: d.name,
       price: d.price,
+    })),
+    ...offers.map(o => ({
+      ...o,
+      type: 'offer',
+      code: o.id.substring(0, 6),
+      name: o.name,
+      price: o.price,
     }))
-  ], [products, combos, doses]);
+  ], [products, combos, doses, offers]);
 
   // Busca dinâmica
   useEffect(() => {
@@ -177,6 +191,7 @@ const AdminPDV = () => {
   const total = subtotal - discount;
 
   const handleConfirm = (selections: Record<string, Record<string, number>>) => {
+    console.log('=== DEBUG: handleConfirm chamado ===', { selections, comboToConfigure });
     if (!comboToConfigure) return;
 
     const { type, items, price: finalPrice, name } = comboToConfigure;
@@ -210,6 +225,8 @@ const AdminPDV = () => {
       }
     }
 
+    console.log('=== DEBUG: allItemsFromConfig ===', allItemsFromConfig);
+
     const totalOriginalPrice = allItemsFromConfig.reduce((sum, item) => sum + item.product.price * (item.discountBy === 'volume' ? 1 : item.quantity), 0);
     
     let accumulatedPrice = 0;
@@ -239,78 +256,224 @@ const AdminPDV = () => {
       };
     });
 
+    console.log('=== DEBUG: newItems a serem adicionados ao carrinho ===', newItems);
+
     setCartItems(prev => [...prev, ...newItems]);
     setComboModalOpen(false);
     setComboToConfigure(null);
     toast({ description: `${name} adicionado ao carrinho.` });
   };
 
-  const addToCart = (item: any, quantity: number = 1) => {
-    if (item.type === 'combo' || item.type === 'dose') {
-      const hasChoosableItems = item.items?.some((i: any) => i.isChoosable || i.allowFlavorSelection);
-      if (hasChoosableItems) {
-        setComboToConfigure(item);
-        setComboModalOpen(true);
-      } else {
-        // Lógica para adicionar direto no carrinho (para itens sem opções)
-        const allItems = item.items.map((i: any) => ({ product: i.product, quantity: i.quantity }));
-        const totalOriginalPrice = allItems.reduce((sum: number, p: any) => sum + p.product.price * p.quantity, 0);
-        const finalPrice = item.price;
+  const handleConfirmDose = (selections: Record<string, Record<string, number>>) => {
+    console.log('=== DEBUG: handleConfirmDose chamado ===', { selections, doseToConfigure });
+    if (!doseToConfigure) return;
 
-        let accumulatedPrice = 0;
-        const newItems: CartItem[] = allItems.map((p: any, index: number) => {
-          const proportion = (p.product.price * p.quantity) / totalOriginalPrice;
-          let proportionalPrice = finalPrice * proportion;
+    const { items, price: finalPrice, name } = doseToConfigure;
+    const allItemsFromConfig: { product: Product; quantity: number; discountBy?: 'volume' | 'unit' }[] = [];
 
-          proportionalPrice = Math.round(proportionalPrice * 100) / 100;
-          accumulatedPrice += proportionalPrice;
-          
-          if (index === allItems.length - 1) {
-            proportionalPrice += (finalPrice - accumulatedPrice);
+    // 1. Derivar o modo de seleção de cada categoria (volume ou unidade)
+    const categoryConfigMap: Record<string, { mode: 'volume' | 'unit' }> = {};
+    items.forEach((item: any) => {
+        if(item.isChoosable && item.categoryId && !categoryConfigMap[item.categoryId]) {
+            categoryConfigMap[item.categoryId] = { mode: item.discountBy === 'volume' ? 'volume' : 'unit' };
+        }
+    });
+
+    items.forEach((item: any) => {
+      if (!item.isChoosable && item.product) {
+        allItemsFromConfig.push({ product: item.product, quantity: item.quantity, discountBy: item.discountBy });
+      }
+    });
+
+    for (const categoryId in selections) {
+      const categoryMode = categoryConfigMap[categoryId]?.mode || 'unit';
+      for (const productId in selections[categoryId]) {
+        const quantity = selections[categoryId][productId];
+        if (quantity > 0) {
+          const product = products.find(p => p.id === productId);
+          if (product) {
+            allItemsFromConfig.push({ product, quantity, discountBy: categoryMode });
           }
+        }
+      }
+    }
 
+    console.log('=== DEBUG: allItemsFromConfig (dose) ===', allItemsFromConfig);
+
+    const totalOriginalPrice = allItemsFromConfig.reduce((sum, item) => sum + item.product.price * (item.discountBy === 'volume' ? 1 : item.quantity), 0);
+    
+    let accumulatedPrice = 0;
+    const newItems: CartItem[] = allItemsFromConfig.map((item, index) => {
+      const proportion = (item.product.price * (item.discountBy === 'volume' ? 1 : item.quantity)) / totalOriginalPrice;
+      let proportionalPrice = finalPrice * proportion;
+      
+      proportionalPrice = Math.round(proportionalPrice * 100) / 100;
+      accumulatedPrice += proportionalPrice;
+
+      if (index === allItemsFromConfig.length - 1) {
+        proportionalPrice += (finalPrice - accumulatedPrice);
+      }
+
+      return {
+        id: `${doseToConfigure.id}-${item.product.id}-${Date.now()}`,
+        productId: item.product.id,
+        code: item.product.code,
+        name: `${item.product.name} (Dose: ${name})`,
+        quantity: item.quantity,
+        price: proportionalPrice / item.quantity,
+        total: proportionalPrice,
+        isDoseItem: true,
+        isFractioned: item.product.isFractioned,
+        discountBy: item.discountBy,
+      };
+    });
+
+    console.log('=== DEBUG: newItems a serem adicionados ao carrinho (dose) ===', newItems);
+
+    setCartItems(prev => [...prev, ...newItems]);
+    setDoseOptionsModalOpen(false);
+    setDoseToConfigure(null);
+    toast({ description: `${name} adicionada ao carrinho.` });
+  };
+
+  const addToCart = (item: any, quantity: number = 1) => {
+    if (item.type === 'combo') {
+      const combo = combos.find(c => c.id === item.id);
+      if (combo && combo.items.some((i: any) => i.isChoosable)) {
+        setComboToConfigure(combo);
+        setComboModalOpen(true);
+        return;
+      }
+      // Se não houver escolhíveis, adiciona direto
+      const comboItems = combo.items.map((item: any) => ({
+        productId: item.productId,
+        quantity: item.quantity,
+        price: item.product.price,
+        name: item.product.name,
+        code: item.product.code || item.product.id.substring(0, 6)
+      }));
+      const newCartItem: CartItem = {
+        id: uuidv4(),
+        productId: item.id,
+        code: item.code,
+        name: item.name,
+        quantity,
+        price: item.price,
+        total: item.price * quantity,
+        isComboItem: true,
+        doseItems: comboItems
+      };
+      setCartItems(prev => [...prev, newCartItem]);
+      toast({
+        title: 'Combo adicionado',
+        description: `${item.name} adicionado ao carrinho`,
+      });
+    } else if (item.type === 'dose') {
+      const dose = doses.find(d => d.id === item.id);
+      console.log('=== DEBUG: Dose selecionada ===', dose);
+      if (dose && dose.items.some((i: any) => i.isChoosable)) {
+        setDoseToConfigure(dose);
+        setDoseOptionsModalOpen(true);
+        return;
+      }
+      // Se não houver escolhíveis, adiciona direto
+      console.log('=== DEBUG: dose.items (array bruto) ===', dose.items);
+      let doseItems = [];
+      try {
+        doseItems = dose.items.map((item: any, idx: number) => {
+          console.log(`=== DEBUG: Item da dose [${idx}] ===`, item);
+          if (!item.product) {
+            console.error(`=== ERRO: Item da dose [${idx}] está sem o campo 'product'!`, item);
+          }
           return {
-            id: `${item.id}-${p.product.id}-${Date.now()}`,
-            productId: p.product.id,
-            code: p.product.code,
-            name: `${p.product.name} (${item.type === 'combo' ? 'Combo' : 'Dose'}: ${item.name})`,
-            quantity: p.quantity,
-            price: proportionalPrice / p.quantity,
-            total: proportionalPrice,
-            isComboItem: item.type === 'combo',
-            isDoseItem: item.type === 'dose',
-            isFractioned: item.isFractioned,
-            discountBy: item.discountBy,
+            productId: item.productId,
+            quantity: item.quantity,
+            price: item.product?.price ?? 0,
+            name: item.product?.name ?? 'Produto desconhecido',
+            code: item.product?.code || (item.product?.id ? item.product.id.substring(0, 6) : '')
           };
         });
-  
-        setCartItems(prev => [...prev, ...newItems]);
-        toast({ description: `${item.name} adicionado ao carrinho.` });
+        console.log('=== DEBUG: doseItems montado ===', doseItems);
+      } catch (e) {
+        console.error('=== ERRO ao montar doseItems ===', e, dose.items);
       }
-    } else { // Produto Simples
-      // Apenas incrementa se já existir um item avulso (não de combo ou dose)
-      const existingItem = cartItems.find(cartItem => 
-        cartItem.productId === item.id && 
-        !cartItem.isComboItem && 
-        !cartItem.isDoseItem
-      );
-
-      if (existingItem) {
-        updateCartItemQuantity(existingItem.id, existingItem.quantity + quantity);
-      } else {
-        const newItem: CartItem = {
-          id: `${item.id}-${Date.now()}`,
+      const newCartItem: CartItem = {
+        id: uuidv4(),
+        productId: item.id,
+        code: item.code,
+        name: item.name,
+        quantity,
+        price: item.price,
+        total: item.price * quantity,
+        isDoseItem: true,
+        doseItems
+      };
+      console.log('=== DEBUG: Novo item de dose no carrinho ===', newCartItem);
+      setCartItems(prev => {
+        const novoCarrinho = [...prev, newCartItem];
+        console.log('=== DEBUG: Carrinho após adicionar dose ===', novoCarrinho);
+        return novoCarrinho;
+      });
+      toast({
+        title: 'Dose adicionada',
+        description: `${item.name} adicionada ao carrinho`,
+      });
+    } else if (item.type === 'offer') {
+      const offer = offers.find(o => o.id === item.id);
+      if (offer) {
+        // Adicionar oferta ao carrinho - cada item da oferta será adicionado com sua quantidade
+        const offerInstanceId = uuidv4();
+        const offerItems = offer.items.map((offerItem: any) => ({
+          productId: offerItem.productId,
+          quantity: offerItem.quantity * quantity, // Multiplicar pela quantidade da oferta
+          price: offer.price / offer.items.reduce((sum: number, oi: any) => sum + oi.quantity, 0), // Preço proporcional
+          name: offerItem.product.name,
+          code: offerItem.product.code || offerItem.product.id.substring(0, 6),
+          offerInstanceId,
+        }));
+        const newCartItem: CartItem = {
+          id: offerInstanceId,
           productId: item.id,
           code: item.code,
           name: item.name,
-          quantity: quantity,
+          quantity,
           price: item.price,
           total: item.price * quantity,
-          isFractioned: item.isFractioned,
+          type: 'offer',
+          offerId: item.id,
+          offerItems // novo campo para evitar confusão com doseItems
         };
-        setCartItems(prev => [...prev, newItem]);
-        toast({ description: `${item.name} adicionado ao carrinho.` });
+        setCartItems(prev => [...prev, newCartItem]);
+        toast({
+          title: 'Oferta adicionada',
+          description: `${item.name} adicionada ao carrinho`,
+        });
       }
+    } else {
+      // Produto normal
+      const existingItem = cartItems.find(cartItem => cartItem.productId === item.id);
+      if (existingItem) {
+        setCartItems(prev => prev.map(cartItem =>
+          cartItem.id === existingItem.id
+            ? { ...cartItem, quantity: cartItem.quantity + quantity, total: (cartItem.quantity + quantity) * cartItem.price }
+            : cartItem
+        ));
+      } else {
+        const newCartItem: CartItem = {
+          id: uuidv4(),
+          productId: item.id,
+          code: item.code,
+          name: item.name,
+          quantity,
+          price: item.price,
+          total: item.price * quantity
+        };
+        setCartItems(prev => [...prev, newCartItem]);
+      }
+      toast({
+        title: 'Produto adicionado',
+        description: `${item.name} adicionado ao carrinho`,
+      });
     }
   };
 
@@ -446,18 +609,54 @@ const AdminPDV = () => {
 
     try {
       setLoading(true);
+      // Desmembrar combos e ofertas antes de enviar
+      let finalItems: any[] = [];
+      for (const item of cartItems) {
+        if ((item.isComboItem && item.doseItems) || (item.type === 'combo' && item.doseItems)) {
+          // Desmembrar combo
+          for (const comboItem of item.doseItems) {
+            const existing = finalItems.find(fi => fi.productId === comboItem.productId);
+            if (existing) {
+              existing.quantity += comboItem.quantity * item.quantity;
+            } else {
+              finalItems.push({
+                productId: comboItem.productId,
+                quantity: comboItem.quantity * item.quantity,
+                price: comboItem.price,
+                comboInstanceId: item.id
+              });
+            }
+          }
+        } else if (item.type === 'offer' && item.offerItems) {
+          // Desmembrar oferta
+          for (const offerItem of item.offerItems) {
+            const existing = finalItems.find(fi => fi.productId === offerItem.productId);
+            if (existing) {
+              existing.quantity += offerItem.quantity;
+            } else {
+              finalItems.push({
+                productId: offerItem.productId,
+                quantity: offerItem.quantity,
+                price: offerItem.price,
+                offerInstanceId: item.id
+              });
+            }
+          }
+        } else if (!item.type || item.type === 'product' || item.type === 'dose') {
+          finalItems.push({
+            productId: item.productId,
+            quantity: item.quantity,
+            price: item.price,
+            isDoseItem: !!item.isDoseItem,
+            isComboItem: !!item.isComboItem,
+            isFractioned: !!item.isFractioned,
+            discountBy: item.discountBy,
+            sellingByVolume: item.discountBy === 'volume',
+          });
+        }
+      }
       const saleData = {
-        items: cartItems.map(item => ({
-          productId: item.productId,
-          quantity: item.quantity,
-          price: item.price,
-          isDoseItem: !!item.isDoseItem,
-          isComboItem: !!item.isComboItem,
-          isFractioned: !!item.isFractioned,
-          discountBy: item.discountBy,
-          sellingByVolume: item.discountBy === 'volume',
-          // O campo choosableSelections é removido pois não é usado pelo backend aqui
-        })),
+        items: finalItems,
         paymentMethodId: paymentMethodId,
       };
 
@@ -764,6 +963,20 @@ const AdminPDV = () => {
                                   )}
                                 </div>
                               )}
+                              {/* Exibir composição de ofertas */}
+                              {item.offerItems && (
+                                <div className="mt-1 text-xs text-gray-700">
+                                  <div className="font-semibold text-cyan-700">Composição:</div>
+                                  <ul className="ml-2">
+                                    {item.offerItems.map((offerItem, idx) => (
+                                      <li key={offerItem.productId + '-' + idx} className="flex justify-between">
+                                        <span>{offerItem.name || 'Produto'}</span>
+                                        <span>{offerItem.quantity} un</span>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              )}
                             </TableCell>
                             <TableCell>
                               <div className="flex items-center justify-center">
@@ -912,6 +1125,23 @@ const AdminPDV = () => {
           combo={comboToConfigure}
           onConfirm={handleConfirm}
           products={products}
+        />
+      )}
+      {/* Dose Options Modal igual Comanda */}
+      {doseToConfigure && (
+        <ComboOptionsModal
+          open={doseOptionsModalOpen}
+          onOpenChange={setDoseOptionsModalOpen}
+          combo={{
+            id: doseToConfigure.id,
+            name: `Dose de ${doseToConfigure.name}`,
+            items: doseToConfigure.items.map((item: any) => ({
+              ...item,
+              isChoosable: item.allowFlavorSelection
+            }))
+          }}
+          onConfirm={handleConfirmDose}
+          isDoseConfiguration={true}
         />
       )}
       <Drawer open={cartOpen} onOpenChange={() => setCartOpen(false)}>

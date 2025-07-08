@@ -164,6 +164,10 @@ const AdminDashboard = () => {
   const [productsMap, setProductsMap] = useState<Record<string, any>>({});
   // Estado para dados financeiros
   const [financeReport, setFinanceReport] = useState<any>(null);
+  // Estado para totais de estoque
+  const [estoqueTotals, setEstoqueTotals] = useState<{ totalCusto: number, totalVenda: number } | null>(null);
+  // Estado para vendas do dia
+  const [vendasHoje, setVendasHoje] = useState<number>(0);
 
   // Buscar pedidos reais do backend
   useEffect(() => {
@@ -206,6 +210,13 @@ const AdminDashboard = () => {
       setFinanceReport(res.data);
     }).catch(error => {
       console.error('Erro ao buscar dados financeiros:', error);
+    });
+  }, []);
+
+  // Buscar totais de estoque ao carregar
+  useEffect(() => {
+    api.get('/admin/estoque-totals').then(res => {
+      setEstoqueTotals(res.data);
     });
   }, []);
 
@@ -425,6 +436,15 @@ const AdminDashboard = () => {
     );
   };
 
+  // Buscar vendas do dia
+  useEffect(() => {
+    api.get('/admin/vendas-hoje').then(res => {
+      const totalPDV = (res.data.pdv || []).reduce((sum: number, v: any) => sum + (v.total || 0), 0);
+      const totalOnline = (res.data.online || []).reduce((sum: number, v: any) => sum + (v.total || 0), 0);
+      setVendasHoje(totalPDV + totalOnline);
+    });
+  }, []);
+
   return (
     <div className="min-h-screen bg-element-gray-light">
       <AdminLayout>
@@ -443,7 +463,7 @@ const AdminDashboard = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
             <StatCard 
               title="Vendas do Dia"
-              value={`R$ ${vendasDoDia.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
+              value={`R$ ${vendasHoje.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
               change=""
               changeType="up"
               icon={<TrendingUp className="h-6 w-6 text-element-blue-dark" />} 
@@ -468,6 +488,28 @@ const AdminDashboard = () => {
               change=""
               changeType="up"
               icon={<Package className="h-6 w-6 text-element-blue-dark" />} 
+            />
+          </div>
+          
+          {/* Cards de estatísticas principais */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            {/* Card: Valor de custo do estoque */}
+            <StatCard
+              title="Valor de custo do estoque"
+              value={estoqueTotals ? estoqueTotals.totalCusto.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : 'R$ 0,00'}
+              icon={<Archive className="h-6 w-6 text-element-blue-dark" />}
+            />
+            {/* Card: Valor de venda do estoque */}
+            <StatCard
+              title="Valor de venda do estoque"
+              value={estoqueTotals ? estoqueTotals.totalVenda.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : 'R$ 0,00'}
+              icon={<DollarSign className="h-6 w-6 text-element-blue-dark" />}
+            />
+            {/* Card: Lucro previsto do estoque */}
+            <StatCard
+              title="Lucro previsto do estoque"
+              value={estoqueTotals ? (estoqueTotals.totalVenda - estoqueTotals.totalCusto).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : 'R$ 0,00'}
+              icon={<TrendingUp className="h-6 w-6 text-element-blue-dark" />}
             />
           </div>
           

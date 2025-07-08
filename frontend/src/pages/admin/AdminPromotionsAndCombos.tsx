@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -83,6 +83,23 @@ interface Dose {
   items: DoseItem[];
 }
 
+interface OfferItem {
+  id: string;
+  productId: string;
+  product: Product;
+  quantity: number;
+}
+
+interface Offer {
+  id: string;
+  name: string;
+  description?: string;
+  image?: string;
+  price: number;
+  active: boolean;
+  items: OfferItem[];
+}
+
 export default function AdminPromotionsAndCombos() {
   const [combos, setCombos] = React.useState<Combo[]>([]);
   const [promotions, setPromotions] = React.useState<Promotion[]>([]);
@@ -91,6 +108,7 @@ export default function AdminPromotionsAndCombos() {
   const [isLoading, setIsLoading] = React.useState(true);
   const [selectedProducts, setSelectedProducts] = React.useState<string[]>([]);
   const [searchTerm, setSearchTerm] = React.useState('');
+  const [offerSearchTerm, setOfferSearchTerm] = React.useState('');
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [productTypes, setProductTypes] = React.useState<Record<string, 'fixed' | 'choosable'>>({});
   const [editingCombo, setEditingCombo] = React.useState<Combo | null>(null);
@@ -108,19 +126,32 @@ export default function AdminPromotionsAndCombos() {
   const [doseCategoryId, setDoseCategoryId] = React.useState<string>('');
   const [choosableNameFilters, setChoosableNameFilters] = React.useState<Record<string, string>>({});
   const [volumeToDiscount, setVolumeToDiscount] = React.useState<Record<string, number>>({});
+  const [offers, setOffers] = React.useState<Offer[]>([]);
+  const [isOfferDialogOpen, setIsOfferDialogOpen] = React.useState(false);
+  const [editingOffer, setEditingOffer] = React.useState<Offer | null>(null);
+  const [offerName, setOfferName] = React.useState('');
+  const [offerDescription, setOfferDescription] = React.useState('');
+  const [offerPrice, setOfferPrice] = React.useState<number | ''>('');
+  const [offerImage, setOfferImage] = React.useState<File | null>(null);
+  const [offerProductIds, setOfferProductIds] = React.useState<string[]>([]);
+  const [offerProductQuantities, setOfferProductQuantities] = React.useState<Record<string, number>>({});
+  const [offerImagePreview, setOfferImagePreview] = React.useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchData = React.useCallback(async () => {
     try {
-      const [combosRes, promotionsRes, productsRes, dosesRes] = await Promise.all([
+      const [combosRes, promotionsRes, productsRes, dosesRes, offersRes] = await Promise.all([
         api.get('/admin/combos'),
         api.get('/admin/promotions'),
         api.get('/admin/products'),
-        api.get('/admin/doses')
+        api.get('/admin/doses'),
+        api.get('/admin/offers'),
       ]);
       setCombos(combosRes.data);
       setPromotions(promotionsRes.data);
       setProducts(productsRes.data);
       setDoses(dosesRes.data);
+      setOffers(offersRes.data);
     } catch (error) {
       toast.error('Erro ao carregar dados');
     } finally {
@@ -134,8 +165,33 @@ export default function AdminPromotionsAndCombos() {
     api.get('/admin/categories?active=true').then(res => setCategories(res.data));
   }, [fetchData]);
 
+  React.useEffect(() => {
+    if (editingOffer) {
+      setOfferName(editingOffer.name || '');
+      setOfferDescription(editingOffer.description || '');
+      setOfferPrice(editingOffer.price || '');
+      setOfferProductIds(editingOffer.items.map(i => i.productId));
+      setOfferProductQuantities(
+        editingOffer.items.reduce((acc, item) => ({ ...acc, [item.productId]: item.quantity }), {})
+      );
+      setOfferImagePreview(editingOffer.image || null);
+    } else {
+      setOfferName('');
+      setOfferDescription('');
+      setOfferPrice('');
+      setOfferProductIds([]);
+      setOfferProductQuantities({});
+      setOfferImage(null);
+      setOfferImagePreview(null);
+    }
+  }, [editingOffer]);
+
   const filteredProducts = products.filter(product => 
     product.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const filteredOfferProducts = products.filter(product => 
+    product.name.toLowerCase().includes(offerSearchTerm.toLowerCase())
   );
 
   const handleProductSelect = (productId: string) => {
@@ -583,6 +639,109 @@ export default function AdminPromotionsAndCombos() {
     }
   };
 
+  const handleOpenOfferDialog = (offer?: Offer) => {
+    setEditingOffer(offer || null);
+    setIsOfferDialogOpen(true);
+  };
+
+  const handleCloseOfferDialog = () => {
+    setEditingOffer(null);
+    setIsOfferDialogOpen(false);
+    setOfferSearchTerm('');
+  };
+
+  const handleProductToggle = (productId: string) => {
+    setOfferProductIds(prev => {
+      if (prev.includes(productId)) {
+        const copy = { ...offerProductQuantities };
+        delete copy[productId];
+        setOfferProductQuantities(copy);
+        return prev.filter(id => id !== productId);
+      } else {
+        setOfferProductQuantities(q => ({ ...q, [productId]: 1 }));
+        return [...prev, productId];
+      }
+    });
+  };
+
+  const handleProductQuantityChange = (productId: string, value: number) => {
+    setOfferProductQuantities(q => ({ ...q, [productId]: value }));
+  };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setOfferImage(file);
+      setOfferImagePreview(URL.createObjectURL(file));
+    }
+  };
+
+  const handleSaveOffer = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!offerName || !offerPrice || offerProductIds.length === 0) {
+      toast.error('Preencha todos os campos obrigatórios');
+      return;
+    }
+    const items = offerProductIds.map(productId => ({
+      productId,
+      quantity: offerProductQuantities[productId] || 1
+    }));
+    let imageUrl = offerImagePreview;
+    if (offerImage) {
+      // Upload para Cloudinary se necessário
+      const formData = new FormData();
+      formData.append('file', offerImage);
+      formData.append('upload_preset', 'ml_default');
+      const res = await fetch('https://api.cloudinary.com/v1_1/demo/image/upload', {
+        method: 'POST',
+        body: formData
+      });
+      const data = await res.json();
+      imageUrl = data.secure_url;
+    }
+    const payload = {
+      name: offerName,
+      description: offerDescription,
+      price: Number(offerPrice),
+      image: imageUrl,
+      items
+    };
+    try {
+      if (editingOffer) {
+        await api.put(`/admin/offers/${editingOffer.id}`, payload);
+        toast.success('Oferta atualizada com sucesso!');
+      } else {
+        await api.post('/admin/offers', payload);
+        toast.success('Oferta criada com sucesso!');
+      }
+      setIsOfferDialogOpen(false);
+      fetchData();
+    } catch (err) {
+      toast.error('Erro ao salvar oferta');
+    }
+  };
+
+  const handleToggleOfferActive = async (offer: Offer) => {
+    try {
+      await api.patch(`/admin/offers/${offer.id}/active`);
+      toast.success(`Oferta ${offer.active ? 'desativada' : 'ativada'} com sucesso!`);
+      fetchData();
+    } catch {
+      toast.error('Erro ao alterar status da oferta');
+    }
+  };
+
+  const handleRemoveOffer = async (offer: Offer) => {
+    if (!window.confirm('Tem certeza que deseja remover esta oferta?')) return;
+    try {
+      await api.delete(`/admin/offers/${offer.id}`);
+      toast.success('Oferta removida com sucesso!');
+      fetchData();
+    } catch {
+      toast.error('Erro ao remover oferta');
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -605,6 +764,7 @@ export default function AdminPromotionsAndCombos() {
               <TabsTrigger value="combos">Combos</TabsTrigger>
               <TabsTrigger value="promotions">Promoções</TabsTrigger>
               <TabsTrigger value="doses">Doses</TabsTrigger>
+              <TabsTrigger value="offers">Ofertas</TabsTrigger>
             </TabsList>
             <TabsContent value="combos">
               <div className="flex flex-col sm:flex-row sm:justify-end mb-4 gap-2">
@@ -830,6 +990,108 @@ export default function AdminPromotionsAndCombos() {
                   </Card>
                 ))}
               </div>
+            </TabsContent>
+            <TabsContent value="offers">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-bold">Ofertas</h2>
+                <Button onClick={() => handleOpenOfferDialog()}>Nova Oferta</Button>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {offers.map(offer => (
+                  <Card key={offer.id} className="relative">
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        {offer.name}
+                        <span className={`text-xs px-2 py-1 rounded ${offer.active ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-500'}`}>{offer.active ? 'Ativa' : 'Inativa'}</span>
+                      </CardTitle>
+                      <CardDescription>{offer.description}</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="mb-2 font-semibold">Preço: {formatPrice(offer.price)}</div>
+                      <div className="text-sm text-muted-foreground">
+                        {offer.items.map(item => (
+                          <div key={item.id}>{item.quantity}x {item.product.name}</div>
+                        ))}
+                      </div>
+                      {offer.image && (
+                        <img src={offer.image} alt="Imagem da oferta" className="w-full h-32 object-cover rounded mt-2" />
+                      )}
+                    </CardContent>
+                    <CardFooter className="flex justify-between items-center gap-2">
+                      <div className="flex items-center gap-2">
+                        <Switch checked={offer.active} onCheckedChange={() => handleToggleOfferActive(offer)} />
+                        <span className="text-xs">{offer.active ? 'Ativa' : 'Inativa'}</span>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button size="sm" variant="outline" onClick={() => handleOpenOfferDialog(offer)}>Editar</Button>
+                        <Button size="sm" variant="destructive" onClick={() => handleRemoveOffer(offer)}><Trash2 size={16} /></Button>
+                      </div>
+                    </CardFooter>
+                  </Card>
+                ))}
+              </div>
+              {/* Modal de oferta (formulário completo) */}
+              <Dialog open={isOfferDialogOpen} onOpenChange={setIsOfferDialogOpen}>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>{editingOffer ? 'Editar Oferta' : 'Nova Oferta'}</DialogTitle>
+                  </DialogHeader>
+                  <form onSubmit={handleSaveOffer} className="space-y-4">
+                    <div>
+                      <Label>Nome*</Label>
+                      <Input value={offerName} onChange={e => setOfferName(e.target.value)} required />
+                    </div>
+                    <div>
+                      <Label>Descrição</Label>
+                      <Textarea value={offerDescription} onChange={e => setOfferDescription(e.target.value)} />
+                    </div>
+                    <div>
+                      <Label>Preço total*</Label>
+                      <Input type="number" min={0} step={0.01} value={offerPrice} onChange={e => setOfferPrice(e.target.value ? Number(e.target.value) : '')} required />
+                    </div>
+                    <div>
+                      <Label>Imagem</Label>
+                      <Input type="file" accept="image/*" ref={fileInputRef} onChange={handleImageChange} />
+                      {offerImagePreview && (
+                        <img src={offerImagePreview} alt="Prévia" className="w-full h-32 object-cover rounded mt-2" />
+                      )}
+                    </div>
+                    <div>
+                      <Label>Produtos*</Label>
+                      <div className="flex items-center gap-2 mb-4">
+                        <Search className="w-4 h-4 text-gray-500" />
+                        <Input
+                          placeholder="Buscar produtos..."
+                          value={offerSearchTerm}
+                          onChange={(e) => setOfferSearchTerm(e.target.value)}
+                          className="flex-1 w-full"
+                        />
+                      </div>
+                      <ScrollArea className="h-40 border rounded p-2">
+                        {filteredOfferProducts.map(product => (
+                          <div key={product.id} className="flex items-center gap-2 mb-2">
+                            <Checkbox checked={offerProductIds.includes(product.id)} onCheckedChange={() => handleProductToggle(product.id)} />
+                            <span>{product.name}</span>
+                            {offerProductIds.includes(product.id) && (
+                              <Input
+                                type="number"
+                                min={1}
+                                value={offerProductQuantities[product.id] || 1}
+                                onChange={e => handleProductQuantityChange(product.id, Number(e.target.value))}
+                                className="w-20 ml-2"
+                              />
+                            )}
+                          </div>
+                        ))}
+                      </ScrollArea>
+                    </div>
+                    <DialogFooter>
+                      <Button variant="outline" type="button" onClick={handleCloseOfferDialog}>Cancelar</Button>
+                      <Button type="submit">Salvar</Button>
+                    </DialogFooter>
+                  </form>
+                </DialogContent>
+              </Dialog>
             </TabsContent>
           </Tabs>
         </main>

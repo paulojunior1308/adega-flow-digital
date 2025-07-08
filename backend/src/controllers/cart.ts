@@ -39,12 +39,44 @@ export const cartController = {
   addItem: async (req: Request, res: Response) => {
     // @ts-ignore
     const userId = req.user.id;
-    let { productId, comboId, doseId, quantity, price, choosableSelections } = req.body;
+    let { productId, comboId, doseId, offerId, quantity, price, choosableSelections } = req.body;
     quantity = quantity || 1;
     let cart = await prisma.cart.findUnique({ where: { userId } });
     if (!cart) {
       cart = await prisma.cart.create({ data: { userId } });
     }
+    
+    // Adicionar oferta ao carrinho
+    if (offerId) {
+      console.log('[CART][LOG] Adicionando oferta ao carrinho. Payload:', req.body);
+      const offer = await prisma.offer.findUnique({
+        where: { id: offerId },
+        include: { items: { include: { product: true } } }
+      });
+      console.log('[CART][LOG] Oferta encontrada:', JSON.stringify(offer, null, 2));
+      if (!offer) {
+        throw new AppError('Oferta não encontrada', 404);
+      }
+      // Gerar um id único para esta instância da oferta
+      const offerInstanceId = uuidv4();
+      // Adicionar todos os produtos da oferta como cartItems com o mesmo offerInstanceId
+      const createdItems = [];
+      for (const offerItem of offer.items) {
+        const item = await prisma.cartItem.create({
+          data: {
+            cartId: cart.id,
+            productId: offerItem.productId,
+            quantity: offerItem.quantity * quantity,
+            offerInstanceId,
+            price: offer.price, // usar o preço da oferta
+          },
+          include: { product: true },
+        });
+        createdItems.push(item);
+      }
+      return res.status(201).json(createdItems);
+    }
+    
     // NOVO: Adicionar dose ao carrinho
     if (doseId) {
       console.log('[CART][LOG] Adicionando dose ao carrinho. Payload:', req.body);

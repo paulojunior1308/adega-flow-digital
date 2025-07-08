@@ -101,11 +101,7 @@ export const comandaController = {
   // Adicionar item à comanda
   addItem: async (req: Request, res: Response) => {
     const { comandaId } = req.params;
-    const { productId, quantity, price, name, code, isDoseItem, isFractioned, discountBy, choosableSelections } = req.body;
-
-    if (!productId || !quantity || !price || !name || !code) {
-      throw new AppError('Dados do item são obrigatórios', 400);
-    }
+    const { productId, comboId, doseId, offerId, quantity, price, name, code, isDoseItem, isFractioned, discountBy, choosableSelections } = req.body;
 
     // Verificar se a comanda existe e está aberta
     const comanda = await prisma.comanda.findUnique({
@@ -119,6 +115,77 @@ export const comandaController = {
 
     if (!comanda.isOpen) {
       throw new AppError('Comanda está fechada', 400);
+    }
+
+    // Processar oferta
+    if (offerId) {
+      const offer = await prisma.offer.findUnique({
+        where: { id: offerId },
+        include: { items: { include: { product: true } } }
+      });
+
+      if (!offer) {
+        throw new AppError('Oferta não encontrada', 404);
+      }
+
+      // Adicionar cada item da oferta à comanda
+      const createdItems = [];
+      for (const offerItem of offer.items) {
+        const item = await prisma.comandaItem.create({
+          data: {
+            comandaId,
+            productId: offerItem.productId,
+            code: offerItem.product.code || offerItem.product.id.substring(0, 6),
+            name: `${offerItem.product.name} (Oferta: ${offer.name})`,
+            quantity: offerItem.quantity * (quantity || 1),
+            price: offer.price / offer.items.reduce((sum, item) => sum + item.quantity, 0), // Preço proporcional
+            total: (offer.price / offer.items.reduce((sum, item) => sum + item.quantity, 0)) * offerItem.quantity * (quantity || 1),
+            offerInstanceId: offerId
+          },
+          include: {
+            product: true
+          }
+        });
+        createdItems.push(item);
+      }
+
+      // Atualizar total da comanda
+      const newTotal = comanda.items.reduce((sum, item) => sum + item.total, 0) + 
+                      createdItems.reduce((sum, item) => sum + item.total, 0);
+      await prisma.comanda.update({
+        where: { id: comandaId },
+        data: { total: newTotal }
+      });
+
+      // Buscar comanda atualizada
+      const updatedComanda = await prisma.comanda.findUnique({
+        where: { id: comandaId },
+        include: {
+          items: {
+            include: {
+              product: true
+            }
+          },
+          user: {
+            select: {
+              name: true
+            }
+          }
+        }
+      });
+
+      // Emitir evento para todos os admins
+      const io = getSocketInstance();
+      if (io) {
+        io.emit('comanda-updated', { comanda: updatedComanda });
+      }
+
+      return res.json(updatedComanda);
+    }
+
+    // Processar produto normal, combo ou dose (lógica existente)
+    if (!productId || !quantity || !price || !name || !code) {
+      throw new AppError('Dados do item são obrigatórios', 400);
     }
 
     // Criar o item

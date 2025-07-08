@@ -58,6 +58,7 @@ model Product {
   supplier    Supplier?   @relation(fields: [supplierId], references: [id])
   saleItems   SaleItem[]
   promotions  Promotion[] @relation("ProductToPromotion")
+  offerItems  OfferItem[]
   doseItems   DoseItem[]
   stockEntries StockEntry[]
   stockMovements StockMovement[]
@@ -134,8 +135,14 @@ model SaleItem {
   isFractioned Boolean @default(false)
   discountBy String? // 'volume' ou 'unit'
   choosableSelections Json?
+  comboInstanceId String?
+  doseInstanceId String?
+  offerInstanceId String?
+  doseId    String?
   product   Product  @relation(fields: [productId], references: [id])
   sale      Sale     @relation(fields: [saleId], references: [id])
+  dose      Dose?    @relation(fields: [doseId], references: [id])
+  offer     Offer?   @relation(fields: [offerInstanceId], references: [id])
 }
 
 model Kit {
@@ -206,12 +213,14 @@ model CartItem {
   comboInstanceId String?
   doseId    String?  // Novo campo para referenciar doses
   doseInstanceId String? // Novo campo para identificar instância única da dose
+  offerInstanceId String? // Campo para identificar instância única da oferta
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   cart      Cart     @relation(fields: [cartId], references: [id])
   product   Product  @relation(fields: [productId], references: [id])
   dose      Dose?    @relation(fields: [doseId], references: [id])
   combo     Combo?   @relation(fields: [comboId], references: [id])
+  offer     Offer?   @relation(fields: [offerInstanceId], references: [id])
   
   @@map("cart_items")
 }
@@ -246,11 +255,13 @@ model OrderItem {
   costPrice Float   // Custo do produto no momento da venda
   comboInstanceId String?
   doseInstanceId String?
+  offerInstanceId String?
   doseId    String?
   choosableSelections Json?
   order     Order   @relation(fields: [orderId], references: [id])
   product   Product @relation(fields: [productId], references: [id])
   dose      Dose?   @relation(fields: [doseId], references: [id])
+  offer     Offer?  @relation(fields: [offerInstanceId], references: [id])
 }
 
 model Combo {
@@ -292,6 +303,31 @@ model Promotion {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   products      Product[] @relation("ProductToPromotion")
+}
+
+model Offer {
+  id          String      @id @default(uuid())
+  name        String
+  description String
+  price       Float       // Preço total da oferta
+  image       String?
+  active      Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  items       OfferItem[]
+  cartItems   CartItem[]
+  orderItems  OrderItem[]
+  saleItems   SaleItem[]
+  comandaItems ComandaItem[]
+}
+
+model OfferItem {
+  id        String   @id @default(uuid())
+  offerId   String
+  productId String
+  quantity  Int      // Quantidade do produto na oferta
+  offer     Offer    @relation(fields: [offerId], references: [id])
+  product   Product  @relation(fields: [productId], references: [id])
 }
 
 model PaymentMethod {
@@ -339,6 +375,7 @@ model Dose {
   items       DoseItem[]
   cartItems   CartItem[]
   orderItems  OrderItem[]
+  saleItems   SaleItem[]
   categoryId  String?
   category    Category?   @relation(fields: [categoryId], references: [id])
 }
@@ -412,9 +449,11 @@ model ComandaItem {
   isFractioned Boolean @default(false)
   discountBy String? // 'volume' ou 'unit'
   choosableSelections Json?
+  offerInstanceId String?
   createdAt DateTime @default(now())
   comanda   Comanda @relation(fields: [comandaId], references: [id], onDelete: Cascade)
   product   Product @relation(fields: [productId], references: [id])
+  offer     Offer?  @relation(fields: [offerInstanceId], references: [id])
 }
 
 enum Role {

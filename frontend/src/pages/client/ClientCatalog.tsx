@@ -50,6 +50,7 @@ const ClientCatalog = () => {
   const [categories, setCategories] = useState([]);
   const [combos, setCombos] = useState([]);
   const [doses, setDoses] = useState([]);
+  const [offers, setOffers] = useState([]);
   const [comboModalOpen, setComboModalOpen] = useState(false);
   const [comboToConfigure, setComboToConfigure] = useState<any>(null);
   const [doseModalOpen, setDoseModalOpen] = useState(false);
@@ -120,6 +121,20 @@ const ClientCatalog = () => {
         duration: 2000,
       });
       return;
+    } else if (product.type === 'offer') {
+      const offer = offers.find((o: any) => o.id === product.id);
+      if (offer) {
+        // Adicionar oferta ao carrinho - cada item da oferta será adicionado com sua quantidade
+        await api.post('/cart', { offerId: product.id, quantity: 1 });
+        const res = await api.get('/cart');
+        setCart(res.data?.items || []);
+        toast({
+          title: 'Oferta adicionada',
+          description: `${product.name} adicionada ao carrinho`,
+          duration: 2000,
+        });
+        return;
+      }
     } else {
       // Produto avulso: checar estoque antes de adicionar
       const cartItem = cart.find(item => item.product.id === product.id);
@@ -254,59 +269,36 @@ const ClientCatalog = () => {
   };
 
   useEffect(() => {
-    api.get('/products').then(res => setProducts(res.data));
+    const fetchData = async () => {
+      try {
+        const [productsRes, categoriesRes, combosRes, dosesRes, offersRes] = await Promise.all([
+          api.get('/products'),
+          api.get('/products/categories'),
+          api.get('/combos'),
+          api.get('/doses'),
+          api.get('/offers')
+        ]);
+        setProducts(productsRes.data);
+        setCategories(categoriesRes.data);
+        setCombos(combosRes.data);
+        setDoses(dosesRes.data);
+        setOffers(offersRes.data);
+      } catch (error) {
+        console.error('Erro ao carregar dados:', error);
+      }
+    };
+    fetchData();
   }, []);
 
-  useEffect(() => {
-    api.get('/products/categories').then(res => {
-      setCategories([{ id: 'all', name: 'Todos' }, ...res.data]);
-    });
-    api.get('/combos').then(res => {
-      // Corrigir combos: mapear allowFlavorSelection para isChoosable
-      const combosCorrigidos = res.data.map((combo: any) => ({
-        ...combo,
-        items: combo.items.map((item: any) => ({
-          ...item,
-          isChoosable: item.allowFlavorSelection
-        }))
-      }));
-      setCombos(combosCorrigidos);
-    });
-    api.get('/doses').then(res => {
-      setDoses(res.data);
-    });
-  }, []);
-
-  const allProducts = React.useMemo(() => [
+  const allItems = [
     ...products.map(p => ({ ...p, type: 'product' })),
-    ...combos.map(c => ({
-      ...c,
-      type: 'combo',
-      name: c.name,
-      price: c.price,
-      oldPrice: undefined,
-      image: c.image,
-      description: c.description,
-      category: c.categoryId || (c.category && c.category.id) || 'combo',
-      rating: 5,
-      tags: [],
-    })),
-    ...doses.map(d => ({
-      ...d,
-      type: 'dose',
-      name: d.name,
-      price: d.price,
-      oldPrice: undefined,
-      image: d.image,
-      description: d.description,
-      category: d.categoryId || (d.category && d.category.id) || 'dose',
-      rating: 5,
-      tags: [],
-    })),
-  ], [products, combos, doses]);
+    ...combos.map(c => ({ ...c, type: 'combo' })),
+    ...doses.map(d => ({ ...d, type: 'dose' })),
+    ...offers.map(o => ({ ...o, type: 'offer' }))
+  ];
 
   useEffect(() => {
-    let result = allProducts;
+    let result = allItems;
     if (selectedCategory !== 'all') {
       if (selectedCategory === 'combo') {
         result = result.filter(p => p.type === 'combo');
@@ -325,13 +317,13 @@ const ClientCatalog = () => {
       result = result.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()));
     }
     setFilteredProducts(result);
-  }, [searchTerm, selectedCategory, allProducts]);
+  }, [searchTerm, selectedCategory, allItems]);
 
   // Função para verificar se uma categoria tem produtos disponíveis
   const hasAvailableProducts = (categoryId: string) => {
     if (categoryId === 'all') return true;
     
-    const categoryProducts = allProducts.filter(product => {
+    const categoryProducts = allItems.filter(product => {
       if (product.category && typeof product.category === 'object' && product.category.id) {
         return String(product.category.id) === String(categoryId);
       }
@@ -350,7 +342,7 @@ const ClientCatalog = () => {
   // Filtrar categorias que têm produtos disponíveis
   const availableCategories = React.useMemo(() => {
     return categories.filter(category => hasAvailableProducts(category.id));
-  }, [categories, allProducts, combos]);
+  }, [categories, allItems]);
 
   // Mapeamento de ícones para categorias
   const getCategoryIcon = (categoryName: string) => {
@@ -365,7 +357,7 @@ const ClientCatalog = () => {
   // Contar produtos disponíveis por categoria
   const getCategoryProductCount = (categoryId: string) => {
     if (categoryId === 'all') {
-      return allProducts.filter(product => {
+      return allItems.filter(product => {
         if (product.type === 'combo') {
           const combo = combos.find((c: any) => c.id === product.id);
           return combo && !isComboOutOfStock(combo);
@@ -378,7 +370,7 @@ const ClientCatalog = () => {
       return combos.filter(combo => !isComboOutOfStock(combo)).length;
     }
     
-    const categoryProducts = allProducts.filter(product => {
+    const categoryProducts = allItems.filter(product => {
       if (product.category && typeof product.category === 'object' && product.category.id) {
         return String(product.category.id) === String(categoryId);
       }

@@ -47,6 +47,10 @@ const AdminSales = () => {
   const [saleDetailsOpen, setSaleDetailsOpen] = React.useState(false);
   const [startDate, setStartDate] = React.useState('');
   const [endDate, setEndDate] = React.useState('');
+  const [paymentMethods, setPaymentMethods] = React.useState<{id: string, name: string}[]>([]);
+  const [editingPaymentMethod, setEditingPaymentMethod] = React.useState(false);
+  const [selectedPaymentMethodId, setSelectedPaymentMethodId] = React.useState<string | null>(null);
+  const [savingPaymentMethod, setSavingPaymentMethod] = React.useState(false);
 
   React.useEffect(() => {
     Promise.all([
@@ -76,6 +80,12 @@ const AdminSales = () => {
       // Unifica e ordena por data decrescente
       const all = [...online, ...pdv].sort((a, b) => b.date - a.date);
       setSalesData(all);
+    });
+  }, []);
+
+  React.useEffect(() => {
+    api.get('/admin/payment-methods').then(res => {
+      setPaymentMethods(res.data.filter((m: any) => m.active));
     });
   }, []);
 
@@ -126,6 +136,28 @@ const AdminSales = () => {
     }
     
     return '-';
+  };
+
+  // Função para salvar alteração do método de pagamento
+  const handleSavePaymentMethod = async () => {
+    if (!selectedSale || !selectedPaymentMethodId) return;
+    setSavingPaymentMethod(true);
+    try {
+      await api.patch(`/admin/pdv-sales/${selectedSale.id}/payment-method`, { paymentMethodId: selectedPaymentMethodId });
+      // Atualiza localmente o método de pagamento na venda selecionada
+      setSalesData(prev => prev.map(sale => sale.id === selectedSale.id ? {
+        ...sale,
+        originalData: {
+          ...sale.originalData,
+          paymentMethod: paymentMethods.find(m => m.id === selectedPaymentMethodId)
+        }
+      } : sale));
+      setEditingPaymentMethod(false);
+    } catch (err) {
+      alert('Erro ao atualizar método de pagamento.');
+    } finally {
+      setSavingPaymentMethod(false);
+    }
   };
 
   // Renderiza o diálogo de detalhes da venda
@@ -190,7 +222,40 @@ const AdminSales = () => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p><strong>Método:</strong> {originalData?.paymentMethod?.name || (typeof originalData?.paymentMethod === 'string' ? originalData.paymentMethod : '-')}</p>
+                  {selectedSale.tipo === 'PDV' && editingPaymentMethod ? (
+                    <div className="flex flex-col gap-2">
+                      <select
+                        className="border rounded px-2 py-1"
+                        value={selectedPaymentMethodId || ''}
+                        onChange={e => setSelectedPaymentMethodId(e.target.value)}
+                      >
+                        <option value="">Selecione...</option>
+                        {paymentMethods.map(method => (
+                          <option key={method.id} value={method.id}>{method.name}</option>
+                        ))}
+                      </select>
+                      <div className="flex gap-2">
+                        <Button size="sm" onClick={handleSavePaymentMethod} disabled={savingPaymentMethod || !selectedPaymentMethodId}>
+                          {savingPaymentMethod ? 'Salvando...' : 'Salvar'}
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => setEditingPaymentMethod(false)}>
+                          Cancelar
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <p>
+                      <strong>Método:</strong> {originalData?.paymentMethod?.name || (typeof originalData?.paymentMethod === 'string' ? originalData.paymentMethod : '-')}
+                      {selectedSale.tipo === 'PDV' && (
+                        <Button size="sm" variant="link" className="ml-2 p-0 h-auto align-baseline" onClick={() => {
+                          setEditingPaymentMethod(true);
+                          setSelectedPaymentMethodId(originalData?.paymentMethod?.id || '');
+                        }}>
+                          Editar
+                        </Button>
+                      )}
+                    </p>
+                  )}
                   <p><strong>Total:</strong> R$ {selectedSale.total.toFixed(2)}</p>
                   {originalData?.discount && (
                     <p><strong>Desconto:</strong> R$ {originalData.discount.toFixed(2)}</p>

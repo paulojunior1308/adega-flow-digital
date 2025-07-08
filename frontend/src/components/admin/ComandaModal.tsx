@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import api from '@/lib/axios';
 import { ComboOptionsModal } from '@/components/home/ComboOptionsModal';
 import socket from '@/lib/socket';
+import { v4 as uuidv4 } from 'uuid';
 
 // Types definition
 interface Product {
@@ -73,6 +74,7 @@ export function ComandaModal({
   const [filteredProducts, setFilteredProducts] = useState<any[]>([]);
   const [combos, setCombos] = useState<any[]>([]);
   const [doses, setDoses] = useState<any[]>([]);
+  const [offers, setOffers] = useState<any[]>([]);
   const [comboModalOpen, setComboModalOpen] = useState(false);
   const [comboToConfigure, setComboToConfigure] = useState<any>(null);
   const [doseModalOpen, setDoseModalOpen] = useState(false);
@@ -194,16 +196,18 @@ export function ComandaModal({
       Promise.all([
         api.get('/admin/products'),
         api.get('/admin/combos'),
-        api.get('/admin/doses')
-      ]).then(([productsRes, combosRes, dosesRes]) => {
+        api.get('/admin/doses'),
+        api.get('/admin/offers')
+      ]).then(([productsRes, combosRes, dosesRes, offersRes]) => {
         setProducts(productsRes.data.filter((p: any) => p.stock > 0));
         setCombos(combosRes.data);
         setDoses(dosesRes.data);
+        setOffers(offersRes.data);
       });
     }
   }, [open]);
 
-  // Unificar produtos, combos e doses para exibição
+  // Unificar produtos, combos, doses e ofertas para exibição
   const allItems = React.useMemo(() => [
     ...products.map(p => ({ ...p, type: 'product' })),
     ...combos.map(c => ({
@@ -212,29 +216,22 @@ export function ComandaModal({
       code: c.id.substring(0, 6),
       name: c.name,
       price: c.price,
-      items: c.items.map(item => ({
-        ...item,
-        isChoosable: item.allowFlavorSelection,
-        product: {
-          ...item.product,
-          category: item.product?.category
-        }
-      }))
     })),
     ...doses.map(d => ({
       ...d,
       type: 'dose',
       code: d.id.substring(0, 6),
-      items: d.items.map((item: any) => ({
-        ...item,
-        isChoosable: item.allowFlavorSelection,
-        product: {
-          ...item.product,
-          category: item.product?.category
-        }
-      }))
+      name: d.name,
+      price: d.price,
+    })),
+    ...offers.map(o => ({
+      ...o,
+      type: 'offer',
+      code: o.id.substring(0, 6),
+      name: o.name,
+      price: o.price,
     }))
-  ], [products, combos, doses]);
+  ], [products, combos, doses, offers]);
 
   // Busca dinâmica
   useEffect(() => {
@@ -325,48 +322,57 @@ export function ComandaModal({
 
   // Add item to comanda
   const addToComanda = async (item: any, quantity: number = 1) => {
-    if (!currentComanda) {
-      toast({
-        title: "Nenhuma comanda selecionada",
-        description: "Crie ou selecione uma comanda primeiro.",
-        variant: "destructive",
-      });
-      return;
-    }
+    if (!currentComanda) return;
 
     if (item.type === 'combo') {
-      setComboToConfigure(item);
-      setComboModalOpen(true);
-      return;
-    }
-
-    if (item.type === 'dose') {
-      setDoseToConfigure(item);
-      setDoseModalOpen(true);
-      return;
-    }
-
-    // Para produtos simples
-    try {
+      const combo = combos.find(c => c.id === item.id);
+      if (combo && combo.items.some((i: any) => i.allowFlavorSelection)) {
+        setComboToConfigure(combo);
+        setComboModalOpen(true);
+        return;
+      }
+      // Se não houver escolhíveis, adiciona direto
+      await api.post(`/admin/comandas/${currentComanda.id}/items`, {
+        comboId: item.id,
+        quantity
+      });
+    } else if (item.type === 'dose') {
+      const dose = doses.find(d => d.id === item.id);
+      if (dose && dose.items.some((i: any) => i.allowFlavorSelection)) {
+        setDoseToConfigure(dose);
+        setDoseModalOpen(true);
+        return;
+      }
+      // Se não houver escolhíveis, adiciona direto
+      await api.post(`/admin/comandas/${currentComanda.id}/items`, {
+        doseId: item.id,
+        quantity
+      });
+    } else if (item.type === 'offer') {
+      const offer = offers.find(o => o.id === item.id);
+      if (offer) {
+        // Adicionar oferta à comanda - cada item da oferta será adicionado com sua quantidade
+        await api.post(`/admin/comandas/${currentComanda.id}/items`, {
+          offerId: item.id,
+          quantity
+        });
+      }
+    } else {
+      // Produto normal
       await api.post(`/admin/comandas/${currentComanda.id}/items`, {
         productId: item.id,
-        code: item.code || item.id.substring(0, 6),
-        name: `${item.name} (Avulso)`,
-        quantity: quantity,
-        price: item.price,
-        isDoseItem: false,
-        isFractioned: item.isFractioned || false,
-        discountBy: null,
-        choosableSelections: null
-      });
-    } catch (error) {
-      console.error('Erro ao adicionar item:', error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível adicionar o item à comanda.",
-        variant: "destructive",
+        quantity
       });
     }
+
+    // Recarregar comanda atual
+    const updatedComanda = await api.get(`/admin/comandas/${currentComanda.id}`);
+    setCurrentComanda(updatedComanda.data);
+    
+    toast({
+      title: 'Item adicionado',
+      description: `${item.name} adicionado à comanda`,
+    });
   };
 
   // Handle combo configuration
@@ -440,6 +446,7 @@ export function ComandaModal({
   };
 
   const handleDoseConfirm = async (choosableSelections: Record<string, Record<string, number>>) => {
+    console.log('=== DEBUG: handleDoseConfirm chamado ===', { choosableSelections, doseToConfigure });
     if (!currentComanda || !doseToConfigure) return;
 
     const produtosDose: { productId: string, nome: string, precoOriginal: number, quantidade: number, isFractioned?: boolean }[] = [];
@@ -475,46 +482,45 @@ export function ComandaModal({
       }
     }
 
+    console.log('=== DEBUG: produtosDose montado ===', produtosDose);
+
     const totalOriginal = produtosDose.reduce((sum, p) => sum + p.precoOriginal * p.quantidade, 0);
     const fatorDesconto = totalOriginal > 0 ? doseToConfigure.price / totalOriginal : 0;
 
     let totalAcumulado = 0;
+    const doseInstanceId = uuidv4();
 
-    for (let i = 0; i < produtosDose.length; i++) {
-        const produto = produtosDose[i];
-        let precoFinalItem: number;
-
-        if (i === produtosDose.length - 1) {
-            // Último item: ajusta para bater o total da dose
-            precoFinalItem = doseToConfigure.price - totalAcumulado;
-        } else {
-            // Demais itens: calcula o preço proporcional e arredonda
-            const precoProporcional = produto.precoOriginal * fatorDesconto;
-            precoFinalItem = Math.round(precoProporcional * 100) / 100;
-            totalAcumulado += precoFinalItem;
+    const novosItens = produtosDose.map((produto, i) => {
+      let precoFinalItem: number;
+      if (i === produtosDose.length - 1) {
+        precoFinalItem = doseToConfigure.price - totalAcumulado;
+      } else {
+        const precoProporcional = produto.precoOriginal * fatorDesconto;
+        precoFinalItem = Math.round(precoProporcional * 100) / 100;
+        totalAcumulado += precoFinalItem;
+      }
+      const precoUnitario = precoFinalItem / produto.quantidade;
+      return {
+        id: `${doseToConfigure.id}-${produto.productId}-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+        productId: produto.productId,
+        code: produto.productId.substring(0, 6),
+        name: `Dose de ${doseToConfigure.name} - ${produto.nome}`,
+        quantity: produto.quantidade,
+        price: precoUnitario,
+        total: precoFinalItem,
+        isDoseItem: true,
+        isFractioned: produto.isFractioned,
+        discountBy: produto.isFractioned ? 'volume' : 'unit',
+        doseId: doseToConfigure.id,
+        doseInstanceId,
+        choosableSelections: {
+          [doseToConfigure.id]: { [produto.productId]: produto.quantidade }
         }
-        
-        const precoUnitario = precoFinalItem / produto.quantidade;
-
-        try {
-          await api.post(`/admin/comandas/${currentComanda.id}/items`, {
-            productId: produto.productId,
-            code: produto.productId.substring(0, 6),
-            name: `Dose de ${doseToConfigure.name} - ${produto.nome}`,
-            quantity: produto.quantidade,
-            price: precoUnitario,
-            isDoseItem: true,
-            isFractioned: produto.isFractioned,
-            discountBy: produto.isFractioned ? 'volume' : 'unit',
-            choosableSelections: {
-                [doseToConfigure.id]: { [produto.productId]: produto.quantidade }
-            }
-          });
-        } catch (error) {
-          console.error('Erro ao adicionar item da dose:', error);
-        }
-    }
-
+      };
+    });
+    console.log('=== DEBUG: Itens da dose adicionados à comanda (estado local) ===', novosItens);
+    // Adiciona ao estado local da comanda
+    currentComanda.items.push(...novosItens);
     setDoseModalOpen(false);
     setDoseToConfigure(null);
     toast({

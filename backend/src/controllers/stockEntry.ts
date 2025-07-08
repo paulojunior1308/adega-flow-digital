@@ -229,7 +229,9 @@ export const stockEntryController = {
         },
         orderBy: { createdAt: 'desc' }
       });
-      res.json(movements);
+      // Filtrar movimentações com produto nulo
+      const safeMovements = movements.filter(mov => mov.product !== null);
+      res.json(safeMovements);
     } catch (error) {
       console.error('Erro ao listar movimentações de estoque:', error);
       res.status(500).json({ error: 'Erro ao listar movimentações de estoque' });

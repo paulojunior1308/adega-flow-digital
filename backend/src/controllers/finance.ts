@@ -44,6 +44,12 @@ export const financeController = {
           }
         }
       }) as any[];
+      
+      // Filtrar itens com produtos nulos
+      const safeSalesData = salesData.map(sale => ({
+        ...sale,
+        items: sale.items.filter((item: any) => item.product !== null)
+      }));
 
       // Buscar vendas do Order (Delivery/App) - status DELIVERED
       const ordersData = await prisma.order.findMany({
@@ -59,6 +65,12 @@ export const financeController = {
           }
         }
       }) as any[];
+      
+      // Filtrar itens com produtos nulos
+      const safeOrdersData = ordersData.map(order => ({
+        ...order,
+        items: order.items.filter((item: any) => item.product !== null)
+      }));
 
       // Calcular total de vendas e custo
       let total_sales = 0;
@@ -146,14 +158,14 @@ export const financeController = {
 
       console.log('\n=== Detalhamento das Vendas (Sale) ===');
       // Processar vendas do Sale
-      salesData.forEach(sale => {
+      safeSalesData.forEach(sale => {
         console.log(`\nVenda ID: ${sale.id}`);
         processItems(sale.items, sale.id, 'Sale');
       });
 
       console.log('\n=== Detalhamento dos Pedidos (Order) ===');
       // Processar vendas do Order
-      ordersData.forEach(order => {
+      safeOrdersData.forEach(order => {
         console.log(`\nPedido ID: ${order.id}`);
         processItems(order.items, order.id, 'Order');
       });
@@ -173,8 +185,8 @@ export const financeController = {
       const net_profit = gross_profit - total_expenses;
 
       console.log('Filtro de datas recebido:', { startDate, endDate, dateFilter2 });
-      console.log('Vendas (Sale) encontradas:', salesData.length);
-      console.log('Pedidos (Order) encontrados:', ordersData.length);
+      console.log('Vendas (Sale) encontradas:', safeSalesData.length);
+      console.log('Pedidos (Order) encontrados:', safeOrdersData.length);
 
       res.json({
         total_sales: Number(total_sales.toFixed(2)),

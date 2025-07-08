@@ -16,6 +16,7 @@ import { paymentMethodController } from '../controllers/paymentMethod';
 import { financeController } from '../controllers/finance';
 import { stockEntryController } from '../controllers/stockEntry';
 import { categoryController } from '../controllers/category';
+import { offerController } from '../controllers/offer';
 
 const router = express.Router();
 
@@ -116,6 +117,8 @@ router.delete('/payment-methods/:id', paymentMethodController.delete);
 // Rota para vendas do PDV físico
 router.post('/pdv-sales', adminController.createPDVSale);
 router.get('/pdv-sales', adminController.getPDVSales);
+// Rota para atualizar método de pagamento da venda PDV
+router.patch('/pdv-sales/:id/payment-method', adminController.updatePDVSale);
 
 // Rota para relatório financeiro
 router.get('/finance/report', financeController.report);
@@ -1151,5 +1154,19 @@ router.get('/schema', async (req, res) => {
     res.status(500).json({ error: 'Erro ao gerar schema do banco de dados' });
   }
 });
+
+// Rotas de ofertas
+router.get('/offers', offerController.getAll);
+router.get('/offers/:id', offerController.getById);
+router.post('/offers', upload.single('image'), offerController.create);
+router.put('/offers/:id', upload.single('image'), offerController.update);
+router.delete('/offers/:id', offerController.remove);
+router.patch('/offers/:id/active', offerController.toggleActive);
+
+// Rota para totais de custo e venda do estoque
+router.get('/estoque-totals', adminController.getEstoqueTotals);
+
+// Rota para vendas do dia (PDV e online)
+router.get('/vendas-hoje', adminController.getVendasHoje);
 
 export default router; 

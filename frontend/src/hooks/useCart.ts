@@ -4,7 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 interface CartItem {
   id: string;
-  type: 'product' | 'combo';
+  type: 'product' | 'combo' | 'offer';
   name: string;
   price: number;
   image?: string;
@@ -12,12 +12,13 @@ interface CartItem {
   items?: {
     id: string;
     productId: string;
-    isChoosable: boolean;
+    isChoosable?: boolean;
     product: {
       name: string;
       price: number;
     };
     selectedOption?: string; // ID do produto escolhido (para itens escolhíveis)
+    quantity?: number; // Quantidade específica para ofertas
   }[];
 }
 
@@ -38,8 +39,8 @@ export const useCart = create<CartStore>()(
       addToCart: (item) => {
         const items = get().items;
         let newItem = { ...item };
-        // Se for combo, sempre gera um id único
-        if (item.type === 'combo') {
+        // Se for combo ou oferta, sempre gera um id único
+        if (item.type === 'combo' || item.type === 'offer') {
           newItem.id = uuidv4();
         }
         const existingItem = items.find(i => i.id === newItem.id);
