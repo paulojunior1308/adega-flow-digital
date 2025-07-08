@@ -135,7 +135,7 @@ export const comandaController = {
           data: {
             comandaId,
             productId: offerItem.productId,
-            code: offerItem.product.code || offerItem.product.id.substring(0, 6),
+            code: offerItem.product.sku || offerItem.product.barcode || offerItem.product.id.substring(0, 6),
             name: `${offerItem.product.name} (Oferta: ${offer.name})`,
             quantity: offerItem.quantity * (quantity || 1),
             price: offer.price / offer.items.reduce((sum, item) => sum + item.quantity, 0), // Preço proporcional
