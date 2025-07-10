@@ -22,7 +22,8 @@ exports.comboController = {
                     category: true
                 }
             });
-            res.json(combos);
+            const combosComProdutos = combos.map(combo => (Object.assign(Object.assign({}, combo), { items: combo.items.map(item => (Object.assign(Object.assign({}, item), { product: item.product || null }))) })));
+            res.json(combosComProdutos);
         }
         catch (error) {
             console.error('Erro ao listar combos:', error);

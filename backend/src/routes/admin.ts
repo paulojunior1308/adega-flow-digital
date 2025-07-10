@@ -17,6 +17,7 @@ import { financeController } from '../controllers/finance';
 import { stockEntryController } from '../controllers/stockEntry';
 import { categoryController } from '../controllers/category';
 import { offerController } from '../controllers/offer';
+import { comandaController } from '../controllers/comanda';
 
 const router = express.Router();
 
@@ -1168,5 +1169,7 @@ router.get('/estoque-totals', adminController.getEstoqueTotals);
 
 // Rota para vendas do dia (PDV e online)
 router.get('/vendas-hoje', adminController.getVendasHoje);
+
+router.post('/comandas/:comandaId/items/combo', comandaController.addComboItems);
 
 export default router; 

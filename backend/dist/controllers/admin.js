@@ -62,18 +62,24 @@ exports.adminController = {
         });
     },
     getEstoque: async (req, res) => {
-        const produtos = await prisma_1.default.product.findMany({
-            select: {
-                id: true,
-                name: true,
-                description: true,
-                price: true,
-                stock: true,
-                active: true,
-                category: true,
-            },
-        });
-        res.json(produtos);
+        try {
+            const produtos = await prisma_1.default.product.findMany({
+                select: {
+                    id: true,
+                    name: true,
+                    description: true,
+                    price: true,
+                    stock: true,
+                    active: true,
+                    category: true,
+                },
+            });
+            res.json(produtos);
+        }
+        catch (error) {
+            console.error('Erro ao buscar estoque:', error);
+            res.status(500).json({ error: 'Erro ao buscar estoque' });
+        }
     },
     getCadastroProdutos: async (req, res) => {
         const categorias = await prisma_1.default.category.findMany();
@@ -253,53 +259,75 @@ exports.adminController = {
         res.json({ message: 'Usuário excluído com sucesso' });
     },
     createPDVSale: async (req, res) => {
+        console.log('=== DEBUG: Início da função createPDVSale ===');
         const { items, paymentMethodId } = req.body;
+        console.log('=== DEBUG: Request body ===');
+        console.log('items:', items);
+        console.log('paymentMethodId:', paymentMethodId);
         if (!items || !Array.isArray(items) || items.length === 0) {
+            console.log('=== DEBUG: Erro - Nenhum item informado ===');
             return res.status(400).json({ error: 'Nenhum item informado.' });
         }
         if (!paymentMethodId) {
+            console.log('=== DEBUG: Erro - Meio de pagamento obrigatório ===');
             return res.status(400).json({ error: 'Meio de pagamento obrigatório.' });
         }
         const paymentMethod = await prisma_1.default.paymentMethod.findUnique({ where: { id: paymentMethodId } });
         if (!paymentMethod) {
+            console.log('=== DEBUG: Erro - Meio de pagamento inválido ===');
             return res.status(400).json({ error: 'Meio de pagamento inválido.' });
         }
         const userId = req.user.id;
+        console.log('=== DEBUG: userId ===', userId);
         console.log('Itens recebidos na venda:', items);
-        const validItems = items.filter(item => !!item.productId);
+        const processedItems = items.filter(item => !!item.productId);
         const allProducts = await prisma_1.default.product.findMany({
-            where: { id: { in: validItems.map(i => i.productId) } },
+            where: { id: { in: processedItems.map(i => i.productId) } },
             select: { id: true }
         });
         const validProductIds = new Set(allProducts.map((p) => p.id));
-        const reallyValidItems = validItems.filter(item => validProductIds.has(item.productId));
-        console.log('Itens realmente válidos para venda:', reallyValidItems);
+        const reallyValidItems = processedItems.filter(item => validProductIds.has(item.productId));
+        console.log('Itens realmente válidos para venda (incluindo produtos de ofertas):', reallyValidItems);
+        console.log('=== DEBUG: Iniciando verificação de estoque ===');
         for (const item of reallyValidItems) {
+            console.log(`=== DEBUG: Verificando estoque do item ${item.productId} ===`);
             const produto = await prisma_1.default.product.findUnique({ where: { id: item.productId } });
-            if (!produto)
+            console.log('Produto encontrado:', produto);
+            if (!produto) {
+                console.log(`=== DEBUG: Produto não encontrado: ${item.productId} ===`);
                 continue;
+            }
             if (produto.isFractioned) {
+                console.log('=== DEBUG: Produto é fracionado ===');
                 if (item.isDoseItem) {
+                    console.log('=== DEBUG: Item é de dose ===');
                     if (item.discountBy === 'volume') {
                         const novoVolume = (produto.totalVolume || 0) - item.quantity;
+                        console.log(`=== DEBUG: Novo volume seria: ${novoVolume} ===`);
                         if (novoVolume < 0) {
+                            console.log(`=== DEBUG: Erro - Estoque insuficiente (volume) para: ${produto.name} ===`);
                             return res.status(400).json({ error: `Estoque insuficiente (volume) para o produto: ${produto.name}` });
                         }
                     }
                     else {
                         const novoEstoque = (produto.stock || 0) - item.quantity;
+                        console.log(`=== DEBUG: Novo estoque seria: ${novoEstoque} ===`);
                         if (novoEstoque < 0) {
+                            console.log(`=== DEBUG: Erro - Estoque insuficiente para: ${produto.name} ===`);
                             return res.status(400).json({ error: `Estoque insuficiente para o produto: ${produto.name}` });
                         }
                     }
                 }
                 else {
+                    console.log('=== DEBUG: Produto fracionado normal ===');
                     if (item.sellingByVolume) {
                         const unitVolume = produto.unitVolume || 1;
                         const volumeNecessario = item.quantity;
                         const novoTotalVolume = (produto.totalVolume || 0) - volumeNecessario;
                         const novoStock = Math.floor(novoTotalVolume / unitVolume);
+                        console.log(`=== DEBUG: Novo volume seria: ${novoTotalVolume}, novo stock: ${novoStock} ===`);
                         if (novoTotalVolume < 0) {
+                            console.log(`=== DEBUG: Erro - Estoque insuficiente (volume) para: ${produto.name} ===`);
                             return res.status(400).json({ error: `Estoque insuficiente (volume) para o produto: ${produto.name}` });
                         }
                     }
@@ -308,77 +336,104 @@ exports.adminController = {
                         const volumeNecessario = item.quantity * unitVolume;
                         const novoTotalVolume = (produto.totalVolume || 0) - volumeNecessario;
                         const novoStock = Math.floor(novoTotalVolume / unitVolume);
+                        console.log(`=== DEBUG: Novo volume seria: ${novoTotalVolume}, novo stock: ${novoStock} ===`);
                         if (novoTotalVolume < 0) {
+                            console.log(`=== DEBUG: Erro - Estoque insuficiente (volume) para: ${produto.name} ===`);
                             return res.status(400).json({ error: `Estoque insuficiente (volume) para o produto: ${produto.name}` });
                         }
                     }
                 }
             }
             else {
+                console.log('=== DEBUG: Produto não fracionado ===');
                 const novoEstoque = (produto.stock || 0) - item.quantity;
+                console.log(`=== DEBUG: Novo estoque seria: ${novoEstoque} ===`);
                 if (novoEstoque < 0) {
+                    console.log(`=== DEBUG: Erro - Estoque insuficiente para: ${produto.name} ===`);
                     return res.status(400).json({ error: `Estoque insuficiente para o produto: ${produto.name}` });
                 }
             }
         }
-        const sale = await prisma_1.default.sale.create({
-            data: {
-                userId,
-                total: reallyValidItems.reduce((sum, item) => {
-                    if (item.isDoseItem) {
-                        return sum + (item.price * item.quantity);
-                    }
-                    return sum + (item.price * item.quantity);
-                }, 0),
-                paymentMethodId,
-                status: 'COMPLETED',
-                items: {
-                    create: await Promise.all(reallyValidItems.map(async (item) => {
-                        const produto = await prisma_1.default.product.findUnique({ where: { id: item.productId } });
-                        let quantityToRecord = item.quantity;
-                        if ((produto === null || produto === void 0 ? void 0 : produto.isFractioned) && !item.isDoseItem) {
-                            quantityToRecord = produto.unitVolume || 1000;
-                        }
-                        return {
-                            productId: item.productId,
-                            quantity: quantityToRecord,
-                            price: item.price,
-                            costPrice: (produto === null || produto === void 0 ? void 0 : produto.costPrice) || 0,
-                            isDoseItem: item.isDoseItem || false,
-                            isFractioned: item.isFractioned || false,
-                            discountBy: item.discountBy,
-                            choosableSelections: item.choosableSelections
-                        };
-                    }))
-                }
-            },
-            include: {
-                items: true
+        console.log('=== DEBUG: Verificação de estoque concluída com sucesso ===');
+        let totalVenda = 0;
+        for (const item of reallyValidItems) {
+            if (item.price && item.quantity) {
+                totalVenda += item.price * item.quantity;
             }
-        });
+        }
+        console.log('=== DEBUG PDV ===');
+        console.log('Itens realmente válidos para venda:', JSON.stringify(reallyValidItems, null, 2));
+        for (const item of reallyValidItems) {
+            const produto = await prisma_1.default.product.findUnique({ where: { id: item.productId } });
+            console.log(`Produto encontrado para item:`, item.productId, produto);
+        }
+        console.log('=== DEBUG: Itens prontos para criar venda ===');
+        console.log(JSON.stringify(reallyValidItems, null, 2));
+        console.log('=== DEBUG: Dados da venda ===');
+        console.log({ userId, totalVenda, paymentMethodId });
+        let sale;
+        try {
+            sale = await prisma_1.default.sale.create({
+                data: {
+                    userId,
+                    total: totalVenda,
+                    paymentMethodId,
+                    status: 'COMPLETED',
+                    items: {
+                        create: await Promise.all(reallyValidItems.map(async (item) => {
+                            const produto = await prisma_1.default.product.findUnique({ where: { id: item.productId } });
+                            if (!produto) {
+                                throw new Error(`Produto não encontrado: ${item.productId}`);
+                            }
+                            let quantityToRecord = item.quantity;
+                            if (produto.isFractioned && !item.isDoseItem) {
+                                quantityToRecord = produto.unitVolume || 1000;
+                            }
+                            return {
+                                productId: item.productId,
+                                quantity: quantityToRecord,
+                                price: item.price,
+                                costPrice: produto.costPrice ? Number(produto.costPrice) : 0,
+                                discount: item.discount || 0,
+                                isDoseItem: item.isDoseItem || false,
+                                isFractioned: item.isFractioned || false,
+                                discountBy: item.discountBy || null,
+                                choosableSelections: item.choosableSelections || null,
+                                comboInstanceId: item.comboInstanceId || null,
+                                doseInstanceId: item.doseInstanceId || null,
+                                offerInstanceId: (typeof item.offerInstanceId === 'string' && item.offerInstanceId.length === 36 && item.offerId) ? item.offerId : null,
+                                doseId: item.doseId || null,
+                                createdAt: new Date()
+                            };
+                        }))
+                    }
+                },
+                include: {
+                    items: true
+                }
+            });
+        }
+        catch (error) {
+            console.error('=== ERRO AO CRIAR VENDA ===');
+            console.error('Erro ao criar venda:', error);
+            if (error instanceof Error && error.stack) {
+                console.error('Stack trace:', error.stack);
+            }
+            console.error('Payload que causou o erro:', JSON.stringify(reallyValidItems, null, 2));
+            return res.status(400).json({ error: `Erro ao criar venda: ${error.message || 'Erro desconhecido'}` });
+        }
+        console.log('=== DEBUG: Atualizando estoque dos itens ===');
+        console.log(JSON.stringify(reallyValidItems, null, 2));
         for (const item of reallyValidItems) {
             const produto = await prisma_1.default.product.findUnique({ where: { id: item.productId } });
             if (!produto)
                 continue;
-            console.log(`\n=== ATUALIZANDO ESTOQUE ===`);
-            console.log(`Produto: ${produto.name}`);
-            console.log(`ID: ${produto.id}`);
-            console.log(`É fracionado: ${produto.isFractioned}`);
-            console.log(`É dose: ${item.isDoseItem}`);
-            console.log(`Quantidade original: ${item.quantity}`);
-            console.log(`Estoque atual: ${produto.stock}`);
-            console.log(`Volume total atual: ${produto.totalVolume}`);
-            console.log(`Volume unitário: ${produto.unitVolume}`);
             if (produto.isFractioned) {
                 if (item.isDoseItem) {
-                    console.log(`-> Processando como ITEM DE DOSE`);
                     if (item.discountBy === 'volume') {
                         const novoVolume = (produto.totalVolume || 0) - item.quantity;
                         const unitVolume = produto.unitVolume || 1;
                         const novoStock = Math.floor(novoVolume / unitVolume);
-                        console.log(`-> Descontando volume: ${item.quantity}ml`);
-                        console.log(`-> Novo volume total: ${novoVolume}ml`);
-                        console.log(`-> Novo estoque: ${novoStock} unidades`);
                         await prisma_1.default.product.update({
                             where: { id: item.productId },
                             data: {
@@ -388,7 +443,6 @@ exports.adminController = {
                         });
                     }
                     else {
-                        console.log(`-> Descontando unidades: ${item.quantity}`);
                         await prisma_1.default.product.update({
                             where: { id: item.productId },
                             data: { stock: { decrement: item.quantity } }
@@ -396,18 +450,11 @@ exports.adminController = {
                     }
                 }
                 else {
-                    console.log(`-> Processando como PRODUTO FRACIONADO NORMAL`);
                     if (item.sellingByVolume) {
                         const unitVolume = produto.unitVolume || 1;
                         const volumeNecessario = item.quantity;
                         const novoTotalVolume = (produto.totalVolume || 0) - volumeNecessario;
                         const novoStock = Math.floor(novoTotalVolume / unitVolume);
-                        console.log(`-> Venda por volume: ${volumeNecessario}ml`);
-                        console.log(`-> Novo volume total: ${novoTotalVolume}ml`);
-                        console.log(`-> Novo estoque: ${novoStock} unidades`);
-                        if (novoTotalVolume < 0) {
-                            return res.status(400).json({ error: `Estoque insuficiente (volume) para o produto: ${produto.name}` });
-                        }
                         await prisma_1.default.product.update({
                             where: { id: item.productId },
                             data: {
@@ -421,13 +468,6 @@ exports.adminController = {
                         const volumeNecessario = item.quantity * unitVolume;
                         const novoTotalVolume = (produto.totalVolume || 0) - volumeNecessario;
                         const novoStock = Math.floor(novoTotalVolume / unitVolume);
-                        console.log(`-> Venda por unidade: ${item.quantity} unidades`);
-                        console.log(`-> Volume necessário: ${volumeNecessario}ml`);
-                        console.log(`-> Novo volume total: ${novoTotalVolume}ml`);
-                        console.log(`-> Novo estoque: ${novoStock} unidades`);
-                        if (novoTotalVolume < 0) {
-                            return res.status(400).json({ error: `Estoque insuficiente (volume) para o produto: ${produto.name}` });
-                        }
                         await prisma_1.default.product.update({
                             where: { id: item.productId },
                             data: {
@@ -439,31 +479,149 @@ exports.adminController = {
                 }
             }
             else {
-                console.log(`-> Processando como PRODUTO NÃO FRACIONADO`);
-                const novoEstoque = (produto.stock || 0) - item.quantity;
-                console.log(`-> Descontando: ${item.quantity} unidades`);
-                console.log(`-> Novo estoque: ${novoEstoque} unidades`);
-                if (novoEstoque < 0) {
-                    return res.status(400).json({ error: `Estoque insuficiente para o produto: ${produto.name}` });
-                }
                 await prisma_1.default.product.update({
                     where: { id: item.productId },
                     data: { stock: { decrement: item.quantity } }
                 });
             }
-            console.log(`=== ESTOQUE ATUALIZADO ===\n`);
+        }
+        for (const item of reallyValidItems) {
+            const produto = await prisma_1.default.product.findUnique({ where: { id: item.productId } });
+            if (!produto)
+                continue;
+            await prisma_1.default.stockMovement.create({
+                data: {
+                    productId: item.productId,
+                    type: 'out',
+                    quantity: item.quantity,
+                    unitCost: produto.costPrice ? Number(produto.costPrice) : 0,
+                    totalCost: (produto.costPrice ? Number(produto.costPrice) : 0) * item.quantity,
+                    notes: 'Venda PDV',
+                    origin: 'venda_pdv'
+                }
+            });
         }
         console.log('[PDV][LOG] Finalizando venda. Payload recebido:', JSON.stringify(items, null, 2));
         res.status(201).json(sale);
     },
     getPDVSales: async (req, res) => {
-        const sales = await prisma_1.default.sale.findMany({
-            include: {
-                user: { select: { id: true, name: true, email: true } },
-                items: { include: { product: true } },
-            },
-            orderBy: { createdAt: 'desc' },
-        });
-        res.json(sales);
+        try {
+            const sales = await prisma_1.default.sale.findMany({
+                include: {
+                    user: { select: { id: true, name: true, email: true } },
+                    items: {
+                        include: {
+                            product: true
+                        }
+                    },
+                    paymentMethod: true,
+                },
+                orderBy: { createdAt: 'desc' },
+            });
+            const safeSales = sales.map(sale => (Object.assign(Object.assign({}, sale), { items: sale.items.filter(item => item.product !== null) })));
+            if (safeSales.length > 0) {
+                console.log('Primeira venda retornada pelo Prisma:');
+                console.log(JSON.stringify(safeSales[0], null, 2));
+            }
+            else {
+                console.log('Nenhuma venda encontrada.');
+            }
+            res.json(safeSales);
+        }
+        catch (error) {
+            console.error('Erro ao buscar vendas:', error);
+            res.status(500).json({ error: 'Erro ao buscar vendas' });
+        }
+    },
+    updatePDVSale: async (req, res) => {
+        const { id } = req.params;
+        const { paymentMethodId } = req.body;
+        if (!paymentMethodId) {
+            return res.status(400).json({ error: 'Meio de pagamento obrigatório.' });
+        }
+        const paymentMethod = await prisma_1.default.paymentMethod.findUnique({ where: { id: paymentMethodId } });
+        if (!paymentMethod) {
+            return res.status(400).json({ error: 'Meio de pagamento inválido.' });
+        }
+        try {
+            const sale = await prisma_1.default.sale.update({
+                where: { id },
+                data: { paymentMethodId },
+                include: { paymentMethod: true }
+            });
+            res.json(sale);
+        }
+        catch (error) {
+            console.error('Erro ao atualizar método de pagamento da venda:', error);
+            res.status(400).json({ error: 'Erro ao atualizar método de pagamento da venda.' });
+        }
+    },
+    getEstoqueTotals: async (req, res) => {
+        try {
+            const produtos = await prisma_1.default.product.findMany({
+                select: {
+                    stock: true,
+                    costPrice: true,
+                    price: true
+                }
+            });
+            let totalCusto = 0;
+            let totalVenda = 0;
+            for (const p of produtos) {
+                const estoque = p.stock || 0;
+                const custo = p.costPrice ? Number(p.costPrice) : 0;
+                const venda = p.price ? Number(p.price) : 0;
+                totalCusto += estoque * custo;
+                totalVenda += estoque * venda;
+            }
+            res.json({ totalCusto, totalVenda });
+        }
+        catch (err) {
+            res.status(500).json({ error: 'Erro ao calcular totais do estoque.' });
+        }
+    },
+    getVendasHoje: async (req, res) => {
+        try {
+            const hoje = new Date();
+            hoje.setHours(0, 0, 0, 0);
+            const amanha = new Date(hoje);
+            amanha.setDate(hoje.getDate() + 1);
+            const vendasPDV = await prisma_1.default.sale.findMany({
+                where: {
+                    createdAt: {
+                        gte: hoje,
+                        lt: amanha
+                    },
+                    status: 'COMPLETED'
+                },
+                select: {
+                    id: true,
+                    total: true,
+                    createdAt: true,
+                    user: { select: { id: true, name: true } },
+                    paymentMethod: { select: { id: true, name: true } }
+                }
+            });
+            const vendasOnline = await prisma_1.default.order.findMany({
+                where: {
+                    createdAt: {
+                        gte: hoje,
+                        lt: amanha
+                    },
+                    status: 'DELIVERED'
+                },
+                select: {
+                    id: true,
+                    total: true,
+                    createdAt: true,
+                    user: { select: { id: true, name: true } },
+                    paymentMethod: true
+                }
+            });
+            res.json({ pdv: vendasPDV, online: vendasOnline });
+        }
+        catch (err) {
+            res.status(500).json({ error: 'Erro ao buscar vendas do dia.' });
+        }
     },
 };

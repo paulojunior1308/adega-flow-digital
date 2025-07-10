@@ -38,11 +38,38 @@ exports.cartController = {
     },
     addItem: async (req, res) => {
         const userId = req.user.id;
-        let { productId, comboId, doseId, quantity, price, choosableSelections } = req.body;
+        let { productId, comboId, doseId, offerId, quantity, price, choosableSelections } = req.body;
         quantity = quantity || 1;
         let cart = await prisma_1.default.cart.findUnique({ where: { userId } });
         if (!cart) {
             cart = await prisma_1.default.cart.create({ data: { userId } });
+        }
+        if (offerId) {
+            console.log('[CART][LOG] Adicionando oferta ao carrinho. Payload:', req.body);
+            const offer = await prisma_1.default.offer.findUnique({
+                where: { id: offerId },
+                include: { items: { include: { product: true } } }
+            });
+            console.log('[CART][LOG] Oferta encontrada:', JSON.stringify(offer, null, 2));
+            if (!offer) {
+                throw new errorHandler_1.AppError('Oferta não encontrada', 404);
+            }
+            const offerInstanceId = (0, uuid_1.v4)();
+            const createdItems = [];
+            for (const offerItem of offer.items) {
+                const item = await prisma_1.default.cartItem.create({
+                    data: {
+                        cartId: cart.id,
+                        productId: offerItem.productId,
+                        quantity: offerItem.quantity * quantity,
+                        offerInstanceId,
+                        price: offer.price,
+                    },
+                    include: { product: true },
+                });
+                createdItems.push(item);
+            }
+            return res.status(201).json(createdItems);
         }
         if (doseId) {
             console.log('[CART][LOG] Adicionando dose ao carrinho. Payload:', req.body);

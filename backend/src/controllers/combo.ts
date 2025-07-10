@@ -18,7 +18,15 @@ export const comboController = {
           category: true
         }
       });
-      res.json(combos);
+      // Fallback: garantir que todos os itens tenham o campo product
+      const combosComProdutos = combos.map(combo => ({
+        ...combo,
+        items: combo.items.map(item => ({
+          ...item,
+          product: item.product || null
+        }))
+      }));
+      res.json(combosComProdutos);
     } catch (error) {
       console.error('Erro ao listar combos:', error);
       res.status(500).json({ error: 'Erro ao listar combos' });

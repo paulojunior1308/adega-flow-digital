@@ -93,4 +93,28 @@ router.get('/combos', async (req, res) => {
         res.status(500).json({ error: 'Erro ao listar combos' });
     }
 });
+router.get('/offers', async (req, res) => {
+    try {
+        const offers = await prisma_1.default.offer.findMany({
+            where: { active: true },
+            include: {
+                items: {
+                    include: {
+                        product: {
+                            include: {
+                                category: true
+                            }
+                        }
+                    }
+                }
+            },
+            orderBy: { createdAt: 'desc' }
+        });
+        res.json(offers);
+    }
+    catch (error) {
+        console.error('Erro ao listar ofertas:', error);
+        res.status(500).json({ error: 'Erro ao listar ofertas' });
+    }
+});
 exports.default = router;

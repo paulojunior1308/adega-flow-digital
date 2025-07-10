@@ -481,6 +481,111 @@ exports.orderController = {
             }
             for (const item of outros) {
             }
+            console.log('[ORDER][DELIVERED] Registrando saída de estoque em StockMovement...');
+            for (const comboItems of Object.values(combosMap)) {
+                const item = comboItems[0];
+                const comboInstanceId = item.comboInstanceId;
+                const combos = await prisma_1.default.combo.findMany({
+                    where: { active: true },
+                    include: { items: true }
+                });
+                let foundCombo = null;
+                for (const combo of combos) {
+                    const comboProductIds = combo.items.map(ci => ci.productId).sort();
+                    const orderProductIds = comboItems.map(oi => oi.productId).sort();
+                    if (JSON.stringify(comboProductIds) === JSON.stringify(orderProductIds)) {
+                        foundCombo = combo;
+                        break;
+                    }
+                }
+                if (foundCombo) {
+                    for (const comboItem of foundCombo.items) {
+                        const produto = await prisma_1.default.product.findUnique({ where: { id: comboItem.productId } });
+                        if (!produto)
+                            continue;
+                        const quantidadeDescontada = Math.abs(Number(comboItem.quantity));
+                        const totalCost = (produto.costPrice || 0) * quantidadeDescontada;
+                        await prisma_1.default.stockMovement.create({
+                            data: {
+                                productId: comboItem.productId,
+                                type: 'out',
+                                quantity: quantidadeDescontada,
+                                unitCost: produto.costPrice || 0,
+                                totalCost,
+                                notes: 'Entrega - Combo',
+                                origin: 'entrega_online'
+                            }
+                        });
+                    }
+                }
+                else {
+                    for (const orderItem of comboItems) {
+                        const produto = await prisma_1.default.product.findUnique({ where: { id: orderItem.productId } });
+                        if (!produto)
+                            continue;
+                        const quantidade = orderItem.quantity;
+                        const totalCost = (produto.costPrice || 0) * quantidade;
+                        await prisma_1.default.stockMovement.create({
+                            data: {
+                                productId: orderItem.productId,
+                                type: 'out',
+                                quantity: quantidade,
+                                unitCost: produto.costPrice || 0,
+                                totalCost,
+                                notes: 'Entrega - Produto Avulso',
+                                origin: 'entrega_online'
+                            }
+                        });
+                    }
+                }
+            }
+            for (const doseItems of Object.values(dosesMap)) {
+                const item = doseItems[0];
+                if (item.doseId) {
+                    const dose = await prisma_1.default.dose.findUnique({
+                        where: { id: item.doseId },
+                        include: { items: true }
+                    });
+                    if (dose) {
+                        for (const doseItem of dose.items) {
+                            const produto = await prisma_1.default.product.findUnique({ where: { id: doseItem.productId } });
+                            if (!produto)
+                                continue;
+                            const quantidadeDescontada = Math.abs(Number(doseItem.quantity));
+                            const totalCost = (produto.costPrice || 0) * quantidadeDescontada;
+                            await prisma_1.default.stockMovement.create({
+                                data: {
+                                    productId: doseItem.productId,
+                                    type: 'out',
+                                    quantity: quantidadeDescontada,
+                                    unitCost: produto.costPrice || 0,
+                                    totalCost,
+                                    notes: 'Entrega - Dose',
+                                    origin: 'entrega_online'
+                                }
+                            });
+                        }
+                    }
+                }
+            }
+            for (const item of outros) {
+                const produto = await prisma_1.default.product.findUnique({ where: { id: item.productId } });
+                if (!produto)
+                    continue;
+                const quantidade = item.quantity;
+                const totalCost = (produto.costPrice || 0) * quantidade;
+                await prisma_1.default.stockMovement.create({
+                    data: {
+                        productId: item.productId,
+                        type: 'out',
+                        quantity: quantidade,
+                        unitCost: produto.costPrice || 0,
+                        totalCost,
+                        notes: 'Entrega - Produto Avulso',
+                        origin: 'entrega_online'
+                    }
+                });
+            }
         }
         const statusMessages = {
             PENDING: 'Seu pedido foi recebido e está aguardando confirmação.',

@@ -450,6 +450,7 @@ model ComandaItem {
   discountBy String? // 'volume' ou 'unit'
   choosableSelections Json?
   offerInstanceId String?
+  comboInstanceId String? // Novo campo para agrupar itens de combo
   createdAt DateTime @default(now())
   comanda   Comanda @relation(fields: [comandaId], references: [id], onDelete: Cascade)
   product   Product @relation(fields: [productId], references: [id])

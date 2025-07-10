@@ -1,0 +1,21 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = __importDefault(require("express"));
+const auth_1 = require("../middlewares/auth");
+const comanda_1 = require("../controllers/comanda");
+const router = express_1.default.Router();
+router.use(auth_1.authMiddleware);
+router.use(auth_1.adminMiddleware);
+router.get('/comandas', comanda_1.comandaController.list);
+router.post('/comandas', comanda_1.comandaController.create);
+router.get('/comandas/:id', comanda_1.comandaController.getById);
+router.put('/comandas/:id/close', comanda_1.comandaController.close);
+router.put('/comandas/:id/reopen', comanda_1.comandaController.reopen);
+router.delete('/comandas/:id', comanda_1.comandaController.delete);
+router.post('/comandas/:comandaId/items', comanda_1.comandaController.addItem);
+router.put('/comandas/:comandaId/items/:itemId', comanda_1.comandaController.updateItemQuantity);
+router.delete('/comandas/:comandaId/items/:itemId', comanda_1.comandaController.removeItem);
+exports.default = router;

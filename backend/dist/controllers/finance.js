@@ -29,6 +29,7 @@ exports.financeController = {
                     }
                 }
             });
+            const safeSalesData = salesData.map(sale => (Object.assign(Object.assign({}, sale), { items: sale.items.filter((item) => item.product !== null) })));
             const ordersData = await prisma_1.default.order.findMany({
                 where: Object.assign({ status: 'DELIVERED' }, (Object.keys(dateFilter2).length > 0 ? { createdAt: dateFilter2 } : {})),
                 include: {
@@ -39,6 +40,7 @@ exports.financeController = {
                     }
                 }
             });
+            const safeOrdersData = ordersData.map(order => (Object.assign(Object.assign({}, order), { items: order.items.filter((item) => item.product !== null) })));
             let total_sales = 0;
             let total_cost = 0;
             const processItems = (items, sourceId, sourceType) => {
@@ -102,12 +104,12 @@ exports.financeController = {
                 });
             };
             console.log('\n=== Detalhamento das Vendas (Sale) ===');
-            salesData.forEach(sale => {
+            safeSalesData.forEach(sale => {
                 console.log(`\nVenda ID: ${sale.id}`);
                 processItems(sale.items, sale.id, 'Sale');
             });
             console.log('\n=== Detalhamento dos Pedidos (Order) ===');
-            ordersData.forEach(order => {
+            safeOrdersData.forEach(order => {
                 console.log(`\nPedido ID: ${order.id}`);
                 processItems(order.items, order.id, 'Order');
             });
@@ -121,8 +123,8 @@ exports.financeController = {
             const total_expenses = expenses.reduce((sum, e) => sum + (Number(e.value) || 0), 0);
             const net_profit = gross_profit - total_expenses;
             console.log('Filtro de datas recebido:', { startDate, endDate, dateFilter2 });
-            console.log('Vendas (Sale) encontradas:', salesData.length);
-            console.log('Pedidos (Order) encontrados:', ordersData.length);
+            console.log('Vendas (Sale) encontradas:', safeSalesData.length);
+            console.log('Pedidos (Order) encontrados:', safeOrdersData.length);
             res.json({
                 total_sales: Number(total_sales.toFixed(2)),
                 total_cost: Number(total_cost.toFixed(2)),

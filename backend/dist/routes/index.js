@@ -14,6 +14,7 @@ const motoboy_1 = __importDefault(require("./motoboy"));
 const motoboy_2 = require("../middlewares/motoboy");
 const public_1 = __importDefault(require("./public"));
 const dose_routes_1 = __importDefault(require("./dose.routes"));
+const comanda_1 = __importDefault(require("./comanda"));
 const router = express_1.default.Router();
 router.options('*', (req, res) => {
     res.status(200).end();
@@ -41,4 +42,5 @@ router.get('/admin-configuracoes', (0, role_1.authorizeRoles)('ADMIN'), admin_1.
 router.get('/admin-pdv', (0, role_1.authorizeRoles)('ADMIN'), admin_1.adminController.getPDV);
 router.use('/', client_2.default);
 router.use('/admin/doses', (0, role_1.authorizeRoles)('ADMIN'), dose_routes_1.default);
+router.use('/admin', (0, role_1.authorizeRoles)('ADMIN'), comanda_1.default);
 exports.default = router;
