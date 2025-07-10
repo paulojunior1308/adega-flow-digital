@@ -485,13 +485,20 @@ export const comandaController = {
       }
     });
 
+    if (!updatedComanda) {
+      return res.status(404).json({ error: 'Comanda não encontrada após atualização.' });
+    }
+
     // Log dos itens da comanda após adição
-    console.log('[DEBUG] Itens da comanda após adição:', updatedComanda.items.map(i => ({
-      id: i.id,
-      name: i.name,
-      productId: i.productId,
-      comboInstanceId: i.comboInstanceId
-    })));
+    console.log('[DEBUG] Itens da comanda após adição:', (updatedComanda.items as any[]).map(i => {
+      const logObj: any = {
+        id: i.id,
+        name: i.name,
+        productId: i.productId
+      };
+      if ('comboInstanceId' in i) logObj.comboInstanceId = i.comboInstanceId;
+      return logObj;
+    }));
 
     // Emitir evento para todos os admins
     const io = getSocketInstance();
