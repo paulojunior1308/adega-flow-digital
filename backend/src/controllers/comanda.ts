@@ -109,6 +109,7 @@ export const comandaController = {
 
   // Adicionar item à comanda
   addItem: async (req: Request, res: Response) => {
+    console.log('[DEBUG] req.body recebido em addItem:', req.body);
     const { comandaId } = req.params;
     const { productId, comboId, doseId, offerId, quantity, price, name, code, isDoseItem, isFractioned, discountBy, choosableSelections } = req.body;
 
