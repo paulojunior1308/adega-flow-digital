@@ -326,15 +326,28 @@ export function ComandaModal({
 
     if (item.type === 'combo') {
       const combo = combos.find(c => c.id === item.id);
-      if (combo && combo.items.some((i: any) => i.allowFlavorSelection)) {
-        setComboToConfigure(combo);
-        setComboModalOpen(true);
-        return;
+      console.log('DEBUG combo:', combo);
+      if (combo) {
+        const isConfigurable = combo.items.some((i: any) => i.allowFlavorSelection || i.isChoosable);
+        console.log('DEBUG isConfigurable:', isConfigurable, combo.items);
+        if (isConfigurable) {
+          setComboToConfigure(combo);
+          setComboModalOpen(true);
+          return;
+        }
       }
-      // Se não houver escolhíveis, adiciona direto
+      // Se não houver escolhíveis, adiciona direto usando a lógica do PDV
+      const comboItems = combo.items.map((item: any) => ({
+        productId: item.productId,
+        quantity: item.quantity,
+        price: item.product.price,
+        name: item.product.name,
+        code: item.product.code || item.product.id.substring(0, 6)
+      }));
       await api.post(`/admin/comandas/${currentComanda.id}/items`, {
         comboId: item.id,
-        quantity
+        quantity,
+        comboItems
       });
     } else if (item.type === 'dose') {
       const dose = doses.find(d => d.id === item.id);
@@ -358,10 +371,13 @@ export function ComandaModal({
         });
       }
     } else {
-      // Produto normal
+      // Produto normal: enviar todos os campos obrigatórios
       await api.post(`/admin/comandas/${currentComanda.id}/items`, {
         productId: item.id,
-        quantity
+        quantity,
+        price: item.price,
+        name: item.name,
+        code: item.code ? item.code : (item.id ? item.id.substring(0, 6) : 'SEM_CODIGO')
       });
     }
 
@@ -375,73 +391,89 @@ export function ComandaModal({
     });
   };
 
-  // Handle combo configuration
+  // Handle combo configuration - CORRIGIDO para não misturar fixos e escolhíveis da mesma categoria
   const handleComboConfirm = async (choosableSelections: Record<string, Record<string, number>>) => {
+    console.log('=== DEBUG: handleComboConfirm chamado ===', { choosableSelections, comboToConfigure });
     if (!currentComanda || !comboToConfigure) return;
+    setComboModalOpen(false); // Fecha o modal imediatamente
+    setComboToConfigure(null); // Limpa o estado
 
-    // Montar lista de produtos do combo (fixos e escolhidos)
-    const produtosCombo: { product: Product, quantidade: number, discountBy?: 'volume' | 'unit' }[] = [];
-    // Fixos
-    for (const item of comboToConfigure.items) {
-      if (!item.isChoosable && item.product) {
-        produtosCombo.push({
-          product: item.product,
-          quantidade: Math.max(1, item.quantity),
-          discountBy: item.discountBy
-        });
+    const comboInstanceId = uuidv4(); // Gera um id único para esta instância do combo
+    const { items, price: finalPrice, name } = comboToConfigure;
+    const allItemsFromConfig: { product: Product; quantity: number; discountBy?: 'volume' | 'unit'; categoryId?: string; isChoosable?: boolean }[] = [];
+
+    // 1. Mapear categorias escolhíveis
+    const choosableCategories = new Set(Object.keys(choosableSelections));
+
+    // 2. Adicionar itens fixos SOMENTE de categorias que não são escolhíveis
+    items.forEach((item: any) => {
+      if (!item.isChoosable && item.product && (!item.categoryId || !choosableCategories.has(item.categoryId))) {
+        allItemsFromConfig.push({ product: item.product, quantity: item.quantity, discountBy: item.discountBy, categoryId: item.categoryId, isChoosable: false });
       }
-    }
-    // Escolhíveis
-    for (const [categoryId, selections] of Object.entries(choosableSelections)) {
-      for (const [productId, quantidade] of Object.entries(selections)) {
-        if (quantidade > 0) {
+    });
+
+    // 3. Adicionar itens escolhidos pelo usuário
+    for (const categoryId in choosableSelections) {
+      for (const productId in choosableSelections[categoryId]) {
+        const quantity = choosableSelections[categoryId][productId];
+        if (quantity > 0) {
           const product = products.find(p => p.id === productId);
           if (product) {
-            produtosCombo.push({
-              product,
-              quantidade: Number(quantidade),
-              discountBy: undefined
-            });
+            // Descobrir discountBy da categoria
+            const itemConfig = items.find((i: any) => i.categoryId === categoryId && i.isChoosable);
+            allItemsFromConfig.push({ product, quantity, discountBy: itemConfig?.discountBy, categoryId, isChoosable: true });
           }
         }
       }
     }
 
-    // Calcular valor proporcional igual ao PDV
-    const totalOriginalPrice = produtosCombo.reduce((sum, item) => sum + item.product.price * (item.discountBy === 'volume' ? 1 : item.quantidade), 0);
+    console.log('=== DEBUG: allItemsFromConfig (corrigido) ===', allItemsFromConfig);
+
+    // 4. Calcular valor proporcional apenas sobre os itens realmente enviados
+    const totalOriginalPrice = allItemsFromConfig.reduce((sum, item) => sum + item.product.price * (item.discountBy === 'volume' ? 1 : item.quantity), 0);
     let accumulatedPrice = 0;
-    for (let i = 0; i < produtosCombo.length; i++) {
-      const item = produtosCombo[i];
-      const proportion = (item.product.price * (item.discountBy === 'volume' ? 1 : item.quantidade)) / totalOriginalPrice;
-      let proportionalPrice = comboToConfigure.price * proportion;
+    const newItems = allItemsFromConfig.map((item, index) => {
+      const proportion = (item.product.price * (item.discountBy === 'volume' ? 1 : item.quantity)) / totalOriginalPrice;
+      let proportionalPrice = finalPrice * proportion;
       proportionalPrice = Math.round(proportionalPrice * 100) / 100;
       accumulatedPrice += proportionalPrice;
-      if (i === produtosCombo.length - 1) {
-        proportionalPrice += (comboToConfigure.price - accumulatedPrice);
+      if (index === allItemsFromConfig.length - 1) {
+        proportionalPrice += (finalPrice - accumulatedPrice);
       }
-      const precoUnitario = proportionalPrice / item.quantidade;
-      try {
-        await api.post(`/admin/comandas/${currentComanda.id}/items`, {
-          productId: item.product.id,
-          code: item.product.code || item.product.id.substring(0, 6),
-          name: `Combo ${comboToConfigure.name} - ${item.product.name}`,
-          quantity: item.quantidade,
-          price: precoUnitario,
-          isDoseItem: false,
-          isFractioned: item.product.isFractioned,
-          discountBy: item.discountBy,
-          choosableSelections: null
-        });
-      } catch (error) {
-        console.error('Erro ao adicionar item do combo:', error);
-      }
-    }
+      return {
+        productId: item.product.id,
+        code: item.product.code || item.product.id.substring(0, 6),
+        name: `${item.product.name} (Combo: ${name})`,
+        quantity: item.quantity,
+        price: proportionalPrice / item.quantity,
+        isDoseItem: false,
+        isFractioned: item.product.isFractioned,
+        discountBy: item.discountBy,
+        choosableSelections: null
+      };
+    });
 
-    setComboModalOpen(false);
-    setComboToConfigure(null);
+    // 5. Unificar itens por productId e price
+    const itemsUnificados = [];
+    newItems.forEach(item => {
+      const existente = itemsUnificados.find(i => i.productId === item.productId && i.price === item.price);
+      if (existente) {
+        existente.quantity += item.quantity;
+      } else {
+        itemsUnificados.push({ ...item });
+      }
+    });
+
+    // 6. Enviar todos os itens do combo em um único POST
+    console.log('[DEBUG] Enviando combo para comanda', { comboId: comboToConfigure.id, comboInstanceId, items: itemsUnificados });
+    await api.post(`/admin/comandas/${currentComanda.id}/items/combo`, {
+      comboId: comboToConfigure.id,
+      comboInstanceId,
+      items: itemsUnificados
+    });
 
     toast({
-      description: `${comboToConfigure.name} adicionado à comanda.`
+      description: `${name} adicionado à comanda.`
     });
   };
 
@@ -519,8 +551,30 @@ export function ComandaModal({
       };
     });
     console.log('=== DEBUG: Itens da dose adicionados à comanda (estado local) ===', novosItens);
-    // Adiciona ao estado local da comanda
-    currentComanda.items.push(...novosItens);
+    
+    // Adicionar cada item ao backend
+    for (const item of novosItens) {
+      try {
+        await api.post(`/admin/comandas/${currentComanda.id}/items`, {
+          productId: item.productId,
+          code: item.code,
+          name: item.name,
+          quantity: item.quantity,
+          price: item.price,
+          isDoseItem: true,
+          isFractioned: item.isFractioned,
+          discountBy: item.discountBy,
+          choosableSelections: item.choosableSelections
+        });
+      } catch (error) {
+        console.error('Erro ao adicionar item da dose:', error);
+      }
+    }
+
+    // Recarregar comanda atual
+    const updatedComanda = await api.get(`/admin/comandas/${currentComanda.id}`);
+    setCurrentComanda(updatedComanda.data);
+    
     setDoseModalOpen(false);
     setDoseToConfigure(null);
     toast({
@@ -727,6 +781,11 @@ export function ComandaModal({
   // Get open comandas
   const openComandas = comandas.filter(c => c.isOpen);
 
+  // Log para depuração de duplicidade visual
+  if (currentComanda && currentComanda.items) {
+    console.log('[DEBUG] Renderizando itens da comanda:', currentComanda.items.map(i => i.id));
+  }
+
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -888,48 +947,55 @@ export function ComandaModal({
                 </div>
 
                 {/* Comanda items */}
-                <div className="flex-1 overflow-y-auto">
-                  {currentComanda.items.map((item) => (
-                    <div key={item.id} className="flex items-center justify-between py-2">
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between">
-                          <span className="font-medium">{item.name}</span>
-                          <span className="text-sm text-gray-500">
-                            {item.quantity} {item.discountBy === 'volume' || (item.discountBy === undefined && item.isFractioned) ? 'ml' : 'un'} x R$ {item.price.toFixed(2)}
-                          </span>
+                {(() => {
+                  const uniqueItems = currentComanda.items.filter(
+                    (item, idx, arr) => arr.findIndex(i => i.id === item.id) === idx
+                  );
+                  return (
+                    <div className="flex-1 overflow-y-auto max-h-[60vh]">
+                      {uniqueItems.map((item) => (
+                        <div key={item.id} className="flex items-center justify-between py-2">
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between">
+                              <span className="font-medium">{item.name}</span>
+                              <span className="text-sm text-gray-500">
+                                {item.quantity} {item.discountBy === 'volume' || (item.discountBy === undefined && item.isFractioned) ? 'ml' : 'un'} x R$ {item.price.toFixed(2)}
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-between text-sm text-gray-500">
+                              <span>Cód: {item.code}</span>
+                              <span>R$ {item.total.toFixed(2)}</span>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 ml-4">
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              onClick={async () => await updateComandaItemQuantity(item.id, item.quantity - 1)}
+                            >
+                              <Minus className="h-4 w-4" />
+                            </Button>
+                            <span className="w-12 text-center">{item.quantity}</span>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              onClick={async () => await updateComandaItemQuantity(item.id, item.quantity + 1)}
+                            >
+                              <Plus className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              onClick={async () => await removeComandaItem(item.id)}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </div>
-                        <div className="flex items-center justify-between text-sm text-gray-500">
-                          <span>Cód: {item.code}</span>
-                          <span>R$ {item.total.toFixed(2)}</span>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2 ml-4">
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          onClick={async () => await updateComandaItemQuantity(item.id, item.quantity - 1)}
-                        >
-                          <Minus className="h-4 w-4" />
-                        </Button>
-                        <span className="w-12 text-center">{item.quantity}</span>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          onClick={async () => await updateComandaItemQuantity(item.id, item.quantity + 1)}
-                        >
-                          <Plus className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          onClick={async () => await removeComandaItem(item.id)}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
+                  );
+                })()}
 
                 <div className="border-t pt-4 mt-4">
                   <div className="flex justify-between mb-4">
@@ -1004,8 +1070,15 @@ export function ComandaModal({
         <ComboOptionsModal
           open={comboModalOpen}
           onOpenChange={setComboModalOpen}
-          combo={comboToConfigure}
+          combo={{
+            ...comboToConfigure,
+            items: comboToConfigure.items.map((item: any) => ({
+              ...item,
+              isChoosable: item.allowFlavorSelection
+            }))
+          }}
           onConfirm={handleComboConfirm}
+          products={products}
         />
       )}
 

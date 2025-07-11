@@ -58,6 +58,7 @@ interface ComboOptionsModalProps {
   };
   onConfirm: (choosableSelections: Record<string, Record<string, number>>) => void;
   isDoseConfiguration?: boolean;
+  products?: Product[];
 }
 
 export function ComboOptionsModal({ open, onOpenChange, combo, onConfirm }: ComboOptionsModalProps) {
