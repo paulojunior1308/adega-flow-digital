@@ -1012,12 +1012,6 @@ export function ComandaModal({
                       <ShoppingCart className="h-4 w-4 mr-2" />
                       Transferir para Carrinho
                     </Button>
-                    <Button 
-                      variant="outline" 
-                      onClick={() => onOpenChange(false)}
-                    >
-                      Cancelar
-                    </Button>
                   </div>
                 </div>
               </div>
