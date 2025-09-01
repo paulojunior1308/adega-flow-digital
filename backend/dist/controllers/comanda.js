@@ -93,7 +93,7 @@ exports.comandaController = {
         res.json(comanda);
     },
     addItem: async (req, res) => {
-        var _a, _b;
+        console.log('[DEBUG] req.body recebido em addItem:', req.body);
         const { comandaId } = req.params;
         const { productId, comboId, doseId, offerId, quantity, price, name, code, isDoseItem, isFractioned, discountBy, choosableSelections } = req.body;
         const comanda = await prisma_1.default.comanda.findUnique({
@@ -234,75 +234,54 @@ exports.comandaController = {
             const choosableSelections = req.body.choosableSelections || {};
             console.log('Recebido choosableSelections:', JSON.stringify(choosableSelections));
             const comboInstanceId = (0, uuid_1.v4)();
-            const allItemsFromConfig = [];
-            const categoryConfigMap = {};
-            combo.items.forEach((item) => {
-                if (item.isChoosable && item.categoryId && !categoryConfigMap[item.categoryId]) {
-                    categoryConfigMap[item.categoryId] = { mode: item.discountBy === 'volume' ? 'volume' : 'unit' };
-                }
-            });
-            combo.items.forEach((item) => {
-                if (!item.isChoosable && item.product) {
-                    allItemsFromConfig.push({ product: item.product, quantity: item.quantity, discountBy: item.discountBy });
-                }
-            });
-            for (const categoryId in choosableSelections) {
-                const categoryMode = ((_a = categoryConfigMap[categoryId]) === null || _a === void 0 ? void 0 : _a.mode) || 'unit';
-                for (const productId in choosableSelections[categoryId]) {
-                    const quantity = choosableSelections[categoryId][productId];
-                    if (quantity > 0) {
-                        const product = (_b = combo.items.find((i) => i.productId === productId)) === null || _b === void 0 ? void 0 : _b.product;
-                        if (product) {
-                            allItemsFromConfig.push({ product, quantity, discountBy: categoryMode });
+            for (const comboItem of combo.items) {
+                if (comboItem.allowFlavorSelection && comboItem.categoryId) {
+                    const selections = choosableSelections[comboItem.categoryId] || {};
+                    for (const [productId, qty] of Object.entries(selections)) {
+                        const quantityNumber = Number(qty);
+                        if (quantityNumber > 0) {
+                            console.log('Buscando produto', productId);
+                            const customPrice = req.body.priceByProduct && req.body.priceByProduct[productId];
+                            const item = await prisma_1.default.comandaItem.create({
+                                data: {
+                                    comandaId,
+                                    productId,
+                                    code: comboItem.product.sku || comboItem.product.barcode || comboItem.product.id.substring(0, 6),
+                                    name: `Combo ${combo.name} - ${comboItem.product.name}`,
+                                    quantity: quantityNumber * (quantity || 1),
+                                    price: customPrice !== undefined ? customPrice : (combo.price / combo.items.reduce((sum, item) => sum + item.quantity, 0)),
+                                    total: (customPrice !== undefined ? customPrice : (combo.price / combo.items.reduce((sum, item) => sum + item.quantity, 0))) * quantityNumber * (quantity || 1),
+                                    isDoseItem: false,
+                                    isFractioned: comboItem.product.isFractioned,
+                                    discountBy: comboItem.product.isFractioned ? 'volume' : 'unit',
+                                    choosableSelections: choosableSelections || null
+                                },
+                                include: { product: true },
+                            });
+                            createdItems.push(item);
                         }
                     }
                 }
-            }
-            console.log('[COMANDA][LOG] allItemsFromConfig:', allItemsFromConfig);
-            const totalOriginalPrice = allItemsFromConfig.reduce((sum, item) => sum + item.product.price * (item.discountBy === 'volume' ? 1 : item.quantity), 0);
-            let accumulatedPrice = 0;
-            const newItems = allItemsFromConfig.map((item, index) => {
-                const proportion = (item.product.price * (item.discountBy === 'volume' ? 1 : item.quantity)) / totalOriginalPrice;
-                let proportionalPrice = combo.price * proportion;
-                proportionalPrice = Math.round(proportionalPrice * 100) / 100;
-                accumulatedPrice += proportionalPrice;
-                if (index === allItemsFromConfig.length - 1) {
-                    proportionalPrice += (combo.price - accumulatedPrice);
+                else {
+                    const customPrice = req.body.priceByProduct && req.body.priceByProduct[comboItem.productId];
+                    const item = await prisma_1.default.comandaItem.create({
+                        data: {
+                            comandaId,
+                            productId: comboItem.productId,
+                            code: comboItem.product.sku || comboItem.product.barcode || comboItem.product.id.substring(0, 6),
+                            name: `Combo ${combo.name} - ${comboItem.product.name}`,
+                            quantity: comboItem.quantity * (quantity || 1),
+                            price: customPrice !== undefined ? customPrice : (combo.price / combo.items.reduce((sum, item) => sum + item.quantity, 0)),
+                            total: (customPrice !== undefined ? customPrice : (combo.price / combo.items.reduce((sum, item) => sum + item.quantity, 0))) * comboItem.quantity * (quantity || 1),
+                            isDoseItem: false,
+                            isFractioned: comboItem.product.isFractioned,
+                            discountBy: comboItem.product.isFractioned ? 'volume' : 'unit',
+                            choosableSelections: choosableSelections || null
+                        },
+                        include: { product: true },
+                    });
+                    createdItems.push(item);
                 }
-                return {
-                    productId: item.product.id,
-                    code: item.product.code || item.product.id.substring(0, 6),
-                    name: `${item.product.name} (Combo: ${combo.name})`,
-                    quantity: item.quantity,
-                    price: proportionalPrice / item.quantity,
-                    total: proportionalPrice,
-                    isDoseItem: false,
-                    isFractioned: item.product.isFractioned,
-                    discountBy: item.discountBy,
-                    choosableSelections: choosableSelections || null,
-                    comboInstanceId
-                };
-            });
-            console.log('[COMANDA][LOG] newItems a serem criados:', newItems);
-            for (const itemData of newItems) {
-                const item = await prisma_1.default.comandaItem.create({
-                    data: {
-                        comandaId,
-                        productId: itemData.productId,
-                        code: itemData.code,
-                        name: itemData.name,
-                        quantity: itemData.quantity * (quantity || 1),
-                        price: itemData.price,
-                        total: itemData.total * (quantity || 1),
-                        isDoseItem: false,
-                        isFractioned: itemData.isFractioned,
-                        discountBy: itemData.discountBy,
-                        choosableSelections: itemData.choosableSelections,
-                        comboInstanceId: itemData.comboInstanceId
-                    },
-                    include: { product: true }
-                });
-                createdItems.push(item);
             }
             const newTotal = comanda.items.reduce((sum, item) => sum + item.total, 0) +
                 createdItems.reduce((sum, item) => sum + item.total, 0);
@@ -425,12 +404,19 @@ exports.comandaController = {
                 user: { select: { name: true } }
             }
         });
-        console.log('[DEBUG] Itens da comanda após adição:', updatedComanda.items.map(i => ({
-            id: i.id,
-            name: i.name,
-            productId: i.productId,
-            comboInstanceId: i.comboInstanceId
-        })));
+        if (!updatedComanda) {
+            return res.status(404).json({ error: 'Comanda não encontrada após atualização.' });
+        }
+        console.log('[DEBUG] Itens da comanda após adição:', updatedComanda.items.map(i => {
+            const logObj = {
+                id: i.id,
+                name: i.name,
+                productId: i.productId
+            };
+            if ('comboInstanceId' in i)
+                logObj.comboInstanceId = i.comboInstanceId;
+            return logObj;
+        }));
         const io = (0, socketInstance_1.getSocketInstance)();
         if (io) {
             io.emit('comanda-updated', { comanda: updatedComanda });

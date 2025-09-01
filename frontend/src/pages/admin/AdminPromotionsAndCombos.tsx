@@ -109,6 +109,9 @@ export default function AdminPromotionsAndCombos() {
   const [selectedProducts, setSelectedProducts] = React.useState<string[]>([]);
   const [searchTerm, setSearchTerm] = React.useState('');
   const [offerSearchTerm, setOfferSearchTerm] = React.useState('');
+  const [comboSearchTerm, setComboSearchTerm] = React.useState('');
+  const [promotionSearchTerm, setPromotionSearchTerm] = React.useState('');
+  const [doseSearchTerm, setDoseSearchTerm] = React.useState('');
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [productTypes, setProductTypes] = React.useState<Record<string, 'fixed' | 'choosable'>>({});
   const [editingCombo, setEditingCombo] = React.useState<Combo | null>(null);
@@ -194,6 +197,22 @@ export default function AdminPromotionsAndCombos() {
     product.name.toLowerCase().includes(offerSearchTerm.toLowerCase())
   );
 
+  const filteredCombos = combos.filter(combo => 
+    combo.name.toLowerCase().includes(comboSearchTerm.toLowerCase())
+  );
+
+  const filteredPromotions = promotions.filter(promotion => 
+    promotion.name.toLowerCase().includes(promotionSearchTerm.toLowerCase())
+  );
+
+  const filteredDoses = doses.filter(dose => 
+    dose.name.toLowerCase().includes(doseSearchTerm.toLowerCase())
+  );
+
+  const filteredOffers = offers.filter(offer => 
+    offer.name.toLowerCase().includes(offerSearchTerm.toLowerCase())
+  );
+
   const handleProductSelect = (productId: string) => {
     setSelectedProducts(prev => {
       if (prev.includes(productId)) {
@@ -211,6 +230,13 @@ export default function AdminPromotionsAndCombos() {
     setEditingCombo(null);
     setEditingPromotion(null);
     setEditingDose(null);
+  };
+
+  const clearSearches = () => {
+    setComboSearchTerm('');
+    setPromotionSearchTerm('');
+    setDoseSearchTerm('');
+    setOfferSearchTerm('');
   };
 
   const handleEditCombo = (combo: Combo) => {
@@ -759,7 +785,7 @@ export default function AdminPromotionsAndCombos() {
             <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-200">Combos, Promoções e Doses</h1>
             <p className="text-gray-600 dark:text-gray-400">Gerencie combos, promoções e doses do catálogo.</p>
           </div>
-          <Tabs defaultValue="combos" className="w-full">
+          <Tabs defaultValue="combos" className="w-full" onValueChange={clearSearches}>
             <TabsList className="w-full overflow-x-auto flex-nowrap whitespace-nowrap scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent">
               <TabsTrigger value="combos">Combos</TabsTrigger>
               <TabsTrigger value="promotions">Promoções</TabsTrigger>
@@ -767,14 +793,23 @@ export default function AdminPromotionsAndCombos() {
               <TabsTrigger value="offers">Ofertas</TabsTrigger>
             </TabsList>
             <TabsContent value="combos">
-              <div className="flex flex-col sm:flex-row sm:justify-end mb-4 gap-2">
+              <div className="flex flex-col sm:flex-row sm:justify-between mb-4 gap-2">
+                <div className="flex items-center gap-2 w-full sm:w-80">
+                  <Search className="w-4 h-4 text-gray-500" />
+                  <Input
+                    placeholder="Buscar combos..."
+                    value={comboSearchTerm}
+                    onChange={(e) => setComboSearchTerm(e.target.value)}
+                    className="flex-1"
+                  />
+                </div>
                 <Button className="flex items-center gap-2 w-full sm:w-auto" onClick={() => { resetForm(); setIsComboDialogOpen(true); }}>
                   <Plus className="w-4 h-4" />
                   Adicionar Combo
                 </Button>
               </div>
               <div className="grid gap-8 grid-cols-1 sm:grid-cols-2 xl:grid-cols-3">
-                {(combos || []).map((combo) => (
+                {(filteredCombos || []).map((combo) => (
                   <Card key={combo.id} className="min-h-[200px] shadow-lg border-2 border-gray-200 dark:border-gray-800 hover:border-primary transition-all group">
                     <CardHeader className="pb-2">
                       <div className="flex justify-between items-start gap-4">
@@ -842,14 +877,23 @@ export default function AdminPromotionsAndCombos() {
               </div>
             </TabsContent>
             <TabsContent value="promotions">
-              <div className="flex flex-col sm:flex-row sm:justify-end mb-4 gap-2">
+              <div className="flex flex-col sm:flex-row sm:justify-between mb-4 gap-2">
+                <div className="flex items-center gap-2 w-full sm:w-80">
+                  <Search className="w-4 h-4 text-gray-500" />
+                  <Input
+                    placeholder="Buscar promoções..."
+                    value={promotionSearchTerm}
+                    onChange={(e) => setPromotionSearchTerm(e.target.value)}
+                    className="flex-1"
+                  />
+                </div>
                 <Button className="flex items-center gap-2 w-full sm:w-auto" onClick={() => { resetForm(); setIsPromotionDialogOpen(true); }}>
                   <Plus className="w-4 h-4" />
                   Adicionar Promoção
                 </Button>
               </div>
               <div className="grid gap-8 grid-cols-1 sm:grid-cols-2 xl:grid-cols-3">
-                {(promotions || []).map((promotion) => (
+                {(filteredPromotions || []).map((promotion) => (
                   <Card key={promotion.id} className="min-h-[200px] shadow-lg border-2 border-gray-200 dark:border-gray-800 hover:border-primary transition-all group">
                     <CardHeader className="pb-2">
                       <div className="flex justify-between items-start gap-4">
@@ -918,14 +962,23 @@ export default function AdminPromotionsAndCombos() {
               </div>
             </TabsContent>
             <TabsContent value="doses">
-              <div className="flex flex-col sm:flex-row sm:justify-end mb-4 gap-2">
+              <div className="flex flex-col sm:flex-row sm:justify-between mb-4 gap-2">
+                <div className="flex items-center gap-2 w-full sm:w-80">
+                  <Search className="w-4 h-4 text-gray-500" />
+                  <Input
+                    placeholder="Buscar doses..."
+                    value={doseSearchTerm}
+                    onChange={(e) => setDoseSearchTerm(e.target.value)}
+                    className="flex-1"
+                  />
+                </div>
                 <Button className="flex items-center gap-2 w-full sm:w-auto" onClick={() => { resetForm(); setIsDoseDialogOpen(true); }}>
                   <Plus className="w-4 h-4" />
                   Adicionar Dose
                 </Button>
               </div>
               <div className="grid gap-8 grid-cols-1 sm:grid-cols-2 xl:grid-cols-3">
-                {(doses || []).map((dose) => (
+                {(filteredDoses || []).map((dose) => (
                   <Card key={dose.id} className="min-h-[200px] shadow-lg border-2 border-gray-200 dark:border-gray-800 hover:border-primary transition-all group">
                     <CardHeader className="pb-2">
                       <div className="flex justify-between items-start gap-4">
@@ -992,12 +1045,20 @@ export default function AdminPromotionsAndCombos() {
               </div>
             </TabsContent>
             <TabsContent value="offers">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-bold">Ofertas</h2>
+              <div className="flex flex-col sm:flex-row sm:justify-between mb-4 gap-2">
+                <div className="flex items-center gap-2 w-full sm:w-80">
+                  <Search className="w-4 h-4 text-gray-500" />
+                  <Input
+                    placeholder="Buscar ofertas..."
+                    value={offerSearchTerm}
+                    onChange={(e) => setOfferSearchTerm(e.target.value)}
+                    className="flex-1"
+                  />
+                </div>
                 <Button onClick={() => handleOpenOfferDialog()}>Nova Oferta</Button>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {offers.map(offer => (
+                {filteredOffers.map(offer => (
                   <Card key={offer.id} className="relative">
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2">

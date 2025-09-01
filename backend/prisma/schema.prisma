@@ -25,6 +25,8 @@ model User {
   sales     Sale[]
   notifications Notification[]
   comandas  Comanda[]
+  pdvSessions PDVSession[]
+  pdvSessionsClosed PDVSession[] @relation("PDVSessionClosedBy")
 }
 
 model Product {
@@ -50,6 +52,7 @@ model Product {
   isFractioned Boolean    @default(false)
   totalVolume Float?      // Volume total em ml para produtos fracionados
   unitVolume  Float?      // Volume da unidade em ml para produtos fracionados
+  stockStatus StockStatus @default(IN_STOCK) // Novo campo para status do estoque
   cartItems   CartItem[]
   comboItems  ComboItem[]
   kitItems    KitItem[]
@@ -116,10 +119,12 @@ model Sale {
   userId          String
   clientId        String?
   paymentMethodId String?
+  pdvSessionId    String? // <- Adicionado para associar à sessão do PDV
   client          Client?        @relation(fields: [clientId], references: [id])
   paymentMethod   PaymentMethod? @relation(fields: [paymentMethodId], references: [id])
   user            User           @relation(fields: [userId], references: [id])
   items           SaleItem[]
+  pdvSession      PDVSession?    @relation(fields: [pdvSessionId], references: [id])
 }
 
 model SaleItem {
@@ -457,6 +462,24 @@ model ComandaItem {
   offer     Offer?  @relation(fields: [offerInstanceId], references: [id])
 }
 
+model PDVSession {
+  id          String    @id @default(uuid())
+  openedAt    DateTime  @default(now())
+  closedAt    DateTime?
+  openedBy    String    // ID do admin que abriu
+  closedBy    String?   // ID do admin que fechou
+  initialCash Float     @default(0) // Caixa inicial
+  finalCash   Float?    // Caixa final
+  totalSales  Float     @default(0) // Total de vendas da sessão
+  isActive    Boolean   @default(true)
+  notes       String?   // Observações da sessão
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  user        User      @relation(fields: [openedBy], references: [id])
+  closedByUser User?    @relation("PDVSessionClosedBy", fields: [closedBy], references: [id])
+  sales       Sale[]    // <- Relação inversa
+}
+
 enum Role {
   ADMIN
   USER
@@ -492,4 +515,10 @@ enum PixPaymentStatus {
   PENDING
   APPROVED
   REJECTED
+}
+
+enum StockStatus {
+  OUT_OF_STOCK    // ESGOTADO - estoque = 0 ou volume = 0
+  LOW_STOCK       // ESTOQUE BAIXO - estoque <= 5
+  IN_STOCK        // EM ESTOQUE - estoque > 5
 }

@@ -7,6 +7,7 @@ exports.orderController = void 0;
 const prisma_1 = __importDefault(require("../config/prisma"));
 const errorHandler_1 = require("../config/errorHandler");
 const socketInstance_1 = require("../config/socketInstance");
+const stockStatus_1 = require("../utils/stockStatus");
 const STORE_LOCATION = {
     lat: -23.75516809248333,
     lng: -46.69815114446251
@@ -355,13 +356,15 @@ exports.orderController = {
                                 console.error(`[ERRO][COMBO][FRACIONADO] Estoque insuficiente para o produto: ${produto.name}`);
                                 return res.status(400).json({ error: `Estoque insuficiente (volume) para o produto: ${produto.name}` });
                             }
-                            await prisma_1.default.product.update({
+                            const updatedProduct = await prisma_1.default.product.update({
                                 where: { id: comboItem.productId },
                                 data: {
                                     totalVolume: novoVolume,
                                     stock: novoEstoque
-                                }
+                                },
+                                select: { stock: true, isFractioned: true, totalVolume: true }
                             });
+                            await (0, stockStatus_1.updateProductStockStatusWithValues)(comboItem.productId, prisma_1.default, updatedProduct.stock, updatedProduct.isFractioned, updatedProduct.totalVolume);
                         }
                         else {
                             const estoqueAtual = produto.stock || 0;
@@ -371,10 +374,12 @@ exports.orderController = {
                                 console.error(`[ERRO][COMBO][NAO FRACIONADO] Estoque insuficiente para o produto: ${produto.name}`);
                                 return res.status(400).json({ error: `Estoque insuficiente para o produto: ${produto.name}` });
                             }
-                            await prisma_1.default.product.update({
+                            const updatedProduct = await prisma_1.default.product.update({
                                 where: { id: comboItem.productId },
-                                data: { stock: novoEstoque }
+                                data: { stock: novoEstoque },
+                                select: { stock: true, isFractioned: true, totalVolume: true }
                             });
+                            await (0, stockStatus_1.updateProductStockStatusWithValues)(comboItem.productId, prisma_1.default, updatedProduct.stock, updatedProduct.isFractioned, updatedProduct.totalVolume);
                         }
                     }
                 }
@@ -399,13 +404,15 @@ exports.orderController = {
                                 console.error(`[ERRO][AVULSO][FRACIONADO] Estoque insuficiente para o produto: ${produto.name}`);
                                 return res.status(400).json({ error: `Estoque insuficiente (volume) para o produto: ${produto.name}` });
                             }
-                            await prisma_1.default.product.update({
+                            const updatedProduct = await prisma_1.default.product.update({
                                 where: { id: orderItem.productId },
                                 data: {
                                     totalVolume: novoVolume,
                                     stock: novoEstoque
-                                }
+                                },
+                                select: { stock: true, isFractioned: true, totalVolume: true }
                             });
+                            await (0, stockStatus_1.updateProductStockStatusWithValues)(orderItem.productId, prisma_1.default, updatedProduct.stock, updatedProduct.isFractioned, updatedProduct.totalVolume);
                         }
                         else {
                             const estoqueAtual = produto.stock || 0;
@@ -415,10 +422,12 @@ exports.orderController = {
                                 console.error(`[ERRO][AVULSO][NAO FRACIONADO] Estoque insuficiente para o produto: ${produto.name}`);
                                 return res.status(400).json({ error: `Estoque insuficiente para o produto: ${produto.name}` });
                             }
-                            await prisma_1.default.product.update({
+                            const updatedProduct = await prisma_1.default.product.update({
                                 where: { id: orderItem.productId },
-                                data: { stock: novoEstoque }
+                                data: { stock: novoEstoque },
+                                select: { stock: true, isFractioned: true, totalVolume: true }
                             });
+                            await (0, stockStatus_1.updateProductStockStatusWithValues)(orderItem.productId, prisma_1.default, updatedProduct.stock, updatedProduct.isFractioned, updatedProduct.totalVolume);
                         }
                     }
                 }
@@ -455,13 +464,15 @@ exports.orderController = {
                                 console.error(`[ERRO][DOSE][FRACIONADO][VOLUME] Estoque insuficiente para o produto: ${produto.name}`);
                                 return res.status(400).json({ error: `Estoque insuficiente (volume) para o produto: ${produto.name}` });
                             }
-                            await prisma_1.default.product.update({
+                            const updatedProduct = await prisma_1.default.product.update({
                                 where: { id: doseItem.productId },
                                 data: {
                                     totalVolume: novoVolume,
                                     stock: novoEstoque
-                                }
+                                },
+                                select: { stock: true, isFractioned: true, totalVolume: true }
                             });
+                            await (0, stockStatus_1.updateProductStockStatusWithValues)(doseItem.productId, prisma_1.default, updatedProduct.stock, updatedProduct.isFractioned, updatedProduct.totalVolume);
                         }
                         else {
                             const estoqueAtual = produto.stock || 0;
@@ -471,10 +482,12 @@ exports.orderController = {
                                 console.error(`[ERRO][DOSE][NAO FRACIONADO] Estoque insuficiente para o produto: ${produto.name}`);
                                 return res.status(400).json({ error: `Estoque insuficiente para o produto: ${produto.name}` });
                             }
-                            await prisma_1.default.product.update({
+                            const updatedProduct = await prisma_1.default.product.update({
                                 where: { id: doseItem.productId },
-                                data: { stock: novoEstoque }
+                                data: { stock: novoEstoque },
+                                select: { stock: true, isFractioned: true, totalVolume: true }
                             });
+                            await (0, stockStatus_1.updateProductStockStatusWithValues)(doseItem.productId, prisma_1.default, updatedProduct.stock, updatedProduct.isFractioned, updatedProduct.totalVolume);
                         }
                     }
                 }

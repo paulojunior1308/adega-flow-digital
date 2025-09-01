@@ -17,7 +17,8 @@ import {
   TrendingUp,
   LogOut as LogOutIcon,
   FolderOpen,
-  Database
+  Database,
+  Clock
 } from 'lucide-react';
 
 interface AdminSidebarProps {
@@ -93,6 +94,11 @@ const AdminSidebar = ({ isCollapsed, toggleSidebar, isMobileOpen, setIsMobileOpe
       icon: <Store className="h-5 w-5" />, 
       label: 'Caixa', 
       path: '/admin-pdv' 
+    },
+    { 
+      icon: <Clock className="h-5 w-5" />, 
+      label: 'Sessões PDV', 
+      path: '/admin-pdv-sessions' 
     },
     { 
       icon: <Database className="h-5 w-5" />, 

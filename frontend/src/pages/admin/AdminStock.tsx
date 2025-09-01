@@ -95,6 +95,20 @@ interface Category {
   name: string;
 }
 
+// Função utilitária para mapear o status de estoque para o frontend
+function mapStockStatus(status: string): 'out' | 'low' | 'medium' | 'high' {
+  switch (status) {
+    case 'OUT_OF_STOCK':
+      return 'out';
+    case 'LOW_STOCK':
+      return 'low';
+    case 'IN_STOCK':
+      return 'high';
+    default:
+      return 'medium';
+  }
+}
+
 const AdminStock = () => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
@@ -145,7 +159,14 @@ const AdminStock = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    api.get('/admin/products').then(res => setProducts(res.data));
+    api.get('/admin/products').then(res => {
+      // Mapear o status de estoque para o formato esperado no frontend
+      const mapped = res.data.map((p: any) => ({
+        ...p,
+        stockStatus: mapStockStatus(p.stockStatus)
+      }));
+      setProducts(mapped);
+    });
     
     api.get('/admin/categories?active=true').then(res => {
       setCategories(res.data);
@@ -392,7 +413,13 @@ const AdminStock = () => {
       setStockEntryForm({ productId: '', quantity: '', unitCost: '', notes: '' });
       setProductSearchTerm('');
       setSelectedProductInfo(null);
-      api.get('/admin/products').then(res => setProducts(res.data));
+      api.get('/admin/products').then(res => {
+        const mapped = res.data.map((p: any) => ({
+          ...p,
+          stockStatus: mapStockStatus(p.stockStatus)
+        }));
+        setProducts(mapped);
+      });
     } catch (err: any) {
       toast({ 
         title: 'Erro ao registrar entrada de estoque.', 
@@ -411,6 +438,14 @@ const AdminStock = () => {
 
   // Função para exportar XLSX
   const exportToXLSX = () => {
+    console.log('🔍 Debug - Filtros aplicados:', {
+      searchTerm,
+      categoryFilter,
+      stockFilter,
+      totalProducts: products.length,
+      filteredProducts: filteredProducts.length
+    });
+    
     const data = filteredProducts.map(product => ({
       Nome: product.name,
       Categoria: product.category?.name,
@@ -422,6 +457,9 @@ const AdminStock = () => {
       Ativo: product.active ? 'Sim' : 'Não',
       'Estoque Baixo': (product.stockStatus === 'low' || product.stockStatus === 'out') ? 'Sim' : 'Não',
     }));
+    
+    console.log('📊 Produtos que serão exportados:', data.length);
+    
     const worksheet = XLSX.utils.json_to_sheet(data);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Estoque');
@@ -430,6 +468,14 @@ const AdminStock = () => {
 
   // Função para exportar PDF
   const exportToPDF = () => {
+    console.log('🔍 Debug - Filtros aplicados:', {
+      searchTerm,
+      categoryFilter,
+      stockFilter,
+      totalProducts: products.length,
+      filteredProducts: filteredProducts.length
+    });
+    
     const doc = new jsPDF();
     doc.setFontSize(16);
     doc.text('Relatório de Estoque', 14, 16);
@@ -445,6 +491,9 @@ const AdminStock = () => {
       product.active ? 'Sim' : 'Não',
       (product.stockStatus === 'low' || product.stockStatus === 'out') ? 'Sim' : 'Não',
     ]);
+    
+    console.log('📊 Produtos que serão exportados:', tableData.length);
+    
     autoTable(doc, {
       head: [['Nome', 'Categoria', 'Preço', 'Preço de Custo', 'Estoque', 'Status', 'Volume', 'Ativo', 'Estoque Baixo']],
       body: tableData,
@@ -564,13 +613,13 @@ const AdminStock = () => {
               )}
               <div className="flex gap-2 ml-auto">
                 <button
-                  onClick={() => exportMovimentacao('xlsx')}
+                  onClick={exportToXLSX}
                   className="flex items-center gap-1 bg-green-700 hover:bg-green-800 text-white px-3 py-1 rounded text-sm font-medium"
                 >
                   <FileDown className="h-4 w-4" /> Exportar XLSX
                 </button>
                 <button
-                  onClick={() => exportMovimentacao('pdf')}
+                  onClick={exportToPDF}
                   className="flex items-center gap-1 bg-blue-700 hover:bg-blue-800 text-white px-3 py-1 rounded text-sm font-medium"
                 >
                   <FileText className="h-4 w-4" /> Exportar PDF

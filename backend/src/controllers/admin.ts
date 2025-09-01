@@ -3,6 +3,7 @@ import prisma from '../config/prisma';
 import { generateToken } from '../config/jwt';
 import { comparePassword, hashPassword } from '../config/bcrypt';
 import { AppError } from '../config/errorHandler';
+import { updateProductStockStatusWithValues } from '../utils/stockStatus';
 
 export const adminController = {
   login: async (req: Request, res: Response) => {
@@ -426,6 +427,12 @@ export const adminController = {
     console.log('=== DEBUG: Dados da venda ===');
     console.log({ userId, totalVenda, paymentMethodId });
 
+    // Buscar sessão ativa do PDV
+    const activeSession = await prisma.pDVSession.findFirst({
+      where: { isActive: true },
+      orderBy: { openedAt: 'desc' }
+    });
+
     // Cria a venda
     let sale;
     try {
@@ -435,6 +442,7 @@ export const adminController = {
           total: totalVenda,
           paymentMethodId,
           status: 'COMPLETED',
+          pdvSessionId: activeSession ? activeSession.id : null,
           items: {
             create: await Promise.all(reallyValidItems.map(async (item: any) => {
               const produto = await prisma.product.findUnique({ where: { id: item.productId } });
@@ -492,18 +500,22 @@ export const adminController = {
             const novoVolume = (produto.totalVolume || 0) - item.quantity;
             const unitVolume = produto.unitVolume || 1;
             const novoStock = Math.floor(novoVolume / unitVolume);
-            await prisma.product.update({
+            const updatedProduct = await prisma.product.update({
               where: { id: item.productId },
               data: {
                 totalVolume: novoVolume,
                 stock: novoStock
-              }
+              },
+              select: { stock: true, isFractioned: true, totalVolume: true }
             });
+            await updateProductStockStatusWithValues(item.productId, prisma, updatedProduct.stock, updatedProduct.isFractioned, updatedProduct.totalVolume);
           } else {
-            await prisma.product.update({
+            const updatedProduct = await prisma.product.update({
               where: { id: item.productId },
-              data: { stock: { decrement: item.quantity } }
+              data: { stock: { decrement: item.quantity } },
+              select: { stock: true, isFractioned: true, totalVolume: true }
             });
+            await updateProductStockStatusWithValues(item.productId, prisma, updatedProduct.stock, updatedProduct.isFractioned, updatedProduct.totalVolume);
           }
         } else {
           if (item.sellingByVolume) {
@@ -511,32 +523,38 @@ export const adminController = {
             const volumeNecessario = item.quantity;
             const novoTotalVolume = (produto.totalVolume || 0) - volumeNecessario;
             const novoStock = Math.floor(novoTotalVolume / unitVolume);
-            await prisma.product.update({
+            const updatedProduct = await prisma.product.update({
               where: { id: item.productId },
               data: {
                 totalVolume: novoTotalVolume,
                 stock: novoStock
-              }
+              },
+              select: { stock: true, isFractioned: true, totalVolume: true }
             });
+            await updateProductStockStatusWithValues(item.productId, prisma, updatedProduct.stock, updatedProduct.isFractioned, updatedProduct.totalVolume);
           } else {
             const unitVolume = produto.unitVolume || 1;
             const volumeNecessario = item.quantity * unitVolume;
             const novoTotalVolume = (produto.totalVolume || 0) - volumeNecessario;
             const novoStock = Math.floor(novoTotalVolume / unitVolume);
-            await prisma.product.update({
+            const updatedProduct = await prisma.product.update({
               where: { id: item.productId },
               data: {
                 totalVolume: novoTotalVolume,
                 stock: novoStock
-              }
+              },
+              select: { stock: true, isFractioned: true, totalVolume: true }
             });
+            await updateProductStockStatusWithValues(item.productId, prisma, updatedProduct.stock, updatedProduct.isFractioned, updatedProduct.totalVolume);
           }
         }
       } else {
-        await prisma.product.update({
+        const updatedProduct = await prisma.product.update({
           where: { id: item.productId },
-          data: { stock: { decrement: item.quantity } }
+          data: { stock: { decrement: item.quantity } },
+          select: { stock: true, isFractioned: true, totalVolume: true }
         });
+        await updateProductStockStatusWithValues(item.productId, prisma, updatedProduct.stock, updatedProduct.isFractioned, updatedProduct.totalVolume);
       }
     }
 
@@ -649,19 +667,40 @@ export const adminController = {
   // Retorna todas as vendas do dia (PDV e online, status concluída)
   getVendasHoje: async (req: Request, res: Response) => {
     try {
-      const hoje = new Date();
-      hoje.setHours(0, 0, 0, 0);
-      const amanha = new Date(hoje);
-      amanha.setDate(hoje.getDate() + 1);
+      // Buscar sessão ativa do PDV
+      const activeSession = await prisma.pDVSession.findFirst({
+        where: { isActive: true },
+        orderBy: { openedAt: 'desc' }
+      });
+
+      let startDate: Date;
+      let endDate: Date;
+      let pDVSessionId: string | undefined = undefined;
+
+      if (activeSession) {
+        // Se há sessão ativa, usar período da sessão
+        startDate = activeSession.openedAt;
+        endDate = new Date(); // Até agora
+        pDVSessionId = activeSession.id;
+      } else {
+        // Se não há sessão ativa, usar dia atual (comportamento anterior)
+        const hoje = new Date();
+        hoje.setHours(0, 0, 0, 0);
+        const amanha = new Date(hoje);
+        amanha.setDate(hoje.getDate() + 1);
+        startDate = hoje;
+        endDate = amanha;
+      }
 
       // Vendas PDV
       const vendasPDV = await prisma.sale.findMany({
         where: {
           createdAt: {
-            gte: hoje,
-            lt: amanha
+            gte: startDate,
+            lt: endDate
           },
-          status: 'COMPLETED'
+          status: 'COMPLETED',
+          ...(pDVSessionId ? { pdvSessionId: pDVSessionId } : {})
         },
         select: {
           id: true,
@@ -675,8 +714,8 @@ export const adminController = {
       const vendasOnline = await prisma.order.findMany({
         where: {
           createdAt: {
-            gte: hoje,
-            lt: amanha
+            gte: startDate,
+            lt: endDate
           },
           status: 'DELIVERED'
         },
@@ -688,9 +727,565 @@ export const adminController = {
           paymentMethod: true
         }
       });
-      res.json({ pdv: vendasPDV, online: vendasOnline });
+      res.json({ pdv: vendasPDV, online: vendasOnline, activeSession });
     } catch (err) {
       res.status(500).json({ error: 'Erro ao buscar vendas do dia.' });
+    }
+  },
+
+  // Abrir sessão do PDV
+  openPDVSession: async (req: Request, res: Response) => {
+    try {
+      const { initialCash, notes } = req.body;
+      // @ts-ignore
+      const userId = req.user.id;
+
+      // Verificar se já existe uma sessão ativa
+      const existingSession = await prisma.pDVSession.findFirst({
+        where: { isActive: true }
+      });
+
+      if (existingSession) {
+        return res.status(400).json({ error: 'Já existe uma sessão do PDV aberta.' });
+      }
+
+      const session = await prisma.pDVSession.create({
+        data: {
+          openedBy: userId,
+          initialCash: initialCash || 0,
+          notes: notes || null
+        },
+        include: {
+          user: { select: { id: true, name: true } }
+        }
+      });
+
+      res.status(201).json(session);
+    } catch (error) {
+      console.error('Erro ao abrir sessão do PDV:', error);
+      res.status(500).json({ error: 'Erro ao abrir sessão do PDV.' });
+    }
+  },
+
+  // Fechar sessão do PDV
+  closePDVSession: async (req: Request, res: Response) => {
+    try {
+      const { finalCash, notes } = req.body;
+      // @ts-ignore
+      const userId = req.user.id;
+
+      // Buscar sessão ativa
+      const activeSession = await prisma.pDVSession.findFirst({
+        where: { isActive: true }
+      });
+
+      if (!activeSession) {
+        return res.status(400).json({ error: 'Não há sessão do PDV aberta.' });
+      }
+
+      // Calcular total de vendas da sessão
+      const sessionSales = await prisma.sale.findMany({
+        where: {
+          pdvSessionId: activeSession.id,
+          status: 'COMPLETED'
+        },
+        select: { total: true }
+      });
+
+      const totalSales = sessionSales.reduce((sum, sale) => sum + sale.total, 0);
+
+      // Fechar sessão
+      const closedSession = await prisma.pDVSession.update({
+        where: { id: activeSession.id },
+        data: {
+          closedAt: new Date(),
+          closedBy: userId,
+          finalCash: finalCash || 0,
+          totalSales: totalSales,
+          isActive: false,
+          notes: notes || activeSession.notes
+        },
+        include: {
+          user: { select: { id: true, name: true } },
+          closedByUser: { select: { id: true, name: true } }
+        }
+      });
+
+      res.json(closedSession);
+    } catch (error) {
+      console.error('Erro ao fechar sessão do PDV:', error);
+      res.status(500).json({ error: 'Erro ao fechar sessão do PDV.' });
+    }
+  },
+
+  // Obter sessão ativa do PDV
+  getActivePDVSession: async (req: Request, res: Response) => {
+    try {
+      const activeSession = await prisma.pDVSession.findFirst({
+        where: { isActive: true },
+        include: {
+          user: { select: { id: true, name: true } }
+        },
+        orderBy: { openedAt: 'desc' }
+      });
+
+      res.json(activeSession);
+    } catch (error) {
+      console.error('Erro ao buscar sessão ativa:', error);
+      res.status(500).json({ error: 'Erro ao buscar sessão ativa.' });
+    }
+  },
+
+  // Cancelar venda e restaurar estoque
+  cancelSale: async (req: Request, res: Response) => {
+    const { id } = req.params;
+    
+    try {
+      // Buscar a venda com todos os itens
+      const sale = await prisma.sale.findUnique({
+        where: { id },
+        include: {
+          items: {
+            include: {
+              product: true
+            }
+          }
+        }
+      });
+
+      if (!sale) {
+        return res.status(404).json({ error: 'Venda não encontrada.' });
+      }
+
+      if (sale.status === 'CANCELLED') {
+        return res.status(400).json({ error: 'Venda já foi cancelada.' });
+      }
+
+      // Iniciar transação para garantir consistência
+      const result = await prisma.$transaction(async (tx) => {
+        // Restaurar estoque para cada item da venda
+        for (const item of sale.items) {
+          const produto = item.product;
+          if (!produto) continue;
+
+          if (produto.isFractioned) {
+            // Produto fracionado: restaurar volume
+            const unitVolume = produto.unitVolume || 1;
+            const volumeToRestore = item.quantity;
+            const novoTotalVolume = (produto.totalVolume || 0) + volumeToRestore;
+            const novoStock = Math.floor(novoTotalVolume / unitVolume);
+
+            await tx.product.update({
+              where: { id: produto.id },
+              data: {
+                totalVolume: novoTotalVolume,
+                stock: novoStock
+              }
+            });
+
+            // Registrar movimentação de entrada (restauração)
+            await tx.stockMovement.create({
+              data: {
+                productId: produto.id,
+                type: 'in',
+                quantity: item.quantity,
+                unitCost: produto.costPrice || 0,
+                totalCost: (produto.costPrice || 0) * item.quantity,
+                notes: `Restauração de estoque - Cancelamento da venda ${sale.id}`,
+                origin: 'cancelamento_venda'
+              }
+            });
+          } else {
+            // Produto não fracionado: restaurar unidades
+            await tx.product.update({
+              where: { id: produto.id },
+              data: {
+                stock: { increment: item.quantity }
+              }
+            });
+
+            // Registrar movimentação de entrada (restauração)
+            await tx.stockMovement.create({
+              data: {
+                productId: produto.id,
+                type: 'in',
+                quantity: item.quantity,
+                unitCost: produto.costPrice || 0,
+                totalCost: (produto.costPrice || 0) * item.quantity,
+                notes: `Restauração de estoque - Cancelamento da venda ${sale.id}`,
+                origin: 'cancelamento_venda'
+              }
+            });
+          }
+
+          // Atualizar status do estoque
+          const updatedProduct = await tx.product.findUnique({
+            where: { id: produto.id },
+            select: { stock: true, isFractioned: true, totalVolume: true }
+          });
+          
+          if (updatedProduct) {
+            await updateProductStockStatusWithValues(
+              produto.id, 
+              tx, 
+              updatedProduct.stock, 
+              updatedProduct.isFractioned, 
+              updatedProduct.totalVolume
+            );
+          }
+        }
+
+        // Atualizar status da venda para cancelada
+        const updatedSale = await tx.sale.update({
+          where: { id },
+          data: { status: 'CANCELLED' },
+          include: {
+            items: {
+              include: {
+                product: true
+              }
+            }
+          }
+        });
+
+        return updatedSale;
+      });
+
+      res.json({
+        message: 'Venda cancelada com sucesso e estoque restaurado.',
+        sale: result
+      });
+
+    } catch (error) {
+      console.error('Erro ao cancelar venda:', error);
+      res.status(500).json({ error: 'Erro ao cancelar venda.' });
+    }
+  },
+
+  // Editar venda (alterar itens)
+  editSale: async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const { items, paymentMethodId } = req.body;
+
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ error: 'Nenhum item informado.' });
+    }
+
+    try {
+      // Buscar a venda atual
+      const currentSale = await prisma.sale.findUnique({
+        where: { id },
+        include: {
+          items: {
+            include: {
+              product: true
+            }
+          }
+        }
+      });
+
+      if (!currentSale) {
+        return res.status(404).json({ error: 'Venda não encontrada.' });
+      }
+
+      if (currentSale.status === 'CANCELLED') {
+        return res.status(400).json({ error: 'Não é possível editar uma venda cancelada.' });
+      }
+
+      // Processar novos itens
+      const processedItems: any[] = items.filter(item => !!item.productId);
+      
+      // Buscar todos os produtos válidos
+      const allProducts = await prisma.product.findMany({
+        where: { id: { in: processedItems.map(i => i.productId) } },
+        select: { id: true }
+      });
+      const validProductIds = new Set(allProducts.map((p: any) => p.id));
+      const newItems = processedItems.filter(item => validProductIds.has(item.productId));
+
+      // Iniciar transação
+      const result = await prisma.$transaction(async (tx) => {
+        // 1. Restaurar estoque dos itens atuais
+        for (const item of currentSale.items) {
+          const produto = item.product;
+          if (!produto) continue;
+
+          if (produto.isFractioned) {
+            // Produto fracionado: restaurar volume
+            const unitVolume = produto.unitVolume || 1;
+            const volumeToRestore = item.quantity;
+            const novoTotalVolume = (produto.totalVolume || 0) + volumeToRestore;
+            const novoStock = Math.floor(novoTotalVolume / unitVolume);
+
+            await tx.product.update({
+              where: { id: produto.id },
+              data: {
+                totalVolume: novoTotalVolume,
+                stock: novoStock
+              }
+            });
+
+            // Registrar movimentação de entrada (restauração)
+            await tx.stockMovement.create({
+              data: {
+                productId: produto.id,
+                type: 'in',
+                quantity: item.quantity,
+                unitCost: produto.costPrice || 0,
+                totalCost: (produto.costPrice || 0) * item.quantity,
+                notes: `Restauração de estoque - Edição da venda ${currentSale.id}`,
+                origin: 'edicao_venda'
+              }
+            });
+          } else {
+            // Produto não fracionado: restaurar unidades
+            await tx.product.update({
+              where: { id: produto.id },
+              data: {
+                stock: { increment: item.quantity }
+              }
+            });
+
+            // Registrar movimentação de entrada (restauração)
+            await tx.stockMovement.create({
+              data: {
+                productId: produto.id,
+                type: 'in',
+                quantity: item.quantity,
+                unitCost: produto.costPrice || 0,
+                totalCost: (produto.costPrice || 0) * item.quantity,
+                notes: `Restauração de estoque - Edição da venda ${currentSale.id}`,
+                origin: 'edicao_venda'
+              }
+            });
+          }
+
+          // Atualizar status do estoque
+          const updatedProduct = await tx.product.findUnique({
+            where: { id: produto.id },
+            select: { stock: true, isFractioned: true, totalVolume: true }
+          });
+          
+          if (updatedProduct) {
+            await updateProductStockStatusWithValues(
+              produto.id, 
+              tx, 
+              updatedProduct.stock, 
+              updatedProduct.isFractioned, 
+              updatedProduct.totalVolume
+            );
+          }
+        }
+
+        // 2. Verificar estoque para novos itens
+        for (const item of newItems) {
+          const produto = await tx.product.findUnique({ where: { id: item.productId } });
+          if (!produto) continue;
+
+          if (produto.isFractioned) {
+            // Produto fracionado: verificar volume
+            const unitVolume = produto.unitVolume || 1;
+            const volumeNecessario = item.quantity;
+            const volumeDisponivel = produto.totalVolume || 0;
+            
+            if (volumeDisponivel < volumeNecessario) {
+              throw new Error(`Estoque insuficiente para o produto: ${produto.name}`);
+            }
+          } else {
+            // Produto não fracionado: verificar unidades
+            const estoqueAtual = produto.stock || 0;
+            const novoEstoque = estoqueAtual - item.quantity;
+            
+            if (novoEstoque < 0) {
+              throw new Error(`Estoque insuficiente para o produto: ${produto.name}`);
+            }
+          }
+        }
+
+        // 3. Descontar estoque dos novos itens
+        for (const item of newItems) {
+          const produto = await tx.product.findUnique({ where: { id: item.productId } });
+          if (!produto) continue;
+
+          if (produto.isFractioned) {
+            // Produto fracionado: desconta volume
+            const unitVolume = produto.unitVolume || 1;
+            const volumeToDiscount = item.quantity;
+            const novoTotalVolume = (produto.totalVolume || 0) - volumeToDiscount;
+            const novoStock = Math.floor(novoTotalVolume / unitVolume);
+
+            await tx.product.update({
+              where: { id: produto.id },
+              data: {
+                totalVolume: novoTotalVolume,
+                stock: novoStock
+              }
+            });
+
+            // Registrar movimentação de saída
+            await tx.stockMovement.create({
+              data: {
+                productId: produto.id,
+                type: 'out',
+                quantity: item.quantity,
+                unitCost: produto.costPrice || 0,
+                totalCost: (produto.costPrice || 0) * item.quantity,
+                notes: 'Venda PDV (Editada)',
+                origin: 'venda_pdv'
+              }
+            });
+          } else {
+            // Produto não fracionado: desconta unidades
+            await tx.product.update({
+              where: { id: produto.id },
+              data: { stock: { decrement: item.quantity } }
+            });
+
+            // Registrar movimentação de saída
+            await tx.stockMovement.create({
+              data: {
+                productId: produto.id,
+                type: 'out',
+                quantity: item.quantity,
+                unitCost: produto.costPrice || 0,
+                totalCost: (produto.costPrice || 0) * item.quantity,
+                notes: 'Venda PDV (Editada)',
+                origin: 'venda_pdv'
+              }
+            });
+          }
+
+          // Atualizar status do estoque
+          const updatedProduct = await tx.product.findUnique({
+            where: { id: produto.id },
+            select: { stock: true, isFractioned: true, totalVolume: true }
+          });
+          
+          if (updatedProduct) {
+            await updateProductStockStatusWithValues(
+              produto.id, 
+              tx, 
+              updatedProduct.stock, 
+              updatedProduct.isFractioned, 
+              updatedProduct.totalVolume
+            );
+          }
+        }
+
+        // 4. Calcular novo total
+        let newTotal = 0;
+        for (const item of newItems) {
+          const produto = await tx.product.findUnique({ where: { id: item.productId } });
+          if (!produto) continue;
+          
+          if (produto.isFractioned && produto.unitVolume) {
+            // Para produtos fracionados, calcular baseado no volume
+            // Se o produto custa R$ 25 por 1000ml, então 900ml = (900/1000) * 25 = R$ 22,50
+            const volumeRatio = item.quantity / produto.unitVolume;
+            const totalPrice = volumeRatio * produto.price;
+            newTotal += totalPrice - (item.discount || 0);
+          } else {
+            // Para produtos por unidade, calcular normalmente
+            newTotal += (item.price * item.quantity) - (item.discount || 0);
+          }
+        }
+
+        // 5. Atualizar venda com novos itens
+        const updatedSale = await tx.sale.update({
+          where: { id },
+          data: {
+            total: newTotal,
+            paymentMethodId: paymentMethodId || currentSale.paymentMethodId,
+            items: {
+              deleteMany: {}, // Remove todos os itens atuais
+              create: await Promise.all(newItems.map(async (item: any) => {
+                const produto = await tx.product.findUnique({ where: { id: item.productId } });
+                if (!produto) {
+                  throw new Error(`Produto não encontrado: ${item.productId}`);
+                }
+                let quantityToRecord = item.quantity;
+                let priceToRecord = item.price;
+                
+                if (produto.isFractioned && !item.isDoseItem) {
+                  // Para produtos fracionados, usar o preço do produto
+                  priceToRecord = produto.price;
+                }
+                
+                return {
+                  productId: item.productId,
+                  quantity: quantityToRecord,
+                  price: priceToRecord,
+                  costPrice: produto.costPrice ? Number(produto.costPrice) : 0,
+                  discount: item.discount || 0,
+                  isDoseItem: item.isDoseItem || false,
+                  isFractioned: item.isFractioned || false,
+                  discountBy: item.discountBy || null,
+                  choosableSelections: item.choosableSelections || null,
+                  comboInstanceId: item.comboInstanceId || null,
+                  doseInstanceId: item.doseInstanceId || null,
+                  offerInstanceId: (typeof item.offerInstanceId === 'string' && item.offerInstanceId.length === 36 && item.offerId) ? item.offerId : null,
+                  doseId: item.doseId || null,
+                  createdAt: new Date()
+                };
+              }))
+            }
+          },
+          include: {
+            items: {
+              include: {
+                product: true
+              }
+            }
+          }
+        });
+
+        return updatedSale;
+      });
+
+      res.json({
+        message: 'Venda editada com sucesso.',
+        sale: result
+      });
+
+    } catch (error: any) {
+      console.error('Erro ao editar venda:', error);
+      res.status(500).json({ 
+        error: error.message || 'Erro ao editar venda.' 
+      });
+    }
+  },
+
+  // Listar histórico de sessões do PDV
+  getPDVSessionsHistory: async (req: Request, res: Response) => {
+    try {
+      let sessions = await prisma.pDVSession.findMany({
+        include: {
+          user: { select: { id: true, name: true } },
+          closedByUser: { select: { id: true, name: true } }
+        },
+        orderBy: { openedAt: 'desc' }
+      });
+
+      // Para sessões ativas, calcular o total de vendas em tempo real
+      const sessionsWithTotals = await Promise.all(sessions.map(async (session) => {
+        if (session.isActive) {
+          const vendas = await prisma.sale.findMany({
+            where: {
+              pdvSessionId: session.id,
+              status: 'COMPLETED'
+            },
+            select: { total: true }
+          });
+          const totalSales = vendas.reduce((sum, v) => sum + (v.total || 0), 0);
+          return { ...session, totalSales };
+        }
+        return session;
+      }));
+
+      res.json(sessionsWithTotals);
+    } catch (error) {
+      console.error('Erro ao buscar histórico de sessões:', error);
+      res.status(500).json({ error: 'Erro ao buscar histórico de sessões.' });
     }
   },
 }; 

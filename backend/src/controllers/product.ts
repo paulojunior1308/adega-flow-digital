@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import prisma from '../config/prisma';
+import { calculateStockStatus } from '../utils/stockStatus';
 
 export const productController = {
   list: async (req: Request, res: Response) => {
@@ -58,6 +59,13 @@ export const productController = {
         const marginPercent = parseFloat(margin);
         finalPrice = parseFloat(costPrice) / (1 - (marginPercent / 100));
       }
+
+      const stockValue = parseInt(stock);
+      const isFractionedValue = isFractioned === true || isFractioned === 'true';
+      const totalVolumeValue = totalVolume ? parseFloat(totalVolume) : null;
+      
+      // Calcular o status do estoque
+      const stockStatus = calculateStockStatus(stockValue, isFractionedValue, totalVolumeValue);
       
       const product = await prisma.product.create({
         data: {
@@ -68,13 +76,14 @@ export const productController = {
           margin: margin ? parseFloat(margin) : null,
           categoryId,
           supplierId: supplierId || null,
-          stock: parseInt(stock),
+          stock: stockValue,
           minStock: minStock ? parseInt(minStock) : 0,
           barcode: barcode || null,
           image: image || null,
-          isFractioned: isFractioned === true || isFractioned === 'true',
-          totalVolume: totalVolume ? parseFloat(totalVolume) : null,
-          unitVolume: unitVolume ? parseFloat(unitVolume) : null
+          isFractioned: isFractionedValue,
+          totalVolume: totalVolumeValue,
+          unitVolume: unitVolume ? parseFloat(unitVolume) : null,
+          stockStatus
         },
         include: {
           category: true,
@@ -101,6 +110,13 @@ export const productController = {
         const marginPercent = parseFloat(margin);
         finalPrice = parseFloat(costPrice) / (1 - (marginPercent / 100));
       }
+
+      const stockValue = parseInt(stock);
+      const isFractionedValue = isFractioned === true || isFractioned === 'true';
+      const totalVolumeValue = totalVolume ? parseFloat(totalVolume) : null;
+      
+      // Calcular o status do estoque
+      const stockStatus = calculateStockStatus(stockValue, isFractionedValue, totalVolumeValue);
       
       const product = await prisma.product.update({
         where: { id },
@@ -110,14 +126,15 @@ export const productController = {
           price: finalPrice,
           costPrice: costPrice ? parseFloat(costPrice) : undefined,
           margin: margin ? parseFloat(margin) : undefined,
-          stock: parseInt(stock),
+          stock: stockValue,
           minStock: minStock ? parseInt(minStock) : undefined,
           barcode,
           active: typeof active === 'boolean' ? active : active === 'true' || active === '1',
           image: image || undefined,
-          isFractioned: isFractioned === true || isFractioned === 'true',
-          totalVolume: totalVolume ? parseFloat(totalVolume) : null,
+          isFractioned: isFractionedValue,
+          totalVolume: totalVolumeValue,
           unitVolume: unitVolume ? parseFloat(unitVolume) : null,
+          stockStatus,
           category: {
             connect: { id: categoryId }
           },
@@ -220,9 +237,34 @@ export const productController = {
       const { id } = req.params;
       const { stock } = req.body;
 
+      const stockValue = parseInt(stock);
+      
+      // Buscar informações do produto para calcular o status
+      const productInfo = await prisma.product.findUnique({
+        where: { id },
+        select: {
+          isFractioned: true,
+          totalVolume: true
+        }
+      });
+
+      if (!productInfo) {
+        return res.status(404).json({ error: 'Produto não encontrado' });
+      }
+
+      // Calcular o novo status do estoque
+      const stockStatus = calculateStockStatus(
+        stockValue, 
+        productInfo.isFractioned, 
+        productInfo.totalVolume
+      );
+
       const product = await prisma.product.update({
         where: { id },
-        data: { stock: parseInt(stock) },
+        data: { 
+          stock: stockValue,
+          stockStatus
+        },
         include: {
           category: true,
           supplier: true

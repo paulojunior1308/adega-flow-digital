@@ -2,9 +2,10 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Search, ShoppingCart, X, RefreshCcw, DollarSign, QrCode, CreditCard, IdCard, Plus, Minus, ChevronUp, ChevronDown, Receipt } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
 import api from '@/lib/axios';
@@ -94,7 +95,22 @@ const AdminPDV = () => {
   const [doseOptionsModalOpen, setDoseOptionsModalOpen] = useState(false);
   const [comandaModalOpen, setComandaModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [activeSession, setActiveSession] = useState<any>(null);
+  const [openSessionModal, setOpenSessionModal] = useState(false);
+  const [closeSessionModal, setCloseSessionModal] = useState(false);
+  const [initialCash, setInitialCash] = useState('');
+  const [finalCash, setFinalCash] = useState('');
+  const [sessionNotes, setSessionNotes] = useState('');
   
+  // Buscar sessão ativa do PDV
+  useEffect(() => {
+    api.get('/admin/pdv/active').then(res => {
+      setActiveSession(res.data);
+    }).catch(() => {
+      setActiveSession(null);
+    });
+  }, []);
+
   // Buscar produtos e combos ao carregar
   useEffect(() => {
     Promise.all([
@@ -702,6 +718,51 @@ const AdminPDV = () => {
     }
   };
 
+  // Funções para gerenciar sessão do PDV
+  const openPDVSession = async () => {
+    try {
+      const response = await api.post('/admin/pdv/open', {
+        initialCash: parseFloat(initialCash) || 0,
+        notes: sessionNotes
+      });
+      setActiveSession(response.data);
+      setOpenSessionModal(false);
+      setInitialCash('');
+      setSessionNotes('');
+      toast({
+        description: 'PDV aberto com sucesso!',
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Erro ao abrir PDV',
+        description: error.response?.data?.error || 'Erro interno do servidor',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const closePDVSession = async () => {
+    try {
+      const response = await api.post('/admin/pdv/close', {
+        finalCash: parseFloat(finalCash) || 0,
+        notes: sessionNotes
+      });
+      setActiveSession(null);
+      setCloseSessionModal(false);
+      setFinalCash('');
+      setSessionNotes('');
+      toast({
+        description: 'PDV fechado com sucesso!',
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Erro ao fechar PDV',
+        description: error.response?.data?.error || 'Erro interno do servidor',
+        variant: 'destructive',
+      });
+    }
+  };
+
   // Mobile detection
   useEffect(() => {
     const handleResize = () => {
@@ -734,8 +795,36 @@ const AdminPDV = () => {
           {/* Lado Esquerdo: Busca e Produtos (não tem mais overflow próprio no mobile) */}
           <div className="flex-1 flex flex-col gap-4">
             <div className="bg-white shadow-sm p-4 flex flex-col sm:flex-row justify-between items-center gap-2 rounded-lg">
-              <h1 className="text-xl font-medium text-element-blue-dark">PDV - Venda Local</h1>
+              <div className="flex flex-col sm:flex-row items-center gap-2">
+                <h1 className="text-xl font-medium text-element-blue-dark">PDV - Venda Local</h1>
+                {activeSession && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <div className="px-2 py-1 bg-green-100 text-green-800 rounded-full">
+                      Sessão Ativa
+                    </div>
+                    <span className="text-gray-600">
+                      Aberta em: {new Date(activeSession.openedAt).toLocaleString('pt-BR')}
+                    </span>
+                  </div>
+                )}
+              </div>
               <div className="flex gap-2 w-full sm:w-auto">
+                {!activeSession ? (
+                  <Button 
+                    onClick={() => setOpenSessionModal(true)} 
+                    className="w-full bg-green-600 hover:bg-green-700"
+                  >
+                    Abrir PDV
+                  </Button>
+                ) : (
+                  <Button 
+                    onClick={() => setCloseSessionModal(true)} 
+                    variant="destructive" 
+                    className="w-full"
+                  >
+                    Fechar PDV
+                  </Button>
+                )}
                 <Button onClick={() => setComandaModalOpen(true)} variant="outline" className="w-full">Abrir Comanda</Button>
                 <Button onClick={() => setQuickProductsOpen(true)} variant="outline" className="w-full">Produtos Rápidos</Button>
               </div>
@@ -774,10 +863,10 @@ const AdminPDV = () => {
               </Button>
             </div>
 
-            {/* Pinned/Searched Products (toma o espaço restante, mas não rola independentemente no mobile) */}
-            <div className="flex-1 bg-white rounded-lg p-2 space-y-2">
+            {/* Pinned/Searched Products (com rolagem adequada) */}
+            <div className="flex-1 bg-white rounded-lg p-2 flex flex-col min-h-0">
               {/* Pinned Products */}
-              <div className="mb-4">
+              <div className="mb-4 flex-shrink-0">
                 <div className="flex gap-2 overflow-x-auto pb-2 md:grid md:grid-cols-3 xl:grid-cols-4 md:gap-2 md:overflow-x-visible">
                   {pinnedProducts.map(product => (
                     <button
@@ -793,8 +882,8 @@ const AdminPDV = () => {
                 </div>
               </div>
 
-              {/* Search results (removido o overflow daqui) */}
-              <div>
+              {/* Search results (com rolagem própria) */}
+              <div className="flex-1 overflow-y-auto min-h-0">
                 {searchQuery.trim() !== '' && (
                   <div className="grid grid-cols-1 gap-2">
                     {filteredProducts.map(product => (
@@ -1178,6 +1267,104 @@ const AdminPDV = () => {
               </div>
             ))}
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal para Abrir PDV */}
+      <Dialog open={openSessionModal} onOpenChange={setOpenSessionModal}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Abrir Sessão do PDV</DialogTitle>
+            <DialogDescription>
+              Inicie uma nova sessão de vendas. Todas as vendas realizadas durante esta sessão serão contabilizadas juntas.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="initialCash" className="text-right">
+                Caixa Inicial
+              </Label>
+              <Input
+                id="initialCash"
+                type="number"
+                step="0.01"
+                placeholder="0,00"
+                value={initialCash}
+                onChange={(e) => setInitialCash(e.target.value)}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="sessionNotes" className="text-right">
+                Observações
+              </Label>
+              <Textarea
+                id="sessionNotes"
+                placeholder="Observações da sessão (opcional)"
+                value={sessionNotes}
+                onChange={(e) => setSessionNotes(e.target.value)}
+                className="col-span-3"
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setOpenSessionModal(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={openPDVSession}>
+              Abrir PDV
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal para Fechar PDV */}
+      <Dialog open={closeSessionModal} onOpenChange={setCloseSessionModal}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Fechar Sessão do PDV</DialogTitle>
+            <DialogDescription>
+              Encerre a sessão atual de vendas. O sistema calculará automaticamente o total de vendas da sessão.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="finalCash" className="text-right">
+                Caixa Final
+              </Label>
+              <Input
+                id="finalCash"
+                type="number"
+                step="0.01"
+                placeholder="0,00"
+                value={finalCash}
+                onChange={(e) => setFinalCash(e.target.value)}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="closeSessionNotes" className="text-right">
+                Observações
+              </Label>
+              <Textarea
+                id="closeSessionNotes"
+                placeholder="Observações do fechamento (opcional)"
+                value={sessionNotes}
+                onChange={(e) => setSessionNotes(e.target.value)}
+                className="col-span-3"
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCloseSessionModal(false)}>
+              Cancelar
+            </Button>
+            <Button variant="destructive" onClick={closePDVSession}>
+              Fechar PDV
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </AdminLayout>

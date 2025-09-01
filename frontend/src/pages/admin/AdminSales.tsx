@@ -16,7 +16,7 @@ import {
   CardTitle 
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Eye, FileText, Calendar, User, CreditCard, FileDown } from 'lucide-react';
+import { Eye, FileText, Calendar, User, CreditCard, FileDown, Edit, X, AlertTriangle } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -51,6 +51,11 @@ const AdminSales = () => {
   const [editingPaymentMethod, setEditingPaymentMethod] = React.useState(false);
   const [selectedPaymentMethodId, setSelectedPaymentMethodId] = React.useState<string | null>(null);
   const [savingPaymentMethod, setSavingPaymentMethod] = React.useState(false);
+  const [editingSale, setEditingSale] = React.useState<SaleData | null>(null);
+  const [editSaleOpen, setEditSaleOpen] = React.useState(false);
+  const [cancellingSale, setCancellingSale] = React.useState<string | null>(null);
+  const [editingSaleItems, setEditingSaleItems] = React.useState<any[]>([]);
+  const [products, setProducts] = React.useState<any[]>([]);
 
   React.useEffect(() => {
     Promise.all([
@@ -73,7 +78,7 @@ const AdminSales = () => {
         customer: sale.user?.name ?? '-',
         items: sale.items?.length ?? 0,
         total: sale.total ? Number(sale.total) : 0,
-        status: 'Concluída',
+        status: sale.status === 'CANCELLED' ? 'Cancelada' : 'Concluída',
         tipo: 'PDV',
         originalData: sale
       }));
@@ -89,10 +94,199 @@ const AdminSales = () => {
     });
   }, []);
 
+  React.useEffect(() => {
+    api.get('/admin/products').then(res => {
+      setProducts(res.data.filter((p: any) => p.active));
+    });
+  }, []);
+
   // Função para abrir detalhes da venda
   const openSaleDetails = (sale: SaleData) => {
     setSelectedSale(sale);
     setSaleDetailsOpen(true);
+  };
+
+  // Função para cancelar venda
+  const handleCancelSale = async (saleId: string) => {
+    if (!confirm('Tem certeza que deseja cancelar esta venda? O estoque será restaurado.')) {
+      return;
+    }
+
+    setCancellingSale(saleId);
+    try {
+      await api.patch(`/admin/pdv-sales/${saleId}/cancel`);
+      
+      // Atualizar a lista de vendas
+      const updatedSales = salesData.map(sale => 
+        sale.id === saleId 
+          ? { ...sale, status: 'Cancelada', originalData: { ...sale.originalData, status: 'CANCELLED' } }
+          : sale
+      );
+      setSalesData(updatedSales);
+      
+      // Fechar modal de detalhes se estiver aberto
+      if (selectedSale?.id === saleId) {
+        setSaleDetailsOpen(false);
+      }
+      
+      alert('Venda cancelada com sucesso!');
+    } catch (error) {
+      console.error('Erro ao cancelar venda:', error);
+      alert('Erro ao cancelar venda. Tente novamente.');
+    } finally {
+      setCancellingSale(null);
+    }
+  };
+
+  // Função para abrir edição de venda
+  const handleEditSale = (sale: SaleData) => {
+    // Verificar se a venda está cancelada
+    if (sale.status === 'Cancelada' || sale.originalData?.status === 'CANCELLED') {
+      alert('Não é possível editar uma venda cancelada.');
+      return;
+    }
+    
+    // Verificar se é uma venda do PDV
+    if (sale.tipo !== 'PDV') {
+      alert('Apenas vendas do PDV podem ser editadas.');
+      return;
+    }
+    
+    setEditingSale(sale);
+    setEditingSaleItems(sale.originalData?.items || []);
+    setEditSaleOpen(true);
+  };
+
+  // Função para salvar edição de venda
+  const handleSaveEditSale = async () => {
+    if (!editingSale) return;
+
+    try {
+      const updatedItems = editingSaleItems.map(item => {
+        // Buscar o produto para verificar se é fracionado
+        const product = products.find(p => p.id === item.productId);
+        
+        return {
+          productId: item.productId,
+          quantity: item.quantity,
+          price: item.price,
+          discount: item.discount || 0,
+          isDoseItem: item.isDoseItem || false,
+          isFractioned: item.isFractioned || false,
+          discountBy: item.discountBy || null,
+          choosableSelections: item.choosableSelections || null,
+          comboInstanceId: item.comboInstanceId || null,
+          doseInstanceId: item.doseInstanceId || null,
+          doseId: item.doseId || null
+        };
+      });
+
+      await api.put(`/admin/pdv-sales/${editingSale.id}`, {
+        items: updatedItems,
+        paymentMethodId: editingSale.originalData?.paymentMethodId
+      });
+
+      // Atualizar a lista de vendas
+      const updatedSales = salesData.map(sale => 
+        sale.id === editingSale.id 
+          ? { 
+              ...sale, 
+              items: updatedItems.length,
+              total: updatedItems.reduce((sum, item) => sum + (item.price * item.quantity), 0),
+              originalData: { 
+                ...sale.originalData, 
+                items: updatedItems,
+                total: updatedItems.reduce((sum, item) => sum + (item.price * item.quantity), 0)
+              }
+            }
+          : sale
+      );
+      setSalesData(updatedSales);
+      
+      setEditSaleOpen(false);
+      setEditingSale(null);
+      alert('Venda editada com sucesso!');
+    } catch (error: any) {
+      console.error('Erro ao editar venda:', error);
+      const errorMessage = error.response?.data?.error || 'Erro ao editar venda. Tente novamente.';
+      alert(errorMessage);
+      
+      // Se a venda foi cancelada, fechar o modal
+      if (errorMessage.includes('cancelada')) {
+        setEditSaleOpen(false);
+        setEditingSale(null);
+      }
+    }
+  };
+
+  // Função para adicionar item na edição
+  const handleAddItem = () => {
+    setEditingSaleItems([...editingSaleItems, {
+      productId: '',
+      quantity: 1,
+      price: 0,
+      discount: 0,
+      isDoseItem: false,
+      isFractioned: false
+    }]);
+  };
+
+  // Função para remover item na edição
+  const handleRemoveItem = (index: number) => {
+    setEditingSaleItems(editingSaleItems.filter((_, i) => i !== index));
+  };
+
+  // Função para calcular o preço correto baseado no tipo de produto
+  const calculateItemPrice = (item: any) => {
+    const product = products.find(p => p.id === item.productId);
+    if (!product) return 0;
+    
+    if (product.isFractioned) {
+      // Para produtos fracionados, o preço é por volume
+      return product.price;
+    } else {
+      // Para produtos por unidade, o preço é por unidade
+      return product.price;
+    }
+  };
+
+  // Função para calcular o subtotal de um item
+  const calculateItemSubtotal = (item: any) => {
+    const product = products.find(p => p.id === item.productId);
+    if (!product) return 0;
+    
+    if (product.isFractioned && product.unitVolume) {
+      // Para produtos fracionados, calcular baseado no volume
+      // Se o produto custa R$ 25 por 1000ml, então 900ml = (900/1000) * 25 = R$ 22,50
+      const volumeRatio = item.quantity / product.unitVolume;
+      const totalPrice = volumeRatio * product.price;
+      return totalPrice - (item.discount || 0);
+    } else {
+      // Para produtos por unidade, calcular normalmente
+      return (item.price * item.quantity) - (item.discount || 0);
+    }
+  };
+
+  // Função para atualizar item na edição
+  const handleUpdateItem = (index: number, field: string, value: any) => {
+    const updatedItems = [...editingSaleItems];
+    updatedItems[index] = { ...updatedItems[index], [field]: value };
+    
+    // Se mudou o produto, buscar o preço e configurar corretamente
+    if (field === 'productId' && value) {
+      const product = products.find(p => p.id === value);
+      if (product) {
+        updatedItems[index].price = product.price;
+        updatedItems[index].isFractioned = product.isFractioned;
+        
+        // Se o produto é fracionado, ajustar a quantidade para o volume unitário
+        if (product.isFractioned && product.unitVolume) {
+          updatedItems[index].quantity = product.unitVolume;
+        }
+      }
+    }
+    
+    setEditingSaleItems(updatedItems);
   };
 
   // Função para formatar data
@@ -275,7 +469,9 @@ const AdminSales = () => {
                 <CardContent>
                   <div className="flex items-center space-x-2 mb-4">
                     <span className={`inline-block px-2 py-1 rounded-full text-xs ${
-                      selectedSale.status === 'Concluída' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                      selectedSale.status === 'Concluída' ? 'bg-green-100 text-green-800' : 
+                      selectedSale.status === 'Cancelada' ? 'bg-red-100 text-red-800' : 
+                      'bg-yellow-100 text-yellow-800'
                     }`}>
                       {selectedSale.status}
                     </span>
@@ -338,6 +534,46 @@ const AdminSales = () => {
               </Card>
             </div>
           </div>
+          
+          {/* Mensagem para vendas canceladas */}
+          {selectedSale.status === 'Cancelada' && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mt-4">
+              <div className="flex items-center">
+                <X className="h-5 w-5 text-red-600 mr-2" />
+                <div>
+                  <h4 className="text-sm font-medium text-red-800">Venda Cancelada</h4>
+                  <p className="text-sm text-red-700 mt-1">
+                    Esta venda foi cancelada e não pode ser editada. O estoque dos produtos foi restaurado.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {/* Botões de ação */}
+          {selectedSale.tipo === 'PDV' && selectedSale.status !== 'Cancelada' && selectedSale.originalData?.status !== 'CANCELLED' && (
+            <div className="flex justify-end gap-2 pt-4 border-t">
+              <Button
+                variant="outline"
+                onClick={() => handleEditSale(selectedSale)}
+              >
+                <Edit className="h-4 w-4 mr-2" />
+                Editar Venda
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => handleCancelSale(selectedSale.id)}
+                disabled={cancellingSale === selectedSale.id}
+              >
+                {cancellingSale === selectedSale.id ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                ) : (
+                  <X className="h-4 w-4 mr-2" />
+                )}
+                Cancelar Venda
+              </Button>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     );
@@ -571,21 +807,50 @@ const AdminSales = () => {
                     <TableCell>{sale.total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</TableCell>
                     <TableCell>
                       <span className={`inline-block px-2 py-1 rounded-full text-xs ${
-                        sale.status === 'Concluída' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                        sale.status === 'Concluída' ? 'bg-green-100 text-green-800' : 
+                        sale.status === 'Cancelada' ? 'bg-red-100 text-red-800' : 
+                        'bg-yellow-100 text-yellow-800'
                       }`}>
                         {sale.status}
                       </span>
                     </TableCell>
                     <TableCell>{sale.tipo}</TableCell>
                     <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => openSaleDetails(sale)}
-                      >
-                        <Eye className="h-4 w-4" />
-                        <span className="sr-only md:not-sr-only md:ml-2">Detalhes</span>
-                      </Button>
+                      <div className="flex gap-1 justify-end">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => openSaleDetails(sale)}
+                        >
+                          <Eye className="h-4 w-4" />
+                          <span className="sr-only md:not-sr-only md:ml-2">Detalhes</span>
+                        </Button>
+                        {sale.tipo === 'PDV' && sale.status !== 'Cancelada' && sale.originalData?.status !== 'CANCELLED' && (
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleEditSale(sale)}
+                            >
+                              <Edit className="h-4 w-4" />
+                              <span className="sr-only md:not-sr-only md:ml-2">Editar</span>
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleCancelSale(sale.id)}
+                              disabled={cancellingSale === sale.id}
+                            >
+                              {cancellingSale === sale.id ? (
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600"></div>
+                              ) : (
+                                <X className="h-4 w-4 text-red-600" />
+                              )}
+                              <span className="sr-only md:not-sr-only md:ml-2">Cancelar</span>
+                            </Button>
+                          </>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -595,6 +860,155 @@ const AdminSales = () => {
         </Card>
       </div>
       {renderSaleDetailsDialog()}
+      
+      {/* Modal de Edição de Venda */}
+      <Dialog open={editSaleOpen} onOpenChange={setEditSaleOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-xl">
+              <Edit className="h-5 w-5" /> 
+              Editar Venda #{editingSale?.id}
+            </DialogTitle>
+            <DialogDescription>
+              Edite os itens da venda. O estoque será ajustado automaticamente.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <h3 className="text-lg font-medium">Itens da Venda</h3>
+                <Button onClick={handleAddItem} size="sm">
+                  + Adicionar Item
+                </Button>
+              </div>
+              
+              <div className="space-y-3">
+                {editingSaleItems.map((item, index) => (
+                  <div key={index} className="border rounded-lg p-4 space-y-3">
+                    <div className="flex justify-between items-start">
+                      <h4 className="font-medium">Item {index + 1}</h4>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleRemoveItem(index)}
+                        className="text-red-600 hover:text-red-700"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Produto</label>
+                        <select
+                          className="w-full border rounded px-3 py-2"
+                          value={item.productId}
+                          onChange={(e) => handleUpdateItem(index, 'productId', e.target.value)}
+                        >
+                          <option value="">Selecione um produto...</option>
+                          {products.map(product => (
+                            <option key={product.id} value={product.id}>
+                              {product.name} - R$ {product.price.toFixed(2)}
+                              {product.isFractioned ? ` (${product.unitVolume}ml)` : ''}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium mb-1">
+                          Quantidade
+                          {item.isFractioned && (
+                            <span className="text-xs text-blue-600 ml-1">(ml)</span>
+                          )}
+                        </label>
+                        <input
+                          type="number"
+                          min="1"
+                          className="w-full border rounded px-3 py-2"
+                          value={item.quantity}
+                          onChange={(e) => handleUpdateItem(index, 'quantity', parseInt(e.target.value) || 1)}
+                        />
+                        {item.isFractioned && (
+                          <p className="text-xs text-gray-500 mt-1">
+                            Produto fracionado - preço por {products.find(p => p.id === item.productId)?.unitVolume}ml
+                          </p>
+                        )}
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Preço Unitário</label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          className="w-full border rounded px-3 py-2"
+                          value={item.price}
+                          onChange={(e) => handleUpdateItem(index, 'price', parseFloat(e.target.value) || 0)}
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Desconto</label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          className="w-full border rounded px-3 py-2"
+                          value={item.discount || 0}
+                          onChange={(e) => handleUpdateItem(index, 'discount', parseFloat(e.target.value) || 0)}
+                        />
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Subtotal</label>
+                        <input
+                          type="text"
+                          className="w-full border rounded px-3 py-2 bg-gray-50"
+                          value={`R$ ${calculateItemSubtotal(item).toFixed(2)}`}
+                          readOnly
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              
+              {editingSaleItems.length === 0 && (
+                <div className="text-center py-8 text-gray-500">
+                  <AlertTriangle className="h-12 w-12 mx-auto mb-4" />
+                  <p>Nenhum item adicionado. Adicione pelo menos um item para continuar.</p>
+                </div>
+              )}
+              
+              <div className="border-t pt-4">
+                <div className="flex justify-between items-center">
+                  <div className="text-lg font-medium">
+                    Total: R$ {editingSaleItems.reduce((sum, item) => sum + calculateItemSubtotal(item), 0).toFixed(2)}
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => setEditSaleOpen(false)}
+                    >
+                      Cancelar
+                    </Button>
+                    <Button
+                      onClick={handleSaveEditSale}
+                      disabled={editingSaleItems.length === 0}
+                    >
+                      Salvar Alterações
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </AdminLayout>
     </div>
   );

@@ -8,6 +8,7 @@ const prisma_1 = __importDefault(require("../config/prisma"));
 const jwt_1 = require("../config/jwt");
 const bcrypt_1 = require("../config/bcrypt");
 const errorHandler_1 = require("../config/errorHandler");
+const stockStatus_1 = require("../utils/stockStatus");
 exports.adminController = {
     login: async (req, res) => {
         const { email, password } = req.body;
@@ -371,6 +372,10 @@ exports.adminController = {
         console.log(JSON.stringify(reallyValidItems, null, 2));
         console.log('=== DEBUG: Dados da venda ===');
         console.log({ userId, totalVenda, paymentMethodId });
+        const activeSession = await prisma_1.default.pDVSession.findFirst({
+            where: { isActive: true },
+            orderBy: { openedAt: 'desc' }
+        });
         let sale;
         try {
             sale = await prisma_1.default.sale.create({
@@ -379,6 +384,7 @@ exports.adminController = {
                     total: totalVenda,
                     paymentMethodId,
                     status: 'COMPLETED',
+                    pdvSessionId: activeSession ? activeSession.id : null,
                     items: {
                         create: await Promise.all(reallyValidItems.map(async (item) => {
                             const produto = await prisma_1.default.product.findUnique({ where: { id: item.productId } });
@@ -434,19 +440,23 @@ exports.adminController = {
                         const novoVolume = (produto.totalVolume || 0) - item.quantity;
                         const unitVolume = produto.unitVolume || 1;
                         const novoStock = Math.floor(novoVolume / unitVolume);
-                        await prisma_1.default.product.update({
+                        const updatedProduct = await prisma_1.default.product.update({
                             where: { id: item.productId },
                             data: {
                                 totalVolume: novoVolume,
                                 stock: novoStock
-                            }
+                            },
+                            select: { stock: true, isFractioned: true, totalVolume: true }
                         });
+                        await (0, stockStatus_1.updateProductStockStatusWithValues)(item.productId, prisma_1.default, updatedProduct.stock, updatedProduct.isFractioned, updatedProduct.totalVolume);
                     }
                     else {
-                        await prisma_1.default.product.update({
+                        const updatedProduct = await prisma_1.default.product.update({
                             where: { id: item.productId },
-                            data: { stock: { decrement: item.quantity } }
+                            data: { stock: { decrement: item.quantity } },
+                            select: { stock: true, isFractioned: true, totalVolume: true }
                         });
+                        await (0, stockStatus_1.updateProductStockStatusWithValues)(item.productId, prisma_1.default, updatedProduct.stock, updatedProduct.isFractioned, updatedProduct.totalVolume);
                     }
                 }
                 else {
@@ -455,34 +465,40 @@ exports.adminController = {
                         const volumeNecessario = item.quantity;
                         const novoTotalVolume = (produto.totalVolume || 0) - volumeNecessario;
                         const novoStock = Math.floor(novoTotalVolume / unitVolume);
-                        await prisma_1.default.product.update({
+                        const updatedProduct = await prisma_1.default.product.update({
                             where: { id: item.productId },
                             data: {
                                 totalVolume: novoTotalVolume,
                                 stock: novoStock
-                            }
+                            },
+                            select: { stock: true, isFractioned: true, totalVolume: true }
                         });
+                        await (0, stockStatus_1.updateProductStockStatusWithValues)(item.productId, prisma_1.default, updatedProduct.stock, updatedProduct.isFractioned, updatedProduct.totalVolume);
                     }
                     else {
                         const unitVolume = produto.unitVolume || 1;
                         const volumeNecessario = item.quantity * unitVolume;
                         const novoTotalVolume = (produto.totalVolume || 0) - volumeNecessario;
                         const novoStock = Math.floor(novoTotalVolume / unitVolume);
-                        await prisma_1.default.product.update({
+                        const updatedProduct = await prisma_1.default.product.update({
                             where: { id: item.productId },
                             data: {
                                 totalVolume: novoTotalVolume,
                                 stock: novoStock
-                            }
+                            },
+                            select: { stock: true, isFractioned: true, totalVolume: true }
                         });
+                        await (0, stockStatus_1.updateProductStockStatusWithValues)(item.productId, prisma_1.default, updatedProduct.stock, updatedProduct.isFractioned, updatedProduct.totalVolume);
                     }
                 }
             }
             else {
-                await prisma_1.default.product.update({
+                const updatedProduct = await prisma_1.default.product.update({
                     where: { id: item.productId },
-                    data: { stock: { decrement: item.quantity } }
+                    data: { stock: { decrement: item.quantity } },
+                    select: { stock: true, isFractioned: true, totalVolume: true }
                 });
+                await (0, stockStatus_1.updateProductStockStatusWithValues)(item.productId, prisma_1.default, updatedProduct.stock, updatedProduct.isFractioned, updatedProduct.totalVolume);
             }
         }
         for (const item of reallyValidItems) {
@@ -582,18 +598,31 @@ exports.adminController = {
     },
     getVendasHoje: async (req, res) => {
         try {
-            const hoje = new Date();
-            hoje.setHours(0, 0, 0, 0);
-            const amanha = new Date(hoje);
-            amanha.setDate(hoje.getDate() + 1);
+            const activeSession = await prisma_1.default.pDVSession.findFirst({
+                where: { isActive: true },
+                orderBy: { openedAt: 'desc' }
+            });
+            let startDate;
+            let endDate;
+            let pDVSessionId = undefined;
+            if (activeSession) {
+                startDate = activeSession.openedAt;
+                endDate = new Date();
+                pDVSessionId = activeSession.id;
+            }
+            else {
+                const hoje = new Date();
+                hoje.setHours(0, 0, 0, 0);
+                const amanha = new Date(hoje);
+                amanha.setDate(hoje.getDate() + 1);
+                startDate = hoje;
+                endDate = amanha;
+            }
             const vendasPDV = await prisma_1.default.sale.findMany({
-                where: {
-                    createdAt: {
-                        gte: hoje,
-                        lt: amanha
-                    },
-                    status: 'COMPLETED'
-                },
+                where: Object.assign({ createdAt: {
+                        gte: startDate,
+                        lt: endDate
+                    }, status: 'COMPLETED' }, (pDVSessionId ? { pdvSessionId: pDVSessionId } : {})),
                 select: {
                     id: true,
                     total: true,
@@ -605,8 +634,8 @@ exports.adminController = {
             const vendasOnline = await prisma_1.default.order.findMany({
                 where: {
                     createdAt: {
-                        gte: hoje,
-                        lt: amanha
+                        gte: startDate,
+                        lt: endDate
                     },
                     status: 'DELIVERED'
                 },
@@ -618,10 +647,452 @@ exports.adminController = {
                     paymentMethod: true
                 }
             });
-            res.json({ pdv: vendasPDV, online: vendasOnline });
+            res.json({ pdv: vendasPDV, online: vendasOnline, activeSession });
         }
         catch (err) {
             res.status(500).json({ error: 'Erro ao buscar vendas do dia.' });
+        }
+    },
+    openPDVSession: async (req, res) => {
+        try {
+            const { initialCash, notes } = req.body;
+            const userId = req.user.id;
+            const existingSession = await prisma_1.default.pDVSession.findFirst({
+                where: { isActive: true }
+            });
+            if (existingSession) {
+                return res.status(400).json({ error: 'Já existe uma sessão do PDV aberta.' });
+            }
+            const session = await prisma_1.default.pDVSession.create({
+                data: {
+                    openedBy: userId,
+                    initialCash: initialCash || 0,
+                    notes: notes || null
+                },
+                include: {
+                    user: { select: { id: true, name: true } }
+                }
+            });
+            res.status(201).json(session);
+        }
+        catch (error) {
+            console.error('Erro ao abrir sessão do PDV:', error);
+            res.status(500).json({ error: 'Erro ao abrir sessão do PDV.' });
+        }
+    },
+    closePDVSession: async (req, res) => {
+        try {
+            const { finalCash, notes } = req.body;
+            const userId = req.user.id;
+            const activeSession = await prisma_1.default.pDVSession.findFirst({
+                where: { isActive: true }
+            });
+            if (!activeSession) {
+                return res.status(400).json({ error: 'Não há sessão do PDV aberta.' });
+            }
+            const sessionSales = await prisma_1.default.sale.findMany({
+                where: {
+                    pdvSessionId: activeSession.id,
+                    status: 'COMPLETED'
+                },
+                select: { total: true }
+            });
+            const totalSales = sessionSales.reduce((sum, sale) => sum + sale.total, 0);
+            const closedSession = await prisma_1.default.pDVSession.update({
+                where: { id: activeSession.id },
+                data: {
+                    closedAt: new Date(),
+                    closedBy: userId,
+                    finalCash: finalCash || 0,
+                    totalSales: totalSales,
+                    isActive: false,
+                    notes: notes || activeSession.notes
+                },
+                include: {
+                    user: { select: { id: true, name: true } },
+                    closedByUser: { select: { id: true, name: true } }
+                }
+            });
+            res.json(closedSession);
+        }
+        catch (error) {
+            console.error('Erro ao fechar sessão do PDV:', error);
+            res.status(500).json({ error: 'Erro ao fechar sessão do PDV.' });
+        }
+    },
+    getActivePDVSession: async (req, res) => {
+        try {
+            const activeSession = await prisma_1.default.pDVSession.findFirst({
+                where: { isActive: true },
+                include: {
+                    user: { select: { id: true, name: true } }
+                },
+                orderBy: { openedAt: 'desc' }
+            });
+            res.json(activeSession);
+        }
+        catch (error) {
+            console.error('Erro ao buscar sessão ativa:', error);
+            res.status(500).json({ error: 'Erro ao buscar sessão ativa.' });
+        }
+    },
+    cancelSale: async (req, res) => {
+        const { id } = req.params;
+        try {
+            const sale = await prisma_1.default.sale.findUnique({
+                where: { id },
+                include: {
+                    items: {
+                        include: {
+                            product: true
+                        }
+                    }
+                }
+            });
+            if (!sale) {
+                return res.status(404).json({ error: 'Venda não encontrada.' });
+            }
+            if (sale.status === 'CANCELLED') {
+                return res.status(400).json({ error: 'Venda já foi cancelada.' });
+            }
+            const result = await prisma_1.default.$transaction(async (tx) => {
+                for (const item of sale.items) {
+                    const produto = item.product;
+                    if (!produto)
+                        continue;
+                    if (produto.isFractioned) {
+                        const unitVolume = produto.unitVolume || 1;
+                        const volumeToRestore = item.quantity;
+                        const novoTotalVolume = (produto.totalVolume || 0) + volumeToRestore;
+                        const novoStock = Math.floor(novoTotalVolume / unitVolume);
+                        await tx.product.update({
+                            where: { id: produto.id },
+                            data: {
+                                totalVolume: novoTotalVolume,
+                                stock: novoStock
+                            }
+                        });
+                        await tx.stockMovement.create({
+                            data: {
+                                productId: produto.id,
+                                type: 'in',
+                                quantity: item.quantity,
+                                unitCost: produto.costPrice || 0,
+                                totalCost: (produto.costPrice || 0) * item.quantity,
+                                notes: `Restauração de estoque - Cancelamento da venda ${sale.id}`,
+                                origin: 'cancelamento_venda'
+                            }
+                        });
+                    }
+                    else {
+                        await tx.product.update({
+                            where: { id: produto.id },
+                            data: {
+                                stock: { increment: item.quantity }
+                            }
+                        });
+                        await tx.stockMovement.create({
+                            data: {
+                                productId: produto.id,
+                                type: 'in',
+                                quantity: item.quantity,
+                                unitCost: produto.costPrice || 0,
+                                totalCost: (produto.costPrice || 0) * item.quantity,
+                                notes: `Restauração de estoque - Cancelamento da venda ${sale.id}`,
+                                origin: 'cancelamento_venda'
+                            }
+                        });
+                    }
+                    const updatedProduct = await tx.product.findUnique({
+                        where: { id: produto.id },
+                        select: { stock: true, isFractioned: true, totalVolume: true }
+                    });
+                    if (updatedProduct) {
+                        await (0, stockStatus_1.updateProductStockStatusWithValues)(produto.id, tx, updatedProduct.stock, updatedProduct.isFractioned, updatedProduct.totalVolume);
+                    }
+                }
+                const updatedSale = await tx.sale.update({
+                    where: { id },
+                    data: { status: 'CANCELLED' },
+                    include: {
+                        items: {
+                            include: {
+                                product: true
+                            }
+                        }
+                    }
+                });
+                return updatedSale;
+            });
+            res.json({
+                message: 'Venda cancelada com sucesso e estoque restaurado.',
+                sale: result
+            });
+        }
+        catch (error) {
+            console.error('Erro ao cancelar venda:', error);
+            res.status(500).json({ error: 'Erro ao cancelar venda.' });
+        }
+    },
+    editSale: async (req, res) => {
+        const { id } = req.params;
+        const { items, paymentMethodId } = req.body;
+        if (!items || !Array.isArray(items) || items.length === 0) {
+            return res.status(400).json({ error: 'Nenhum item informado.' });
+        }
+        try {
+            const currentSale = await prisma_1.default.sale.findUnique({
+                where: { id },
+                include: {
+                    items: {
+                        include: {
+                            product: true
+                        }
+                    }
+                }
+            });
+            if (!currentSale) {
+                return res.status(404).json({ error: 'Venda não encontrada.' });
+            }
+            if (currentSale.status === 'CANCELLED') {
+                return res.status(400).json({ error: 'Não é possível editar uma venda cancelada.' });
+            }
+            const processedItems = items.filter(item => !!item.productId);
+            const allProducts = await prisma_1.default.product.findMany({
+                where: { id: { in: processedItems.map(i => i.productId) } },
+                select: { id: true }
+            });
+            const validProductIds = new Set(allProducts.map((p) => p.id));
+            const newItems = processedItems.filter(item => validProductIds.has(item.productId));
+            const result = await prisma_1.default.$transaction(async (tx) => {
+                for (const item of currentSale.items) {
+                    const produto = item.product;
+                    if (!produto)
+                        continue;
+                    if (produto.isFractioned) {
+                        const unitVolume = produto.unitVolume || 1;
+                        const volumeToRestore = item.quantity;
+                        const novoTotalVolume = (produto.totalVolume || 0) + volumeToRestore;
+                        const novoStock = Math.floor(novoTotalVolume / unitVolume);
+                        await tx.product.update({
+                            where: { id: produto.id },
+                            data: {
+                                totalVolume: novoTotalVolume,
+                                stock: novoStock
+                            }
+                        });
+                        await tx.stockMovement.create({
+                            data: {
+                                productId: produto.id,
+                                type: 'in',
+                                quantity: item.quantity,
+                                unitCost: produto.costPrice || 0,
+                                totalCost: (produto.costPrice || 0) * item.quantity,
+                                notes: `Restauração de estoque - Edição da venda ${currentSale.id}`,
+                                origin: 'edicao_venda'
+                            }
+                        });
+                    }
+                    else {
+                        await tx.product.update({
+                            where: { id: produto.id },
+                            data: {
+                                stock: { increment: item.quantity }
+                            }
+                        });
+                        await tx.stockMovement.create({
+                            data: {
+                                productId: produto.id,
+                                type: 'in',
+                                quantity: item.quantity,
+                                unitCost: produto.costPrice || 0,
+                                totalCost: (produto.costPrice || 0) * item.quantity,
+                                notes: `Restauração de estoque - Edição da venda ${currentSale.id}`,
+                                origin: 'edicao_venda'
+                            }
+                        });
+                    }
+                    const updatedProduct = await tx.product.findUnique({
+                        where: { id: produto.id },
+                        select: { stock: true, isFractioned: true, totalVolume: true }
+                    });
+                    if (updatedProduct) {
+                        await (0, stockStatus_1.updateProductStockStatusWithValues)(produto.id, tx, updatedProduct.stock, updatedProduct.isFractioned, updatedProduct.totalVolume);
+                    }
+                }
+                for (const item of newItems) {
+                    const produto = await tx.product.findUnique({ where: { id: item.productId } });
+                    if (!produto)
+                        continue;
+                    if (produto.isFractioned) {
+                        const unitVolume = produto.unitVolume || 1;
+                        const volumeNecessario = item.quantity;
+                        const volumeDisponivel = produto.totalVolume || 0;
+                        if (volumeDisponivel < volumeNecessario) {
+                            throw new Error(`Estoque insuficiente para o produto: ${produto.name}`);
+                        }
+                    }
+                    else {
+                        const estoqueAtual = produto.stock || 0;
+                        const novoEstoque = estoqueAtual - item.quantity;
+                        if (novoEstoque < 0) {
+                            throw new Error(`Estoque insuficiente para o produto: ${produto.name}`);
+                        }
+                    }
+                }
+                for (const item of newItems) {
+                    const produto = await tx.product.findUnique({ where: { id: item.productId } });
+                    if (!produto)
+                        continue;
+                    if (produto.isFractioned) {
+                        const unitVolume = produto.unitVolume || 1;
+                        const volumeToDiscount = item.quantity;
+                        const novoTotalVolume = (produto.totalVolume || 0) - volumeToDiscount;
+                        const novoStock = Math.floor(novoTotalVolume / unitVolume);
+                        await tx.product.update({
+                            where: { id: produto.id },
+                            data: {
+                                totalVolume: novoTotalVolume,
+                                stock: novoStock
+                            }
+                        });
+                        await tx.stockMovement.create({
+                            data: {
+                                productId: produto.id,
+                                type: 'out',
+                                quantity: item.quantity,
+                                unitCost: produto.costPrice || 0,
+                                totalCost: (produto.costPrice || 0) * item.quantity,
+                                notes: 'Venda PDV (Editada)',
+                                origin: 'venda_pdv'
+                            }
+                        });
+                    }
+                    else {
+                        await tx.product.update({
+                            where: { id: produto.id },
+                            data: { stock: { decrement: item.quantity } }
+                        });
+                        await tx.stockMovement.create({
+                            data: {
+                                productId: produto.id,
+                                type: 'out',
+                                quantity: item.quantity,
+                                unitCost: produto.costPrice || 0,
+                                totalCost: (produto.costPrice || 0) * item.quantity,
+                                notes: 'Venda PDV (Editada)',
+                                origin: 'venda_pdv'
+                            }
+                        });
+                    }
+                    const updatedProduct = await tx.product.findUnique({
+                        where: { id: produto.id },
+                        select: { stock: true, isFractioned: true, totalVolume: true }
+                    });
+                    if (updatedProduct) {
+                        await (0, stockStatus_1.updateProductStockStatusWithValues)(produto.id, tx, updatedProduct.stock, updatedProduct.isFractioned, updatedProduct.totalVolume);
+                    }
+                }
+                let newTotal = 0;
+                for (const item of newItems) {
+                    const produto = await tx.product.findUnique({ where: { id: item.productId } });
+                    if (!produto)
+                        continue;
+                    if (produto.isFractioned && produto.unitVolume) {
+                        const volumeRatio = item.quantity / produto.unitVolume;
+                        const totalPrice = volumeRatio * produto.price;
+                        newTotal += totalPrice - (item.discount || 0);
+                    }
+                    else {
+                        newTotal += (item.price * item.quantity) - (item.discount || 0);
+                    }
+                }
+                const updatedSale = await tx.sale.update({
+                    where: { id },
+                    data: {
+                        total: newTotal,
+                        paymentMethodId: paymentMethodId || currentSale.paymentMethodId,
+                        items: {
+                            deleteMany: {},
+                            create: await Promise.all(newItems.map(async (item) => {
+                                const produto = await tx.product.findUnique({ where: { id: item.productId } });
+                                if (!produto) {
+                                    throw new Error(`Produto não encontrado: ${item.productId}`);
+                                }
+                                let quantityToRecord = item.quantity;
+                                let priceToRecord = item.price;
+                                if (produto.isFractioned && !item.isDoseItem) {
+                                    priceToRecord = produto.price;
+                                }
+                                return {
+                                    productId: item.productId,
+                                    quantity: quantityToRecord,
+                                    price: priceToRecord,
+                                    costPrice: produto.costPrice ? Number(produto.costPrice) : 0,
+                                    discount: item.discount || 0,
+                                    isDoseItem: item.isDoseItem || false,
+                                    isFractioned: item.isFractioned || false,
+                                    discountBy: item.discountBy || null,
+                                    choosableSelections: item.choosableSelections || null,
+                                    comboInstanceId: item.comboInstanceId || null,
+                                    doseInstanceId: item.doseInstanceId || null,
+                                    offerInstanceId: (typeof item.offerInstanceId === 'string' && item.offerInstanceId.length === 36 && item.offerId) ? item.offerId : null,
+                                    doseId: item.doseId || null,
+                                    createdAt: new Date()
+                                };
+                            }))
+                        }
+                    },
+                    include: {
+                        items: {
+                            include: {
+                                product: true
+                            }
+                        }
+                    }
+                });
+                return updatedSale;
+            });
+            res.json({
+                message: 'Venda editada com sucesso.',
+                sale: result
+            });
+        }
+        catch (error) {
+            console.error('Erro ao editar venda:', error);
+            res.status(500).json({
+                error: error.message || 'Erro ao editar venda.'
+            });
+        }
+    },
+    getPDVSessionsHistory: async (req, res) => {
+        try {
+            let sessions = await prisma_1.default.pDVSession.findMany({
+                include: {
+                    user: { select: { id: true, name: true } },
+                    closedByUser: { select: { id: true, name: true } }
+                },
+                orderBy: { openedAt: 'desc' }
+            });
+            const sessionsWithTotals = await Promise.all(sessions.map(async (session) => {
+                if (session.isActive) {
+                    const vendas = await prisma_1.default.sale.findMany({
+                        where: {
+                            pdvSessionId: session.id,
+                            status: 'COMPLETED'
+                        },
+                        select: { total: true }
+                    });
+                    const totalSales = vendas.reduce((sum, v) => sum + (v.total || 0), 0);
+                    return Object.assign(Object.assign({}, session), { totalSales });
+                }
+                return session;
+            }));
+            res.json(sessionsWithTotals);
+        }
+        catch (error) {
+            console.error('Erro ao buscar histórico de sessões:', error);
+            res.status(500).json({ error: 'Erro ao buscar histórico de sessões.' });
         }
     },
 };

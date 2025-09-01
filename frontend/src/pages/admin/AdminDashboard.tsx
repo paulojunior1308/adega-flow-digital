@@ -168,6 +168,7 @@ const AdminDashboard = () => {
   const [estoqueTotals, setEstoqueTotals] = useState<{ totalCusto: number, totalVenda: number } | null>(null);
   // Estado para vendas do dia
   const [vendasHoje, setVendasHoje] = useState<number>(0);
+  const [activeSession, setActiveSession] = useState<any>(null);
 
   // Buscar pedidos reais do backend
   useEffect(() => {
@@ -442,6 +443,14 @@ const AdminDashboard = () => {
       const totalPDV = (res.data.pdv || []).reduce((sum: number, v: any) => sum + (v.total || 0), 0);
       const totalOnline = (res.data.online || []).reduce((sum: number, v: any) => sum + (v.total || 0), 0);
       setVendasHoje(totalPDV + totalOnline);
+      
+      // Se há sessão ativa, mostrar informação adicional
+      if (res.data.activeSession) {
+        console.log('Sessão PDV ativa:', res.data.activeSession);
+        setActiveSession(res.data.activeSession);
+      } else {
+        setActiveSession(null);
+      }
     });
   }, []);
 
@@ -462,9 +471,9 @@ const AdminDashboard = () => {
           {/* Stats */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
             <StatCard 
-              title="Vendas do Dia"
+              title={activeSession ? "Vendas da Sessão" : "Vendas do Dia"}
               value={`R$ ${vendasHoje.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
-              change=""
+              change={activeSession ? `Sessão ativa desde ${new Date(activeSession.openedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}` : ""}
               changeType="up"
               icon={<TrendingUp className="h-6 w-6 text-element-blue-dark" />} 
             />

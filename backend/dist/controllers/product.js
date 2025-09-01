@@ -5,6 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.productController = void 0;
 const prisma_1 = __importDefault(require("../config/prisma"));
+const stockStatus_1 = require("../utils/stockStatus");
 exports.productController = {
     list: async (req, res) => {
         try {
@@ -60,6 +61,10 @@ exports.productController = {
                 const marginPercent = parseFloat(margin);
                 finalPrice = parseFloat(costPrice) / (1 - (marginPercent / 100));
             }
+            const stockValue = parseInt(stock);
+            const isFractionedValue = isFractioned === true || isFractioned === 'true';
+            const totalVolumeValue = totalVolume ? parseFloat(totalVolume) : null;
+            const stockStatus = (0, stockStatus_1.calculateStockStatus)(stockValue, isFractionedValue, totalVolumeValue);
             const product = await prisma_1.default.product.create({
                 data: {
                     name,
@@ -69,13 +74,14 @@ exports.productController = {
                     margin: margin ? parseFloat(margin) : null,
                     categoryId,
                     supplierId: supplierId || null,
-                    stock: parseInt(stock),
+                    stock: stockValue,
                     minStock: minStock ? parseInt(minStock) : 0,
                     barcode: barcode || null,
                     image: image || null,
-                    isFractioned: isFractioned === true || isFractioned === 'true',
-                    totalVolume: totalVolume ? parseFloat(totalVolume) : null,
-                    unitVolume: unitVolume ? parseFloat(unitVolume) : null
+                    isFractioned: isFractionedValue,
+                    totalVolume: totalVolumeValue,
+                    unitVolume: unitVolume ? parseFloat(unitVolume) : null,
+                    stockStatus
                 },
                 include: {
                     category: true,
@@ -99,6 +105,10 @@ exports.productController = {
                 const marginPercent = parseFloat(margin);
                 finalPrice = parseFloat(costPrice) / (1 - (marginPercent / 100));
             }
+            const stockValue = parseInt(stock);
+            const isFractionedValue = isFractioned === true || isFractioned === 'true';
+            const totalVolumeValue = totalVolume ? parseFloat(totalVolume) : null;
+            const stockStatus = (0, stockStatus_1.calculateStockStatus)(stockValue, isFractionedValue, totalVolumeValue);
             const product = await prisma_1.default.product.update({
                 where: { id },
                 data: {
@@ -107,14 +117,15 @@ exports.productController = {
                     price: finalPrice,
                     costPrice: costPrice ? parseFloat(costPrice) : undefined,
                     margin: margin ? parseFloat(margin) : undefined,
-                    stock: parseInt(stock),
+                    stock: stockValue,
                     minStock: minStock ? parseInt(minStock) : undefined,
                     barcode,
                     active: typeof active === 'boolean' ? active : active === 'true' || active === '1',
                     image: image || undefined,
-                    isFractioned: isFractioned === true || isFractioned === 'true',
-                    totalVolume: totalVolume ? parseFloat(totalVolume) : null,
+                    isFractioned: isFractionedValue,
+                    totalVolume: totalVolumeValue,
                     unitVolume: unitVolume ? parseFloat(unitVolume) : null,
+                    stockStatus,
                     category: {
                         connect: { id: categoryId }
                     },
@@ -210,9 +221,24 @@ exports.productController = {
         try {
             const { id } = req.params;
             const { stock } = req.body;
+            const stockValue = parseInt(stock);
+            const productInfo = await prisma_1.default.product.findUnique({
+                where: { id },
+                select: {
+                    isFractioned: true,
+                    totalVolume: true
+                }
+            });
+            if (!productInfo) {
+                return res.status(404).json({ error: 'Produto não encontrado' });
+            }
+            const stockStatus = (0, stockStatus_1.calculateStockStatus)(stockValue, productInfo.isFractioned, productInfo.totalVolume);
             const product = await prisma_1.default.product.update({
                 where: { id },
-                data: { stock: parseInt(stock) },
+                data: {
+                    stock: stockValue,
+                    stockStatus
+                },
                 include: {
                     category: true,
                     supplier: true

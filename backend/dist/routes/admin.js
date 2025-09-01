@@ -95,6 +95,8 @@ router.delete('/payment-methods/:id', paymentMethod_1.paymentMethodController.de
 router.post('/pdv-sales', admin_1.adminController.createPDVSale);
 router.get('/pdv-sales', admin_1.adminController.getPDVSales);
 router.patch('/pdv-sales/:id/payment-method', admin_1.adminController.updatePDVSale);
+router.patch('/pdv-sales/:id/cancel', admin_1.adminController.cancelSale);
+router.put('/pdv-sales/:id', admin_1.adminController.editSale);
 router.get('/finance/report', finance_1.financeController.report);
 router.post('/stock-entries', stockEntry_1.stockEntryController.create);
 router.get('/stock-entries', stockEntry_1.stockEntryController.list);
@@ -986,5 +988,9 @@ router.delete('/offers/:id', offer_1.offerController.remove);
 router.patch('/offers/:id/active', offer_1.offerController.toggleActive);
 router.get('/estoque-totals', admin_1.adminController.getEstoqueTotals);
 router.get('/vendas-hoje', admin_1.adminController.getVendasHoje);
+router.post('/pdv/open', admin_1.adminController.openPDVSession);
+router.post('/pdv/close', admin_1.adminController.closePDVSession);
+router.get('/pdv/active', admin_1.adminController.getActivePDVSession);
+router.get('/pdv/history', admin_1.adminController.getPDVSessionsHistory);
 router.post('/comandas/:comandaId/items/combo', comanda_1.comandaController.addComboItems);
 exports.default = router;

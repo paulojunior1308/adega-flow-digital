@@ -120,6 +120,10 @@ router.post('/pdv-sales', adminController.createPDVSale);
 router.get('/pdv-sales', adminController.getPDVSales);
 // Rota para atualizar método de pagamento da venda PDV
 router.patch('/pdv-sales/:id/payment-method', adminController.updatePDVSale);
+// Rota para cancelar venda
+router.patch('/pdv-sales/:id/cancel', adminController.cancelSale);
+// Rota para editar venda
+router.put('/pdv-sales/:id', adminController.editSale);
 
 // Rota para relatório financeiro
 router.get('/finance/report', financeController.report);
@@ -1169,6 +1173,12 @@ router.get('/estoque-totals', adminController.getEstoqueTotals);
 
 // Rota para vendas do dia (PDV e online)
 router.get('/vendas-hoje', adminController.getVendasHoje);
+
+// Rotas para controle de sessão do PDV
+router.post('/pdv/open', adminController.openPDVSession);
+router.post('/pdv/close', adminController.closePDVSession);
+router.get('/pdv/active', adminController.getActivePDVSession);
+router.get('/pdv/history', adminController.getPDVSessionsHistory);
 
 router.post('/comandas/:comandaId/items/combo', comandaController.addComboItems);
 

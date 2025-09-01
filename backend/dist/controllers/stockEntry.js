@@ -5,6 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.stockEntryController = void 0;
 const prisma_1 = __importDefault(require("../config/prisma"));
+const stockStatus_1 = require("../utils/stockStatus");
 exports.stockEntryController = {
     create: async (req, res) => {
         try {
@@ -61,12 +62,14 @@ exports.stockEntryController = {
                     origin: 'manual'
                 }
             });
-            await prisma_1.default.product.update({
+            const updatedProduct = await prisma_1.default.product.update({
                 where: { id: productId },
                 data: Object.assign({ costPrice: novoCustoMedio, stock: { increment: quantidadeNova } }, (produto.isFractioned && produto.unitVolume ? {
                     totalVolume: { increment: quantidadeNova * Number(produto.unitVolume) }
-                } : {}))
+                } : {})),
+                select: { stock: true, isFractioned: true, totalVolume: true }
             });
+            await (0, stockStatus_1.updateProductStockStatusWithValues)(productId, prisma_1.default, updatedProduct.stock, updatedProduct.isFractioned, updatedProduct.totalVolume);
             res.status(201).json(Object.assign(Object.assign({}, entry), { novoCustoMedio: novoCustoMedio.toFixed(2), estoqueAnterior: estoqueAtual, estoqueNovo: estoqueAtual + quantidadeNova }));
         }
         catch (error) {
@@ -139,19 +142,23 @@ exports.stockEntryController = {
                 const unitVolume = produto.unitVolume || 1;
                 const novoTotalVolume = (produto.totalVolume || 0) - quantidade;
                 const novoStock = Math.floor(novoTotalVolume / unitVolume);
-                await prisma_1.default.product.update({
+                const updatedProduct = await prisma_1.default.product.update({
                     where: { id: productId },
                     data: {
                         totalVolume: novoTotalVolume,
                         stock: novoStock
-                    }
+                    },
+                    select: { stock: true, isFractioned: true, totalVolume: true }
                 });
+                await (0, stockStatus_1.updateProductStockStatusWithValues)(productId, prisma_1.default, updatedProduct.stock, updatedProduct.isFractioned, updatedProduct.totalVolume);
             }
             else {
-                await prisma_1.default.product.update({
+                const updatedProduct = await prisma_1.default.product.update({
                     where: { id: productId },
-                    data: { stock: { decrement: quantidade } }
+                    data: { stock: { decrement: quantidade } },
+                    select: { stock: true, isFractioned: true, totalVolume: true }
                 });
+                await (0, stockStatus_1.updateProductStockStatusWithValues)(productId, prisma_1.default, updatedProduct.stock, updatedProduct.isFractioned, updatedProduct.totalVolume);
             }
             res.status(201).json({
                 message: 'Baixa de estoque registrada com sucesso',

@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import prisma from '../config/prisma';
+import { updateProductStockStatusWithValues } from '../utils/stockStatus';
 
 export const stockEntryController = {
   // Registrar nova entrada de estoque
@@ -75,7 +76,7 @@ export const stockEntryController = {
       });
 
       // Atualizar o produto com o novo custo médio e estoque
-      await prisma.product.update({
+      const updatedProduct = await prisma.product.update({
         where: { id: productId },
         data: {
           costPrice: novoCustoMedio,
@@ -83,8 +84,11 @@ export const stockEntryController = {
           ...(produto.isFractioned && produto.unitVolume ? {
             totalVolume: { increment: quantidadeNova * Number(produto.unitVolume) }
           } : {})
-        }
+        },
+        select: { stock: true, isFractioned: true, totalVolume: true }
       });
+      // Atualizar status de estoque
+      await updateProductStockStatusWithValues(productId, prisma, updatedProduct.stock, updatedProduct.isFractioned, updatedProduct.totalVolume);
 
       res.status(201).json({
         ...entry,
@@ -179,19 +183,25 @@ export const stockEntryController = {
         const novoTotalVolume = (produto.totalVolume || 0) - quantidade;
         const novoStock = Math.floor(novoTotalVolume / unitVolume);
         
-        await prisma.product.update({
+        const updatedProduct = await prisma.product.update({
           where: { id: productId },
           data: {
             totalVolume: novoTotalVolume,
             stock: novoStock
-          }
+          },
+          select: { stock: true, isFractioned: true, totalVolume: true }
         });
+        // Atualizar status de estoque
+        await updateProductStockStatusWithValues(productId, prisma, updatedProduct.stock, updatedProduct.isFractioned, updatedProduct.totalVolume);
       } else {
         // Produto não fracionado: desconta unidades
-        await prisma.product.update({
+        const updatedProduct = await prisma.product.update({
           where: { id: productId },
-          data: { stock: { decrement: quantidade } }
+          data: { stock: { decrement: quantidade } },
+          select: { stock: true, isFractioned: true, totalVolume: true }
         });
+        // Atualizar status de estoque
+        await updateProductStockStatusWithValues(productId, prisma, updatedProduct.stock, updatedProduct.isFractioned, updatedProduct.totalVolume);
       }
 
       res.status(201).json({
