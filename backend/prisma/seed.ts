@@ -10,7 +10,7 @@ async function main() {
     SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'`;
   console.log('Tabelas existentes no banco:', tables.map(t => t.table_name));
 
- // Apagar todas as tabelas do banco (exceto _prisma_migrations)
+/*  // Apagar todas as tabelas do banco (exceto _prisma_migrations)
 await prisma.$executeRawUnsafe(`
   DO $$ DECLARE
     r RECORD;
@@ -23,17 +23,7 @@ await prisma.$executeRawUnsafe(`
 console.log('Tabelas apagadas com sucesso!');
 
   // Adicionar usuário admin
-  await prisma.user.upsert({
-    where: { email: 'pauloesjr2@gmail.com' },
-    update: {},
-    create: {
-      email: 'pauloesjr2@gmail.com',
-      password: await bcrypt.hash('Paulo1308**', 10),
-      name: 'Paulo Junior',
-      cpf: '45032534846',
-      role: Role.ADMIN,
-      active: true,
-    },
+
   });
 
   // Adicionar categorias
@@ -65,7 +55,7 @@ console.log('Tabelas apagadas com sucesso!');
   }
   console.log('Categorias adicionadas com sucesso!'+ prisma.category.findMany());
 
-
+*/
 }
 
 main()
