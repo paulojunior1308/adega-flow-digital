@@ -22,18 +22,7 @@ await prisma.$executeRawUnsafe(`
 `);
 console.log('Tabelas apagadas com sucesso!');
 
-  // Adicionar usuário admin
-  await prisma.user.upsert({
-    where: { email: 'pauloesjr2@gmail.com' },
-    update: {},
-    create: {
-      email: 'pauloesjr2@gmail.com',
-      password: await bcrypt.hash('Paulo1308**', 10),
-      name: 'Paulo Junior',
-      cpf: '45032534846',
-      role: Role.ADMIN,
-      active: true,
-    },
+
   });
 
   // Adicionar categorias
