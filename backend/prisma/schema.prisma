@@ -484,6 +484,7 @@ enum Role {
   ADMIN
   USER
   MOTOBOY
+  VENDEDOR
 }
 
 enum SaleStatus {

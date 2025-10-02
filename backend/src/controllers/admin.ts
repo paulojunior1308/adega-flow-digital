@@ -191,8 +191,8 @@ export const adminController = {
   createUser: async (req: Request, res: Response) => {
     const { name, email, password, role, cpf } = req.body;
 
-    if (!['ADMIN', 'MOTOBOY', 'USER'].includes(role)) {
-      throw new AppError('Tipo de usuário inválido. Só é permitido ADMIN, MOTOBOY ou USER.', 400);
+    if (!['ADMIN', 'MOTOBOY', 'USER', 'VENDEDOR'].includes(role)) {
+      throw new AppError('Tipo de usuário inválido. Só é permitido ADMIN, MOTOBOY, USER ou VENDEDOR.', 400);
     }
     if (!cpf) {
       throw new AppError('CPF é obrigatório.', 400);

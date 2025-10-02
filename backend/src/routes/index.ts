@@ -9,6 +9,7 @@ import { orderController } from '../controllers/order';
 import { Router } from 'express';
 import { PrismaClient } from '@prisma/client';
 import motoboyRoutes from './motoboy';
+import vendedorRoutes from './vendedor';
 import { productController } from '../controllers/product';
 import { comboController } from '../controllers/combo';
 import { promotionController } from '../controllers/promotion';
@@ -39,10 +40,13 @@ router.use('/doses', doseRoutes);
 router.use(authMiddleware);
 
 // Rotas administrativas
-router.use('/admin', authorizeRoles('ADMIN'), adminRoutes);
+router.use('/admin', authorizeRoles('ADMIN', 'VENDEDOR'), adminRoutes);
 
 // Rotas do motoboy
 router.use('/motoboy', motoboyMiddleware, motoboyRoutes);
+
+// Rotas do vendedor
+router.use('/vendedor', vendedorRoutes);
 
 // Rotas do Cliente
 router.get('/cliente-dashboard', authorizeRoles('USER'), clientController.getDashboard);
@@ -64,10 +68,10 @@ router.get('/admin-pdv', authorizeRoles('ADMIN'), adminController.getPDV);
 
 router.use('/', clientRoutes);
 
-// Rotas de doses protegidas para admin
-router.use('/admin/doses', authorizeRoles('ADMIN'), doseRoutes);
+// Rotas de doses protegidas para admin e vendedor
+router.use('/admin/doses', authorizeRoles('ADMIN', 'VENDEDOR'), doseRoutes);
 
-// Rotas de comandas protegidas para admin
-router.use('/admin', authorizeRoles('ADMIN'), comandaRoutes);
+// Rotas de comandas protegidas para admin e vendedor
+router.use('/admin', authorizeRoles('ADMIN', 'VENDEDOR'), comandaRoutes);
 
 export default router; 

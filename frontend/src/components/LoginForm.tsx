@@ -38,6 +38,8 @@ const LoginForm = () => {
         navigate('/admin-dashboard');
       } else if (user.role === 'MOTOBOY') {
         navigate('/motoboy');
+      } else if (user.role === 'VENDEDOR') {
+        navigate('/admin-estoque');
       } else {
         navigate('/cliente-dashboard');
       }

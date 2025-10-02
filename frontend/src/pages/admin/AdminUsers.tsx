@@ -5,15 +5,17 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, UserPlus } from 'lucide-react';
+import { Search, UserPlus, Pencil, Trash2 } from 'lucide-react';
 import axios from 'axios';
 import { useAuth } from '@/hooks/useAuth';
 
 const userTypes = [
-  { value: 'admin', label: 'Administrador' },
-  { value: 'motoboy', label: 'Motoboy' },
+  { value: 'ADMIN', label: 'Administrador' },
+  { value: 'MOTOBOY', label: 'Motoboy' },
+  { value: 'VENDEDOR', label: 'Vendedor' },
 ];
 
 const API_URL = `${import.meta.env.VITE_API_URL}/api`;
@@ -21,9 +23,13 @@ const API_URL = `${import.meta.env.VITE_API_URL}/api`;
 const AdminUsers = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [users, setUsers] = useState([]);
-  const [form, setForm] = useState({ name: '', email: '', password: '', cpf: '', type: 'admin' });
+  const [form, setForm] = useState({ name: '', email: '', password: '', cpf: '', type: 'ADMIN' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [editUser, setEditUser] = useState<any | null>(null);
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [deleteUser, setDeleteUser] = useState<any | null>(null);
   const { token } = useAuth();
 
   useEffect(() => {
@@ -33,7 +39,7 @@ const AdminUsers = () => {
       return;
     }
     setLoading(true);
-    axios.get(`${API_URL}/admin/users?roles=ADMIN,MOTOBOY`, {
+    axios.get(`${API_URL}/admin/users?roles=ADMIN,MOTOBOY,VENDEDOR`, {
       headers: {
         Authorization: `Bearer ${token}`
       }
@@ -50,7 +56,7 @@ const AdminUsers = () => {
   }, [token]);
 
   const handleOpenModal = () => {
-    setForm({ name: '', email: '', password: '', cpf: '', type: 'admin' });
+    setForm({ name: '', email: '', password: '', cpf: '', type: 'ADMIN' });
     setIsModalOpen(true);
   };
 
@@ -82,7 +88,7 @@ const AdminUsers = () => {
           Authorization: `Bearer ${token}`
         }
       });
-      const res = await axios.get(`${API_URL}/admin/users?roles=ADMIN,MOTOBOY`, {
+      const res = await axios.get(`${API_URL}/admin/users?roles=ADMIN,MOTOBOY,VENDEDOR`, {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -92,6 +98,74 @@ const AdminUsers = () => {
     } catch (err) {
       console.error('Erro ao cadastrar usuário:', err);
       setError('Erro ao cadastrar usuário');
+    }
+    setLoading(false);
+  };
+
+  const openEdit = (user: any) => {
+    setEditUser(user);
+    setIsEditOpen(true);
+  };
+
+  const handleEditChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!editUser) return;
+    setEditUser({ ...editUser, [e.target.name]: e.target.value });
+  };
+
+  const handleEditTypeChange = (value: string) => {
+    if (!editUser) return;
+    setEditUser({ ...editUser, role: value });
+  };
+
+  const submitEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editUser) return;
+    setLoading(true);
+    setError('');
+    try {
+      await axios.put(`${API_URL}/admin/users/${editUser.id}`, {
+        name: editUser.name,
+        email: editUser.email,
+        cpf: editUser.cpf,
+        role: (editUser.role || '').toUpperCase(),
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const res = await axios.get(`${API_URL}/admin/users?roles=ADMIN,MOTOBOY,VENDEDOR`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setUsers(res.data);
+      setIsEditOpen(false);
+      setEditUser(null);
+    } catch (err) {
+      console.error('Erro ao atualizar usuário:', err);
+      setError('Erro ao atualizar usuário');
+    }
+    setLoading(false);
+  };
+
+  const openDelete = (user: any) => {
+    setDeleteUser(user);
+    setIsDeleteOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteUser) return;
+    setLoading(true);
+    setError('');
+    try {
+      await axios.delete(`${API_URL}/admin/users/${deleteUser.id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const res = await axios.get(`${API_URL}/admin/users?roles=ADMIN,MOTOBOY,VENDEDOR`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setUsers(res.data);
+      setIsDeleteOpen(false);
+      setDeleteUser(null);
+    } catch (err) {
+      console.error('Erro ao excluir usuário:', err);
+      setError('Erro ao excluir usuário');
     }
     setLoading(false);
   };
@@ -142,6 +216,7 @@ const AdminUsers = () => {
                     <TableHead>Nome</TableHead>
                     <TableHead>Email</TableHead>
                     <TableHead>Tipo</TableHead>
+                    <TableHead className="w-[140px] text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -150,7 +225,15 @@ const AdminUsers = () => {
                       <TableCell className="font-medium">#{user.id}</TableCell>
                       <TableCell>{user.name}</TableCell>
                       <TableCell>{user.email}</TableCell>
-                      <TableCell>{user.role === 'ADMIN' ? 'Administrador' : 'Motoboy'}</TableCell>
+                      <TableCell>{user.role === 'ADMIN' ? 'Administrador' : user.role === 'VENDEDOR' ? 'Vendedor' : 'Motoboy'}</TableCell>
+                      <TableCell className="text-right space-x-2">
+                        <Button size="sm" variant="outline" onClick={() => openEdit(user)}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button size="sm" variant="destructive" onClick={() => openDelete(user)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -201,10 +284,63 @@ const AdminUsers = () => {
             </form>
           </DialogContent>
         </Dialog>
+
+        <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Editar Usuário</DialogTitle>
+            </DialogHeader>
+            {editUser && (
+              <form onSubmit={submitEdit} className="space-y-4">
+                <div>
+                  <Label htmlFor="edit-name">Nome</Label>
+                  <Input id="edit-name" name="name" value={editUser.name || ''} onChange={handleEditChange} required />
+                </div>
+                <div>
+                  <Label htmlFor="edit-email">E-mail</Label>
+                  <Input id="edit-email" name="email" type="email" value={editUser.email || ''} onChange={handleEditChange} required />
+                </div>
+                <div>
+                  <Label htmlFor="edit-cpf">CPF</Label>
+                  <Input id="edit-cpf" name="cpf" type="text" value={editUser.cpf || ''} onChange={handleEditChange} />
+                </div>
+                <div>
+                  <Label htmlFor="edit-type">Tipo de Usuário</Label>
+                  <Select value={editUser.role || 'ADMIN'} onValueChange={handleEditTypeChange}>
+                    <SelectTrigger id="edit-type">
+                      <SelectValue placeholder="Selecione o tipo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {userTypes.map((type) => (
+                        <SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <DialogFooter>
+                  <Button type="button" variant="outline" onClick={() => setIsEditOpen(false)}>Cancelar</Button>
+                  <Button type="submit" className="bg-element-blue-neon text-element-gray-dark hover:bg-element-blue-neon/90">Salvar</Button>
+                </DialogFooter>
+              </form>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        <AlertDialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Excluir usuário?</AlertDialogTitle>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmDelete}>Excluir</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
       </AdminLayout>
     </div>
   );
 };
 
-export default AdminUsers; 
+export default AdminUsers;

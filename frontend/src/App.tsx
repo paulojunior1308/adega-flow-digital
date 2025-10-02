@@ -71,23 +71,24 @@ const App = () => (
           <Route path="/cadastro" element={<Cadastro />} />
           
           {/* Admin Routes */}
-          <Route path="/admin-dashboard" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminDashboard /></ProtectedRoute>} />
+          <Route path="/admin-dashboard" element={<ProtectedRoute allowedRoles={['ADMIN', 'VENDEDOR']}><AdminDashboard /></ProtectedRoute>} />
           <Route path="/admin-pedidos" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminOrders/></ProtectedRoute>} />
-          <Route path="/admin-estoque" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminStock /></ProtectedRoute>} />
-          <Route path="/admin-cadastro-produtos" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminProductRegistration /></ProtectedRoute>} />
-          <Route path="/admin-categorias" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminCategories /></ProtectedRoute>} />
+          <Route path="/admin-estoque" element={<ProtectedRoute allowedRoles={['ADMIN', 'VENDEDOR']}><AdminStock /></ProtectedRoute>} />
+          <Route path="/admin-cadastro-produtos" element={<ProtectedRoute allowedRoles={['ADMIN', 'VENDEDOR']}><AdminProductRegistration /></ProtectedRoute>} />
+          <Route path="/admin-categorias" element={<ProtectedRoute allowedRoles={['ADMIN', 'VENDEDOR']}><AdminCategories /></ProtectedRoute>} />
           <Route path="/admin-finance" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminFinance /></ProtectedRoute>} />
-          <Route path="/admin-pdv" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminPDV /></ProtectedRoute>} />
+          <Route path="/admin-pdv" element={<ProtectedRoute allowedRoles={['ADMIN', 'VENDEDOR']}><AdminPDV /></ProtectedRoute>} />
           <Route path="/admin-vendas" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminSales /></ProtectedRoute>} />
           <Route path="/admin-clientes" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminCustomers /></ProtectedRoute>} />
-          <Route path="/admin-fornecedores" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminSuppliers /></ProtectedRoute>} />
-          <Route path="/admin-pagamentos" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminPayments /></ProtectedRoute>} />
+          <Route path="/admin-fornecedores" element={<ProtectedRoute allowedRoles={['ADMIN', 'VENDEDOR']}><AdminSuppliers /></ProtectedRoute>} />
+          <Route path="/admin-pagamentos" element={<ProtectedRoute allowedRoles={['ADMIN', 'VENDEDOR']}><AdminPayments /></ProtectedRoute>} />
           <Route path="/admin-contas" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminAccounts /></ProtectedRoute>} />
           <Route path="/motoboy" element={<ProtectedRoute allowedRoles={['MOTOBOY']}><MotoboyDashboard /></ProtectedRoute>} />
           <Route path="/admin-usuarios" element={<ProtectedRoute allowedRoles={['ADMIN']}><UsersList /></ProtectedRoute>} />
-          <Route path="/admin-promocoes-combos" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminPromotionsAndCombos /></ProtectedRoute>} />
+          <Route path="/admin-promocoes-combos" element={<ProtectedRoute allowedRoles={['ADMIN', 'VENDEDOR']}><AdminPromotionsAndCombos /></ProtectedRoute>} />
           <Route path="/admin-backup" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminBackup /></ProtectedRoute>} />
-          <Route path="/admin-pdv-sessions" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminPDVSessions /></ProtectedRoute>} />
+          <Route path="/admin-pdv-sessions" element={<ProtectedRoute allowedRoles={['ADMIN', 'VENDEDOR']}><AdminPDVSessions /></ProtectedRoute>} />
+          
         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

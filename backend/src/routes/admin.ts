@@ -38,21 +38,21 @@ const upload = multer({ storage });
 router.post('/login', adminController.login);
 
 // Middleware de autenticação para todas as rotas administrativas
-router.use(authMiddleware, adminMiddleware);
-router.use(authorizeRoles('ADMIN'));
+router.use(authMiddleware);
+router.use(authorizeRoles('ADMIN', 'VENDEDOR'));
 
 // Rotas protegidas - apenas ADMIN
-router.get('/dashboard', adminController.dashboard);
-router.post('/users', adminController.createUser);
-router.get('/users', adminController.getUsers);
-router.put('/users/:id', adminController.updateUser);
-router.delete('/users/:id', adminController.deleteUser);
+router.get('/dashboard', authorizeRoles('ADMIN'), adminController.dashboard);
+router.post('/users', authorizeRoles('ADMIN'), adminController.createUser);
+router.get('/users', authorizeRoles('ADMIN'), adminController.getUsers);
+router.put('/users/:id', authorizeRoles('ADMIN'), adminController.updateUser);
+router.delete('/users/:id', authorizeRoles('ADMIN'), adminController.deleteUser);
 
 // Rotas de pedidos para admin
-router.get('/orders', orderController.adminList);
-router.patch('/orders/:id/status', orderController.updateStatus);
-router.patch('/orders/:id/location', orderController.updateLocation);
-router.patch('/orders/:id/pix-status', orderController.updatePixStatus);
+router.get('/orders', authorizeRoles('ADMIN'), orderController.adminList);
+router.patch('/orders/:id/status', authorizeRoles('ADMIN'), orderController.updateStatus);
+router.patch('/orders/:id/location', authorizeRoles('ADMIN'), orderController.updateLocation);
+router.patch('/orders/:id/pix-status', authorizeRoles('ADMIN'), orderController.updatePixStatus);
 
 // Rotas de produtos
 router.get('/products', productController.list);
@@ -76,10 +76,10 @@ router.patch('/products/:id/promos-combos', productController.updatePromosCombos
 
 // Rotas de promoções
 router.get('/promotions', promotionController.list);
-router.post('/promotions', upload.single('image'), promotionController.create);
-router.put('/promotions/:id', upload.single('image'), promotionController.update);
-router.delete('/promotions/:id', promotionController.delete);
-router.patch('/promotions/:id/active', async (req, res) => {
+router.post('/promotions', authorizeRoles('ADMIN'), upload.single('image'), promotionController.create);
+router.put('/promotions/:id', authorizeRoles('ADMIN'), upload.single('image'), promotionController.update);
+router.delete('/promotions/:id', authorizeRoles('ADMIN'), promotionController.delete);
+router.patch('/promotions/:id/active', authorizeRoles('ADMIN'), async (req, res) => {
   const { id } = req.params;
   const { active } = req.body;
   try {
@@ -103,17 +103,17 @@ router.patch('/categories/:id/active', categoryController.updateActive);
 
 // Rotas de fornecedores
 router.get('/suppliers', supplierController.list);
-router.post('/suppliers', supplierController.create);
+router.post('/suppliers', authorizeRoles('ADMIN'), supplierController.create);
 router.get('/suppliers/:id', supplierController.get);
-router.put('/suppliers/:id', supplierController.update);
-router.delete('/suppliers/:id', supplierController.delete);
+router.put('/suppliers/:id', authorizeRoles('ADMIN'), supplierController.update);
+router.delete('/suppliers/:id', authorizeRoles('ADMIN'), supplierController.delete);
 
 // Rotas de métodos de pagamento
 router.get('/payment-methods', paymentMethodController.list);
-router.post('/payment-methods', paymentMethodController.create);
+router.post('/payment-methods', authorizeRoles('ADMIN'), paymentMethodController.create);
 router.get('/payment-methods/:id', paymentMethodController.get);
-router.put('/payment-methods/:id', paymentMethodController.update);
-router.delete('/payment-methods/:id', paymentMethodController.delete);
+router.put('/payment-methods/:id', authorizeRoles('ADMIN'), paymentMethodController.update);
+router.delete('/payment-methods/:id', authorizeRoles('ADMIN'), paymentMethodController.delete);
 
 // Rota para vendas do PDV físico
 router.post('/pdv-sales', adminController.createPDVSale);
@@ -126,7 +126,7 @@ router.patch('/pdv-sales/:id/cancel', adminController.cancelSale);
 router.put('/pdv-sales/:id', adminController.editSale);
 
 // Rota para relatório financeiro
-router.get('/finance/report', financeController.report);
+router.get('/finance/report', authorizeRoles('ADMIN'), financeController.report);
 
 // Rotas de entradas de estoque
 router.post('/stock-entries', stockEntryController.create);
@@ -139,7 +139,7 @@ router.post('/stock-out', stockEntryController.stockOut);
 router.get('/stock-movements', stockEntryController.listMovements);
 
 // Rota para backup completo do banco de dados (estrutura + dados)
-router.get('/backup', async (req, res) => {
+router.get('/backup', authorizeRoles('ADMIN'), async (req, res) => {
   try {
     // Buscar todos os dados principais do banco
     const users = await prisma.user.findMany();
@@ -865,7 +865,7 @@ router.get('/backup', async (req, res) => {
 });
 
 // Rota para gerar schema completo das tabelas
-router.get('/schema', async (req, res) => {
+router.get('/schema', authorizeRoles('ADMIN'), async (req, res) => {
   try {
     // Gerar schema baseado no Prisma
     let schemaContent = `-- Schema completo do banco de dados - ${new Date().toISOString()}\n`;
@@ -1163,10 +1163,10 @@ router.get('/schema', async (req, res) => {
 // Rotas de ofertas
 router.get('/offers', offerController.getAll);
 router.get('/offers/:id', offerController.getById);
-router.post('/offers', upload.single('image'), offerController.create);
-router.put('/offers/:id', upload.single('image'), offerController.update);
-router.delete('/offers/:id', offerController.remove);
-router.patch('/offers/:id/active', offerController.toggleActive);
+router.post('/offers', authorizeRoles('ADMIN'), upload.single('image'), offerController.create);
+router.put('/offers/:id', authorizeRoles('ADMIN'), upload.single('image'), offerController.update);
+router.delete('/offers/:id', authorizeRoles('ADMIN'), offerController.remove);
+router.patch('/offers/:id/active', authorizeRoles('ADMIN'), offerController.toggleActive);
 
 // Rota para totais de custo e venda do estoque
 router.get('/estoque-totals', adminController.getEstoqueTotals);

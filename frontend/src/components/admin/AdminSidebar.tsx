@@ -20,6 +20,7 @@ import {
   Database,
   Clock
 } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
 
 interface AdminSidebarProps {
   isCollapsed: boolean;
@@ -29,83 +30,106 @@ interface AdminSidebarProps {
 }
 
 const AdminSidebar = ({ isCollapsed, toggleSidebar, isMobileOpen, setIsMobileOpen }: AdminSidebarProps) => {
-  const menuItems = [
+  const { user } = useAuth();
+  
+  const allMenuItems = [
     { 
       icon: <Home className="h-5 w-5" />, 
       label: 'Dashboard', 
-      path: '/admin-dashboard' 
+      path: '/admin-dashboard',
+      roles: ['ADMIN']
     },
     { 
       icon: <Archive className="h-5 w-5" />, 
       label: 'Estoque', 
-      path: '/admin-estoque' 
+      path: '/admin-estoque',
+      roles: ['ADMIN', 'VENDEDOR']
     },
     { 
       icon: <Plus className="h-5 w-5" />, 
       label: 'Cadastrar Produtos', 
-      path: '/admin-cadastro-produtos' 
+      path: '/admin-cadastro-produtos',
+      roles: ['ADMIN', 'VENDEDOR']
     },
     { 
       icon: <FolderOpen className="h-5 w-5" />, 
       label: 'Categorias', 
-      path: '/admin-categorias' 
+      path: '/admin-categorias',
+      roles: ['ADMIN', 'VENDEDOR']
     },
     { 
-      icon: <Package className="h-5 w-5" />, 
-      label: 'Pedidos', 
-      path: '/admin-pedidos' 
-    },
-    { 
-      icon: <DollarSign className="h-5 w-5" />, 
-      label: 'Controle de Vendas', 
-      path: '/admin-vendas' 
-    },
-    { 
-      icon: <TrendingUp className="h-5 w-5" />, 
-      label: 'Financeiro', 
-      path: '/admin-finance' 
-    },
-    { 
-      icon: <Users className="h-5 w-5" />, 
-      label: 'Lista de Clientes', 
-      path: '/admin-clientes' 
-    },
-    { 
-      icon: <Users className="h-5 w-5" />, 
-      label: 'Usuários', 
-      path: '/admin-usuarios' 
+      icon: <Store className="h-5 w-5" />, 
+      label: 'PDV', 
+      path: '/admin-pdv',
+      roles: ['ADMIN', 'VENDEDOR']
     },
     { 
       icon: <Tag className="h-5 w-5" />, 
       label: 'Promoções e Combos', 
-      path: '/admin-promocoes-combos' 
+      path: '/admin-promocoes-combos',
+      roles: ['ADMIN', 'VENDEDOR']
     },
     { 
       icon: <Truck className="h-5 w-5" />, 
       label: 'Cadastro de Fornecedores', 
-      path: '/admin-fornecedores' 
+      path: '/admin-fornecedores',
+      roles: ['ADMIN', 'VENDEDOR']
     },
     { 
       icon: <CreditCard className="h-5 w-5" />, 
       label: 'Meios de Pagamento', 
-      path: '/admin-pagamentos' 
-    },
-    { 
-      icon: <Store className="h-5 w-5" />, 
-      label: 'Caixa', 
-      path: '/admin-pdv' 
+      path: '/admin-pagamentos',
+      roles: ['ADMIN', 'VENDEDOR']
     },
     { 
       icon: <Clock className="h-5 w-5" />, 
       label: 'Sessões PDV', 
-      path: '/admin-pdv-sessions' 
+      path: '/admin-pdv-sessions',
+      roles: ['ADMIN', 'VENDEDOR']
     },
+    { 
+      icon: <Package className="h-5 w-5" />, 
+      label: 'Pedidos', 
+      path: '/admin-pedidos',
+      roles: ['ADMIN']
+    },
+    { 
+      icon: <DollarSign className="h-5 w-5" />, 
+      label: 'Controle de Vendas', 
+      path: '/admin-vendas',
+      roles: ['ADMIN']
+    },
+    { 
+      icon: <TrendingUp className="h-5 w-5" />, 
+      label: 'Financeiro', 
+      path: '/admin-finance',
+      roles: ['ADMIN']
+    },
+    { 
+      icon: <Users className="h-5 w-5" />, 
+      label: 'Lista de Clientes', 
+      path: '/admin-clientes',
+      roles: ['ADMIN']
+    },
+    { 
+      icon: <Users className="h-5 w-5" />, 
+      label: 'Usuários', 
+      path: '/admin-usuarios',
+      roles: ['ADMIN']
+    },
+    
     { 
       icon: <Database className="h-5 w-5" />, 
       label: 'Backup (Temp)', 
-      path: '/admin-backup' 
+      path: '/admin-backup',
+      roles: ['ADMIN']
     }
   ];
+
+  // Filtrar itens do menu baseado no role do usuário
+  const menuItems = allMenuItems.filter(item => 
+    item.roles.includes(user?.role || '')
+  );
   
   return (
     <>

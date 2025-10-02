@@ -4,9 +4,8 @@ import { comandaController } from '../controllers/comanda';
 
 const router = express.Router();
 
-// Todas as rotas requerem autenticação e role de admin
+// Todas as rotas requerem autenticação e role de admin ou vendedor
 router.use(authMiddleware);
-router.use(adminMiddleware);
 
 // Rotas de comandas
 router.get('/comandas', comandaController.list);

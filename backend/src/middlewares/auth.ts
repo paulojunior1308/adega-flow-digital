@@ -71,7 +71,7 @@ export const authMiddleware = async (req: AuthRequest, res: Response, next: Next
 };
 
 export const adminMiddleware = (req: AuthRequest, res: Response, next: NextFunction) => {
-  if (req.user?.role !== 'ADMIN') {
+  if (req.user?.role !== 'ADMIN' && req.user?.role !== 'VENDEDOR') {
     return res.status(403).json({ error: 'Acesso negado' });
   }
 
