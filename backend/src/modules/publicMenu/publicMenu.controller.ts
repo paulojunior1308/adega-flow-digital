@@ -97,6 +97,17 @@ async function loadImageSourceForPdf(src: string): Promise<Buffer | string | nul
   try {
     if (!src) return null;
 
+    // PDFKit só suporta bem JPEG e PNG; ignoramos outros formatos (webp, avif, etc.)
+    const lower = src.toLowerCase();
+    const isSupported =
+      lower.endsWith('.jpg') ||
+      lower.endsWith('.jpeg') ||
+      lower.endsWith('.png');
+
+    if (!isSupported) {
+      return null;
+    }
+
     // Caminhos locais servidos pelo backend
     if (src.startsWith('/uploads')) {
       const filePath = path.resolve(process.cwd(), `.${src}`);
