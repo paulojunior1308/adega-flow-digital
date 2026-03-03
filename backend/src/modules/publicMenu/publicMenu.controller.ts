@@ -97,17 +97,6 @@ async function loadImageSourceForPdf(src: string): Promise<Buffer | string | nul
   try {
     if (!src) return null;
 
-    // PDFKit só suporta bem JPEG e PNG; ignoramos outros formatos (webp, avif, etc.)
-    const lower = src.toLowerCase();
-    const isSupported =
-      lower.endsWith('.jpg') ||
-      lower.endsWith('.jpeg') ||
-      lower.endsWith('.png');
-
-    if (!isSupported) {
-      return null;
-    }
-
     // Caminhos locais servidos pelo backend
     if (src.startsWith('/uploads')) {
       const filePath = path.resolve(process.cwd(), `.${src}`);
@@ -123,7 +112,24 @@ async function loadImageSourceForPdf(src: string): Promise<Buffer | string | nul
 
     // URLs externas (Cloudinary, etc)
     if (src.startsWith('http')) {
-      const response = await axios.get<ArrayBuffer>(src, { responseType: 'arraybuffer' });
+      let finalUrl = src;
+
+      // Para Cloudinary, força formato JPEG (compatível com PDFKit)
+      if (/^https:\/\/res\.cloudinary\.com\//i.test(src)) {
+        finalUrl = src.replace(/\.(webp|avif|png)$/i, '.jpg');
+      }
+
+      const lower = finalUrl.toLowerCase();
+      const isSupported =
+        lower.endsWith('.jpg') ||
+        lower.endsWith('.jpeg') ||
+        lower.endsWith('.png');
+
+      if (!isSupported) {
+        return null;
+      }
+
+      const response = await axios.get<ArrayBuffer>(finalUrl, { responseType: 'arraybuffer' });
       return Buffer.from(response.data);
     }
 
@@ -199,6 +205,12 @@ async function renderPublicMenuPdf(doc: PDFDocument, viewModel: PublicMenuViewMo
 
     ensurePdfSpace(doc, headerHeight);
 
+    const marginLeft = doc.page.margins.left;
+    const marginRight = doc.page.margins.right;
+    const pageWidth = doc.page.width;
+    const priceColWidth = 70;
+    const priceColX = pageWidth - marginRight - priceColWidth;
+
     doc
       .fontSize(14)
       .fillColor('#1A374D')
@@ -206,7 +218,30 @@ async function renderPublicMenuPdf(doc: PDFDocument, viewModel: PublicMenuViewMo
         underline: false,
       });
 
-    doc.moveDown(0.5);
+    // Cabeçalho da "tabela": Produto / Preço
+    doc.moveDown(0.2);
+    const headerY = doc.y;
+
+    doc
+      .fontSize(9)
+      .fillColor('#6B7280')
+      .text('PRODUTO / DESCRIÇÃO', marginLeft, headerY);
+
+    doc
+      .fontSize(9)
+      .fillColor('#6B7280')
+      .text('PREÇO', priceColX, headerY, {
+        width: priceColWidth,
+        align: 'right',
+      });
+
+    doc
+      .moveTo(marginLeft, headerY + 10)
+      .lineTo(pageWidth - marginRight, headerY + 10)
+      .strokeColor('#E5E7EB')
+      .stroke();
+
+    doc.moveDown(0.6);
 
     for (const product of category.products) {
       // Garante espaço razoável para o bloco do produto
@@ -218,32 +253,48 @@ async function renderPublicMenuPdf(doc: PDFDocument, viewModel: PublicMenuViewMo
         minimumFractionDigits: 2,
       }).format(product.price);
 
-      // Linha principal: Nome + preço na mesma linha
+      const rowY = doc.y;
+      const nameColWidth = priceColX - marginLeft - 8;
+
+      // Nome na coluna da esquerda
       doc
         .fontSize(11)
         .fillColor('#111827')
-        .text(product.name, {
-          continued: true,
+        .text(product.name, marginLeft, rowY, {
+          width: nameColWidth,
         });
 
+      // Preço alinhado na coluna da direita
       doc
         .fontSize(11)
         .fillColor('#e11d48')
-        .text(`  ${priceText}`);
+        .text(priceText, priceColX, rowY, {
+          width: priceColWidth,
+          align: 'right',
+        });
+
+      let currentY = doc.y;
 
       // Descrição embaixo, se existir
       if (product.description) {
         doc
           .fontSize(9)
           .fillColor('#6B7280')
-          .text(product.description, {
-            width: doc.page.width - doc.page.margins.left - doc.page.margins.right,
+          .text(product.description, marginLeft, currentY + 2, {
+            width: pageWidth - marginLeft - marginRight,
             lineGap: 2,
           });
+        currentY = doc.y;
       }
 
-      // Espaço entre produtos
-      doc.moveDown(0.6);
+      // Linha separadora entre produtos
+      doc
+        .moveTo(marginLeft, currentY + 3)
+        .lineTo(pageWidth - marginRight, currentY + 3)
+        .strokeColor('#E5E7EB')
+        .stroke();
+
+      doc.y = currentY + 7;
     }
 
     doc.moveDown(0.5);
