@@ -198,7 +198,8 @@ async function renderPublicMenuPdf(doc: PDFDocument, viewModel: PublicMenuViewMo
     doc.moveDown(0.5);
 
     for (const product of category.products) {
-      ensurePdfSpace(doc, 50);
+      // Garante espaço extra para não sobrepor linhas na impressão
+      ensurePdfSpace(doc, 80);
 
       const startY = doc.y;
 
@@ -236,7 +237,10 @@ async function renderPublicMenuPdf(doc: PDFDocument, viewModel: PublicMenuViewMo
           .fillColor('#6B7280')
           .text(product.description, doc.page.margins.left, nameEndY + 2, {
             width: textAreaWidth,
+            lineGap: 2,
           });
+        // Pequeno respiro após a descrição
+        doc.moveDown(0.15);
       }
 
       let blockBottomY = doc.y;
