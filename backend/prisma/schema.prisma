@@ -41,6 +41,7 @@ model Product {
   barcode     String?     @unique
   sku         String?     @unique
   active      Boolean     @default(true)
+  visibleInPublicMenu Boolean @default(true) // Define se o produto aparece no cardápio público
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
   categoryId  String
@@ -72,6 +73,7 @@ model Category {
   id          String    @id @default(uuid())
   name        String
   active      Boolean   @default(true)
+  publicMenuOrder Int   @default(0) // Ordenação manual para exibição no cardápio público
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   description String?

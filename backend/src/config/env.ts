@@ -39,6 +39,13 @@ const envSchema = z.object({
   // Upload
   uploadDir: z.string().default('uploads'),
   maxFileSize: z.coerce.number().default(5 * 1024 * 1024), // 5MB
+
+  // Informações do estabelecimento para o cardápio público
+  publicMenuStoreName: z.string().default(''),
+  publicMenuStoreAddress: z.string().default(''),
+  publicMenuStorePhone: z.string().default(''),
+  publicMenuBusinessHours: z.string().default(''),
+  publicMenuLogoUrl: z.string().optional(),
 });
 
 const _env = envSchema.safeParse({
@@ -60,6 +67,11 @@ const _env = envSchema.safeParse({
   googleClientSecret: process.env.GOOGLE_CLIENT_SECRET,
   uploadDir: process.env.UPLOAD_DIR,
   maxFileSize: process.env.MAX_FILE_SIZE,
+  publicMenuStoreName: process.env.PUBLIC_MENU_STORE_NAME,
+  publicMenuStoreAddress: process.env.PUBLIC_MENU_STORE_ADDRESS,
+  publicMenuStorePhone: process.env.PUBLIC_MENU_STORE_PHONE,
+  publicMenuBusinessHours: process.env.PUBLIC_MENU_BUSINESS_HOURS,
+  publicMenuLogoUrl: process.env.PUBLIC_MENU_LOGO_URL,
 });
 
 if (!_env.success) {

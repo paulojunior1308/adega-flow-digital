@@ -1,4 +1,5 @@
 import express, { Express } from 'express';
+import path from 'path';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
@@ -12,6 +13,7 @@ import { sanitizeRequest } from './sanitizer';
 import { swaggerSpec } from './swagger';
 import logger from './logger';
 import routes from '../routes';
+import publicMenuRoutes from '../modules/publicMenu/publicMenu.routes';
 
 export const initializeExpress = (app: Express) => {
   // Configurações básicas
@@ -84,6 +86,14 @@ export const initializeExpress = (app: Express) => {
   app.get('/', (req, res) => {
     res.json({ message: 'API do Sistema PDV - Adega Flow' });
   });
+
+  // Rotas públicas sem prefixo /api (ex: cardápio público)
+  app.use('/', publicMenuRoutes);
+
+  // Servir logo e demais assets públicos compartilhados do cardápio
+  // Usa a raiz do projeto (../frontend/public a partir de /backend)
+  const publicAssetsPath = path.resolve(process.cwd(), '../frontend/public');
+  app.use('/public', express.static(publicAssetsPath));
 
   // Registrando as rotas
   app.use('/api', routes);
