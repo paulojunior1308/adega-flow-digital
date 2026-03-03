@@ -208,8 +208,12 @@ async function renderPublicMenuPdf(doc: PDFDocument, viewModel: PublicMenuViewMo
     const marginLeft = doc.page.margins.left;
     const marginRight = doc.page.margins.right;
     const pageWidth = doc.page.width;
+    const imageColWidth = 40;
+    const gap = 8;
     const priceColWidth = 70;
     const priceColX = pageWidth - marginRight - priceColWidth;
+    const nameColX = marginLeft + imageColWidth + gap;
+    const nameColWidth = priceColX - nameColX - gap;
 
     doc
       .fontSize(14)
@@ -225,7 +229,16 @@ async function renderPublicMenuPdf(doc: PDFDocument, viewModel: PublicMenuViewMo
     doc
       .fontSize(9)
       .fillColor('#6B7280')
-      .text('PRODUTO / DESCRIÇÃO', marginLeft, headerY);
+      .text('IMAGEM', marginLeft, headerY, {
+        width: imageColWidth,
+      });
+
+    doc
+      .fontSize(9)
+      .fillColor('#6B7280')
+      .text('PRODUTO / DESCRIÇÃO', nameColX, headerY, {
+        width: nameColWidth,
+      });
 
     doc
       .fontSize(9)
@@ -254,13 +267,30 @@ async function renderPublicMenuPdf(doc: PDFDocument, viewModel: PublicMenuViewMo
       }).format(product.price);
 
       const rowY = doc.y;
-      const nameColWidth = priceColX - marginLeft - 8;
+      let blockBottomY = rowY;
 
-      // Nome na coluna da esquerda
+      // Imagem na primeira coluna, se existir
+      if (product.image) {
+        const imageSource = await loadImageSourceForPdf(product.image);
+        if (imageSource) {
+          try {
+            doc.image(imageSource as any, marginLeft, rowY, {
+              fit: [imageColWidth, imageColWidth],
+              align: 'center',
+              valign: 'center',
+            });
+            blockBottomY = Math.max(blockBottomY, rowY + imageColWidth);
+          } catch (error) {
+            logger.warn('Não foi possível desenhar imagem de produto no PDF do cardápio público:', error);
+          }
+        }
+      }
+
+      // Nome na coluna do meio
       doc
         .fontSize(11)
         .fillColor('#111827')
-        .text(product.name, marginLeft, rowY, {
+        .text(product.name, nameColX, rowY, {
           width: nameColWidth,
         });
 
@@ -280,43 +310,23 @@ async function renderPublicMenuPdf(doc: PDFDocument, viewModel: PublicMenuViewMo
         doc
           .fontSize(9)
           .fillColor('#6B7280')
-          .text(product.description, marginLeft, currentY + 2, {
-            width: pageWidth - marginLeft - marginRight - 50, // deixa espaço para possível imagem à direita
+          .text(product.description, nameColX, currentY + 2, {
+            width: nameColWidth,
             lineGap: 2,
           });
         currentY = doc.y;
       }
 
-      // Imagem pequena à direita, se existir e for suportada
-      if (product.image) {
-        const imageSource = await loadImageSourceForPdf(product.image);
-        if (imageSource) {
-          try {
-            const imageSize = 40;
-            const imageY = rowY;
-            const imageX = pageWidth - marginRight - imageSize;
-
-            doc.image(imageSource as any, imageX, imageY, {
-              fit: [imageSize, imageSize],
-              align: 'center',
-              valign: 'center',
-            });
-
-            currentY = Math.max(currentY, imageY + imageSize);
-          } catch (error) {
-            logger.warn('Não foi possível desenhar imagem de produto no PDF do cardápio público:', error);
-          }
-        }
-      }
+      blockBottomY = Math.max(blockBottomY, currentY);
 
       // Linha separadora entre produtos
       doc
-        .moveTo(marginLeft, currentY + 3)
-        .lineTo(pageWidth - marginRight, currentY + 3)
+        .moveTo(marginLeft, blockBottomY + 3)
+        .lineTo(pageWidth - marginRight, blockBottomY + 3)
         .strokeColor('#E5E7EB')
         .stroke();
 
-      doc.y = currentY + 7;
+      doc.y = blockBottomY + 7;
     }
 
     doc.moveDown(0.5);
