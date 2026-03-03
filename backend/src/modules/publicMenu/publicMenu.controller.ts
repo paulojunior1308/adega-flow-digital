@@ -26,7 +26,8 @@ export const publicMenuController = {
       const html = renderPublicMenuHtml(viewModel);
 
       const browser = await puppeteer.launch({
-        headless: 'new',
+        // Em ambientes de servidor (Render), o modo headless padrão já é suficiente.
+        headless: true,
         args: ['--no-sandbox', '--disable-setuid-sandbox'],
       });
 
