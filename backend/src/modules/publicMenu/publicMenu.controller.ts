@@ -245,7 +245,7 @@ async function renderPublicMenuPdf(doc: PDFDocument, viewModel: PublicMenuViewMo
 
     for (const product of category.products) {
       // Garante espaço razoável para o bloco do produto
-      ensurePdfSpace(doc, 60);
+      ensurePdfSpace(doc, 70);
 
       const priceText = new Intl.NumberFormat('pt-BR', {
         style: 'currency',
@@ -281,10 +281,32 @@ async function renderPublicMenuPdf(doc: PDFDocument, viewModel: PublicMenuViewMo
           .fontSize(9)
           .fillColor('#6B7280')
           .text(product.description, marginLeft, currentY + 2, {
-            width: pageWidth - marginLeft - marginRight,
+            width: pageWidth - marginLeft - marginRight - 50, // deixa espaço para possível imagem à direita
             lineGap: 2,
           });
         currentY = doc.y;
+      }
+
+      // Imagem pequena à direita, se existir e for suportada
+      if (product.image) {
+        const imageSource = await loadImageSourceForPdf(product.image);
+        if (imageSource) {
+          try {
+            const imageSize = 40;
+            const imageY = rowY;
+            const imageX = pageWidth - marginRight - imageSize;
+
+            doc.image(imageSource as any, imageX, imageY, {
+              fit: [imageSize, imageSize],
+              align: 'center',
+              valign: 'center',
+            });
+
+            currentY = Math.max(currentY, imageY + imageSize);
+          } catch (error) {
+            logger.warn('Não foi possível desenhar imagem de produto no PDF do cardápio público:', error);
+          }
+        }
       }
 
       // Linha separadora entre produtos
