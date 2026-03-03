@@ -10,10 +10,23 @@ function formatPriceBRL(value: number): string {
 
 function resolveImageUrl(image?: string): string | null {
   if (!image) return null;
-  if (image.startsWith('http')) return image;
-  if (image.startsWith('/')) return image;
-  // Garante que caminhos como "uploads/xyz.jpg" virem "/uploads/xyz.jpg"
-  return `/${image.replace(/^\/+/, '')}`;
+
+  // Imagens locais servidas pelo próprio backend (já são same-origin)
+  if (image.startsWith('/uploads')) return image;
+  if (image.startsWith('/public')) return image;
+
+  // Caso a imagem esteja em um caminho relativo (ex: "uploads/xyz.jpg")
+  if (!image.startsWith('http') && !image.startsWith('/')) {
+    return `/${image.replace(/^\/+/, '')}`;
+  }
+
+  // Para URLs externas (ex: Cloudinary), usamos um proxy same-origin
+  if (image.startsWith('http')) {
+    const encoded = encodeURIComponent(image);
+    return `/cardapio-publico/image-proxy?url=${encoded}`;
+  }
+
+  return image;
 }
 
 export function renderPublicMenuHtml(viewModel: PublicMenuViewModel): string {

@@ -1,4 +1,7 @@
 import { Request, Response } from 'express';
+import http from 'http';
+import https from 'https';
+import { URL } from 'url';
 import logger from '../../config/logger';
 import { publicMenuService } from './publicMenu.service';
 import { renderPublicMenuHtml } from './publicMenu.view';
@@ -63,6 +66,47 @@ export const publicMenuController = {
       return res
         .status(500)
         .json({ error: 'Erro ao gerar PDF do cardápio público. Tente novamente mais tarde.' });
+    }
+  },
+
+  async getPublicMenuImageProxy(req: Request, res: Response) {
+    try {
+      const { url } = req.query;
+      if (!url || typeof url !== 'string') {
+        return res.status(400).send('Parâmetro "url" é obrigatório.');
+      }
+
+      const decodedUrl = decodeURIComponent(url);
+
+      // Evita transformar o endpoint em um proxy aberto: só permite Cloudinary
+      if (!/^https:\/\/res\.cloudinary\.com\//.test(decodedUrl)) {
+        return res.status(400).send('URL de imagem inválida.');
+      }
+
+      const target = new URL(decodedUrl);
+      const client = target.protocol === 'https:' ? https : http;
+
+      client
+        .get(target, (upstreamRes) => {
+          const contentType = upstreamRes.headers['content-type'] || 'image/jpeg';
+          res.setHeader('Content-Type', contentType);
+
+          // Evita cache agressivo em navegadores intermediários
+          res.setHeader('Cache-Control', 'public, max-age=3600');
+
+          upstreamRes.pipe(res);
+        })
+        .on('error', (err) => {
+          logger.error('Erro ao proxiar imagem do cardápio público:', err);
+          if (!res.headersSent) {
+            res.status(500).end();
+          }
+        });
+    } catch (error) {
+      logger.error('Erro ao processar proxy de imagem do cardápio público:', error);
+      if (!res.headersSent) {
+        res.status(500).end();
+      }
     }
   },
 };
