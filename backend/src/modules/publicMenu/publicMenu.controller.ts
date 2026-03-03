@@ -203,7 +203,7 @@ async function renderPublicMenuPdf(doc: PDFDocument, viewModel: PublicMenuViewMo
   for (const category of categories) {
     if (!category.products.length) continue;
 
-    ensurePdfSpace(doc, headerHeight + 20);
+    ensurePdfSpace(doc, headerHeight);
 
     const marginLeft = doc.page.margins.left;
     const marginRight = doc.page.margins.right;
@@ -212,25 +212,32 @@ async function renderPublicMenuPdf(doc: PDFDocument, viewModel: PublicMenuViewMo
     const gap = 8;
     const priceColWidth = 70;
     const priceColX = pageWidth - marginRight - priceColWidth;
+    const categoryColWidth = 90;
+    const categoryColX = priceColX - gap - categoryColWidth;
     const nameColX = marginLeft + imageColWidth + gap;
-    const nameColWidth = priceColX - nameColX - gap;
+    const nameColWidth = categoryColX - nameColX - gap;
 
-    // Cabeçalho da "tabela": Imagem / Produto / Preço
-    doc.moveDown(0.1);
+    // Cabeçalho da tabela: Imagem | Nome | Categoria | Preço
+    doc.moveDown(0.4);
     const headerY = doc.y;
 
     doc
       .fontSize(9)
       .fillColor('#6B7280')
-      .text('IMAGEM', marginLeft, headerY, {
-        width: imageColWidth,
-      });
+      .text('IMAGEM', marginLeft, headerY, { width: imageColWidth });
 
     doc
       .fontSize(9)
       .fillColor('#6B7280')
       .text('PRODUTO / DESCRIÇÃO', nameColX, headerY, {
         width: nameColWidth,
+      });
+
+    doc
+      .fontSize(9)
+      .fillColor('#6B7280')
+      .text('CATEGORIA', categoryColX, headerY, {
+        width: categoryColWidth,
       });
 
     doc
@@ -251,7 +258,7 @@ async function renderPublicMenuPdf(doc: PDFDocument, viewModel: PublicMenuViewMo
 
     for (const product of category.products) {
       // Garante espaço razoável para o bloco do produto
-      ensurePdfSpace(doc, 70);
+      ensurePdfSpace(doc, 80);
 
       const priceText = new Intl.NumberFormat('pt-BR', {
         style: 'currency',
@@ -286,6 +293,15 @@ async function renderPublicMenuPdf(doc: PDFDocument, viewModel: PublicMenuViewMo
         .text(product.name, nameColX, rowY, {
           width: nameColWidth,
         });
+      let currentY = doc.y;
+
+      // Categoria na coluna específica
+      doc
+        .fontSize(9)
+        .fillColor('#6B7280')
+        .text(category.name, categoryColX, rowY, {
+          width: categoryColWidth,
+        });
 
       // Preço alinhado na coluna da direita
       doc
@@ -296,7 +312,7 @@ async function renderPublicMenuPdf(doc: PDFDocument, viewModel: PublicMenuViewMo
           align: 'right',
         });
 
-      let currentY = doc.y;
+      currentY = Math.max(currentY, doc.y);
 
       // Descrição embaixo, se existir
       if (product.description) {
