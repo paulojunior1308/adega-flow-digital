@@ -209,79 +209,41 @@ async function renderPublicMenuPdf(doc: PDFDocument, viewModel: PublicMenuViewMo
     doc.moveDown(0.5);
 
     for (const product of category.products) {
-      // Garante espaço extra para não sobrepor linhas na impressão
-      ensurePdfSpace(doc, 80);
+      // Garante espaço razoável para o bloco do produto
+      ensurePdfSpace(doc, 60);
 
-      const startY = doc.y;
+      const priceText = new Intl.NumberFormat('pt-BR', {
+        style: 'currency',
+        currency: 'BRL',
+        minimumFractionDigits: 2,
+      }).format(product.price);
 
-      const imageSize = 40;
-      const textAreaWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right - (imageSize + 16);
-
-      // Nome e preço
+      // Linha principal: Nome + preço na mesma linha
       doc
         .fontSize(11)
         .fillColor('#111827')
         .text(product.name, {
-          width: textAreaWidth,
-          continued: false,
+          continued: true,
         });
 
-      const nameEndY = doc.y;
+      doc
+        .fontSize(11)
+        .fillColor('#e11d48')
+        .text(`  ${priceText}`);
 
-          const priceText = new Intl.NumberFormat('pt-BR', {
-            style: 'currency',
-            currency: 'BRL',
-            minimumFractionDigits: 2,
-          }).format(product.price);
-
-          doc
-            .fontSize(11)
-            .fillColor('#e11d48')
-            .text(priceText, doc.page.width - doc.page.margins.right - 80, startY, {
-              align: 'right',
-            });
-
-      // Descrição
+      // Descrição embaixo, se existir
       if (product.description) {
         doc
           .fontSize(9)
           .fillColor('#6B7280')
-          .text(product.description, doc.page.margins.left, nameEndY + 2, {
-            width: textAreaWidth,
+          .text(product.description, {
+            width: doc.page.width - doc.page.margins.left - doc.page.margins.right,
             lineGap: 2,
           });
-        // Pequeno respiro após a descrição
-        doc.moveDown(0.15);
       }
 
-      let blockBottomY = doc.y;
-
-      // Imagem pequena ao lado, se existir
-      if (product.image) {
-        const resolved = (product as any).image as string | undefined;
-        const imageSource = resolved ? await loadImageSourceForPdf(resolved) : null;
-        if (imageSource) {
-          try {
-            const imageY = startY;
-            const imageX = doc.page.width - doc.page.margins.right - imageSize;
-            doc.image(imageSource as any, imageX, imageY, {
-              fit: [imageSize, imageSize],
-              align: 'center',
-              valign: 'center',
-            });
-            blockBottomY = Math.max(blockBottomY, imageY + imageSize);
-          } catch (error) {
-            logger.warn('Não foi possível desenhar imagem de produto no PDF do cardápio público:', error);
-          }
-        }
-      }
-
-      doc.moveTo(doc.page.margins.left, blockBottomY + 4)
-        .lineTo(doc.page.width - doc.page.margins.right, blockBottomY + 4)
-        .strokeColor('#E5E7EB')
-        .stroke();
-
-      doc.y = blockBottomY + 8;
+      // Espaço entre produtos
+      doc.moveDown(0.6);
     }
 
     doc.moveDown(0.5);
