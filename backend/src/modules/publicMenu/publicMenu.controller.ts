@@ -203,7 +203,7 @@ async function renderPublicMenuPdf(doc: PDFDocument, viewModel: PublicMenuViewMo
   for (const category of categories) {
     if (!category.products.length) continue;
 
-    ensurePdfSpace(doc, headerHeight);
+    ensurePdfSpace(doc, headerHeight + 20);
 
     const marginLeft = doc.page.margins.left;
     const marginRight = doc.page.margins.right;
@@ -215,15 +215,8 @@ async function renderPublicMenuPdf(doc: PDFDocument, viewModel: PublicMenuViewMo
     const nameColX = marginLeft + imageColWidth + gap;
     const nameColWidth = priceColX - nameColX - gap;
 
-    doc
-      .fontSize(14)
-      .fillColor('#1A374D')
-      .text(category.name.toUpperCase(), {
-        underline: false,
-      });
-
-    // Cabeçalho da "tabela": Produto / Preço
-    doc.moveDown(0.2);
+    // Cabeçalho da "tabela": Imagem / Produto / Preço
+    doc.moveDown(0.1);
     const headerY = doc.y;
 
     doc
